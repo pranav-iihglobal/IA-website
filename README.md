@@ -25,7 +25,7 @@ npm run build    # production build (all routes prerendered)
 
 Until a `[GU: …]` placeholder is replaced, the site **automatically falls back to English** for that string when a visitor switches to ગુજરાતી — unfinished translations are never shown.
 
-**Images:** all imagery is currently inline SVG placeholders in [`components/Illustrations.tsx`](components/Illustrations.tsx) (each marked `PLACEHOLDER`). When real photos/pack shots are ready, drop them in `public/` and swap the SVGs for `next/image` — Vercel serves WebP/AVIF and responsive sizes automatically.
+**Images:** the real brand logo lives at `public/logo.svg` (header, footer) and `app/icon.svg` (favicon). All other imagery is inline SVG placeholders in [`components/Illustrations.tsx`](components/Illustrations.tsx) (each marked `PLACEHOLDER`). When real photos/pack shots are ready, drop them in `public/` and swap the SVGs for `next/image` — Vercel serves WebP/AVIF and responsive sizes automatically.
 
 ## Adding Learn articles
 

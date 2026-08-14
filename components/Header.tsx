@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { NAV, SITE } from "@/lib/content";
 import { useLanguage } from "./LanguageProvider";
-import { LeafMark } from "./Illustrations";
 
 export function Header() {
   const [open, setOpen] = useState(false);
@@ -22,7 +22,15 @@ export function Header() {
           className="flex items-center gap-2"
           onClick={() => setOpen(false)}
         >
-          <LeafMark className="h-8 w-8" />
+          <Image
+            src="/logo.svg"
+            alt="IKSARVA — Roots to Riches"
+            width={34}
+            height={48}
+            unoptimized
+            priority
+            className="h-12 w-auto"
+          />
           <span className="flex flex-col leading-tight">
             <span className="font-display text-lg font-bold text-russet">
               IKSARVA

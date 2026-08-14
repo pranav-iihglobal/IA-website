@@ -1,15 +1,22 @@
 import Link from "next/link";
+import Image from "next/image";
 import { NAV, SITE, UI } from "@/lib/content";
 import { T } from "./T";
-import { LeafMark } from "./Illustrations";
 
 export function Footer() {
   return (
     <footer className="bg-russet-dark text-cornsilk">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-3">
         <div>
-          <div className="flex items-center gap-2">
-            <LeafMark className="h-9 w-9" />
+          <div className="flex items-center gap-3">
+            <Image
+              src="/logo.svg"
+              alt="IKSARVA — Roots to Riches"
+              width={45}
+              height={64}
+              unoptimized
+              className="h-16 w-auto rounded"
+            />
             <div className="leading-tight">
               <p className="font-display text-lg font-bold">IKSARVA Agritech</p>
               <p className="text-xs text-camel-light">

@@ -6,36 +6,6 @@
  * automatically).
  */
 
-/** Brand mark: a leaf-and-root motif. PLACEHOLDER for the real logo. */
-export function LeafMark({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 48 48"
-      className={className}
-      aria-hidden="true"
-      fill="none"
-    >
-      <circle cx="24" cy="24" r="23" fill="#5E7153" />
-      <path
-        d="M24 10c6 4 9 9 9 14 0 6-4 10-9 10s-9-4-9-10c0-5 3-10 9-14Z"
-        fill="#C2CBA3"
-      />
-      <path
-        d="M24 14v20M24 20c-2-1-4-3-4.5-5M24 26c2-1 4-3 4.5-5"
-        stroke="#4A5A42"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-      <path
-        d="M24 34v4M20 38c1.5-1.5 2.5-2 4-2s2.5.5 4 2"
-        stroke="#F9ECC9"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 /** Hero illustration: plant with deep roots. PLACEHOLDER for real field photo. */
 export function HeroRoots({ className = "" }: { className?: string }) {
   return (
