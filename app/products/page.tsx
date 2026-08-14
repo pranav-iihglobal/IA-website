@@ -7,7 +7,7 @@ import { Reveal } from "@/components/Reveal";
 export const metadata: Metadata = {
   title: "Products",
   description:
-    "FloraMax flowering bio-stimulant, Mycho mycorrhizal inoculant, and NPK Consortia — biofertilizers made for North Gujarat's crops.",
+    "FloraMax flowering bio-stimulant, Mycorrhizal Bio-Fertilizer, and NPK Consortia Bio-Fertilizer — biofertilizers made for North Gujarat's crops.",
   alternates: { canonical: "/products" },
   openGraph: {
     title: "IKSARVA Products — Biofertilizers for North Gujarat",

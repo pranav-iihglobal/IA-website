@@ -271,8 +271,8 @@ export const PRODUCTS: Product[] = [
       "Hello IKSARVA, I want to know more about FloraMax (25g flowering bio-stimulant).",
   },
   {
-    slug: "mycho",
-    name: "Mycho",
+    slug: "mycorrhizal",
+    name: "Mycorrhizal Bio-Fertilizer",
     art: "roots",
     category: {
       en: "Mycorrhizal bio-fertilizer",
@@ -283,8 +283,8 @@ export const PRODUCTS: Product[] = [
       gu: "તમારાં મૂળ માટે જમીનની અંદરનું મદદગાર જાળું.",
     },
     description: {
-      en: "Mycho is a mycorrhizal inoculant. Mycorrhizae are friendly fungi that attach to your crop's roots and spread thin threads far into the soil — like extra roots your plant didn't have to grow. They pull in water and nutrients from soil the roots alone could never reach.",
-      gu: "Mycho એ માયકોરાઇઝા કલ્ચર છે. માયકોરાઇઝા એ મિત્ર ફૂગ છે જે પાકનાં મૂળ સાથે જોડાઈને જમીનમાં દૂર સુધી ઝીણા તાંતણા ફેલાવે છે — જાણે છોડને ઉગાડ્યા વગર વધારાનાં મૂળ મળી ગયાં. તે એવી જમીનમાંથી પાણી અને પોષણ ખેંચી લાવે છે જ્યાં મૂળ એકલાં ક્યારેય પહોંચી ન શકે.",
+      en: "Our Mycorrhizal Bio-Fertilizer puts living mycorrhizae into your soil. Mycorrhizae are friendly fungi that attach to your crop's roots and spread thin threads far into the soil — like extra roots your plant didn't have to grow. They pull in water and nutrients from soil the roots alone could never reach.",
+      gu: "અમારું માયકોરાઇઝા જૈવિક ખાતર તમારી જમીનમાં જીવતી માયકોરાઇઝા ઉમેરે છે. માયકોરાઇઝા એ મિત્ર ફૂગ છે જે પાકનાં મૂળ સાથે જોડાઈને જમીનમાં દૂર સુધી ઝીણા તાંતણા ફેલાવે છે — જાણે છોડને ઉગાડ્યા વગર વધારાનાં મૂળ મળી ગયાં. તે એવી જમીનમાંથી પાણી અને પોષણ ખેંચી લાવે છે જ્યાં મૂળ એકલાં ક્યારેય પહોંચી ન શકે.",
     },
     benefits: [
       {
@@ -321,11 +321,11 @@ export const PRODUCTS: Product[] = [
       gu: "250 ગ્રામનો ડબ્બો — 100% ઓર્ગેનિક, પાણીમાં ઓગળે",
     },
     whatsappMessage:
-      "Hello IKSARVA, I want to know more about Mycho (mycorrhizal inoculant).",
+      "Hello IKSARVA, I want to know more about your Mycorrhizal Bio-Fertilizer (250g).",
   },
   {
     slug: "npk-consortia",
-    name: "NPK Consortia",
+    name: "NPK Consortia Bio-Fertilizer",
     art: "network",
     category: {
       en: "Bacterial consortium",
@@ -374,7 +374,7 @@ export const PRODUCTS: Product[] = [
       gu: "500 ગ્રામનો ડબ્બો — 100% ઓર્ગેનિક, પાણીમાં ઓગળે",
     },
     whatsappMessage:
-      "Hello IKSARVA, I want to know more about NPK Consortia (bacterial consortium).",
+      "Hello IKSARVA, I want to know more about your NPK Consortia Bio-Fertilizer (500g).",
   },
 ];
 

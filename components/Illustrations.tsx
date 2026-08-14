@@ -87,7 +87,7 @@ export function SachetArt({ className = "" }: { className?: string }) {
   );
 }
 
-/** Product art: root network (Mycho). PLACEHOLDER for real imagery. */
+/** Product art: root network (Mycorrhizal Bio-Fertilizer). PLACEHOLDER for real imagery. */
 export function RootsArt({ className = "" }: { className?: string }) {
   return (
     <svg

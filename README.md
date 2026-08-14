@@ -26,7 +26,7 @@ npm run build    # production build (all routes prerendered)
 
 **Images:** the real brand logo lives at `public/logo.svg` (header, footer) and `app/icon.svg` (favicon).
 
-**Product pack shots:** drop a photo at `public/products/<slug>.jpg` (or `.png`/`.webp`) — `npk-consortia`, `mycho`, `floramax` — and the site automatically uses it on the product card and detail page from the next build (no code change; see `lib/product-images.ts`). Products without a photo fall back to the inline SVG placeholders in [`components/Illustrations.tsx`](components/Illustrations.tsx).
+**Product pack shots:** drop a photo at `public/products/<slug>.jpg` (or `.png`/`.webp`) — `npk-consortia`, `mycorrhizal`, `floramax` — and the site automatically uses it on the product card and detail page from the next build (no code change; see `lib/product-images.ts`). Products without a photo fall back to the inline SVG placeholders in [`components/Illustrations.tsx`](components/Illustrations.tsx).
 
 ## Adding Learn articles
 
@@ -75,7 +75,7 @@ app/
   layout.tsx            Root layout — header, footer, Organization JSON-LD, metadata
   page.tsx              Home (hero, FloraMax feature, region strip, dealer CTA)
   products/page.tsx     Product index
-  products/[slug]/      Product detail pages (FloraMax, Mycho, NPK Consortia)
+  products/[slug]/      Product detail pages (FloraMax, Mycorrhizal, NPK Consortia)
   about/page.tsx        Mission, philosophy, team, region
   dealers/page.tsx      Dealer value proposition + WhatsApp CTA
   learn/page.tsx        Knowledge index (markdown-driven)

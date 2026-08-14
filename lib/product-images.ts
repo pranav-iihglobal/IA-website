@@ -6,7 +6,7 @@ import path from "path";
  *
  * Drop an image at public/products/<slug>.jpg (or .png / .webp), e.g.:
  *   public/products/npk-consortia.jpg
- *   public/products/mycho.jpg
+ *   public/products/mycorrhizal.jpg
  *   public/products/floramax.jpg
  * and the site swaps that product's SVG placeholder for the photo on the
  * next build — no code change needed. next/image serves it as WebP/AVIF in

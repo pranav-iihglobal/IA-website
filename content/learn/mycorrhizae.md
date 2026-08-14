@@ -31,7 +31,7 @@ Mycorrhizae are living things. Years of heavy fungicide use, deep tillage, and l
 
 ## How to bring them back
 
-- **Inoculate.** A mycorrhizal product (like our Mycho) puts live spores next to young roots at sowing or transplanting — the one time in the season when the partnership forms.
+- **Inoculate.** A mycorrhizal product (like our Mycorrhizal Bio-Fertilizer) puts live spores next to young roots at sowing or transplanting — the one time in the season when the partnership forms.
 - **Go easy on soil-applied fungicides** near the application time.
 - **Keep living roots in the ground** as much of the year as possible — the fungi feed on them.
 
