@@ -29,7 +29,7 @@ export function Header() {
             height={48}
             unoptimized
             priority
-            className="h-12 w-auto"
+            className="logo-wiggle h-12 w-auto"
           />
           <span className="flex flex-col leading-tight">
             <span className="font-display text-lg font-bold text-russet">

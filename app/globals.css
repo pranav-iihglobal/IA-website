@@ -41,13 +41,14 @@
   --color-russet-dark: #5f2f14;
 
   /*
-   * Typography — system stacks only (no webfont downloads; primary audience is
-   * on budget Android over patchy networks). Noto Sans Gujarati ships with
-   * Android/Windows and covers ગુજરાતી text; everything falls back cleanly.
+   * Brand typography — Anek Gujarati for display/headings, Noto Sans Gujarati
+   * for body. Both are self-hosted at build time via next/font (the CSS
+   * variables below are set on <html> in app/layout.tsx), with system
+   * fallbacks so text renders instantly on slow connections.
    */
-  --font-display: Georgia, "Noto Serif Gujarati", "Times New Roman", serif;
-  --font-body: "Noto Sans Gujarati", system-ui, -apple-system, "Segoe UI",
-    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-anek), Georgia, "Times New Roman", serif;
+  --font-body: var(--font-noto-gujarati), "Noto Sans Gujarati", system-ui,
+    -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 html {
@@ -110,4 +111,229 @@ body {
   font-style: italic;
   color: var(--color-olive-dark);
   margin-bottom: 1rem;
+}
+
+/* ==========================================================================
+   Motion & interaction
+   ========================================================================== */
+
+/* --- Scroll reveal (driven by components/Reveal.tsx) --- */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal-left {
+  transform: translateX(-36px);
+}
+.reveal-right {
+  transform: translateX(36px);
+}
+.reveal.revealed {
+  opacity: 1;
+  transform: none;
+}
+
+/* --- Ambient float / drift for decorative elements --- */
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-16px) rotate(3deg);
+  }
+}
+@keyframes drift-leaf {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(14px, -18px) rotate(10deg);
+  }
+  50% {
+    transform: translate(-8px, -30px) rotate(-6deg);
+  }
+  75% {
+    transform: translate(-18px, -12px) rotate(8deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(4deg);
+  }
+}
+.animate-float {
+  animation: float-y 6s ease-in-out infinite;
+}
+.animate-drift {
+  animation: drift-leaf 14s ease-in-out infinite;
+}
+.animate-sway {
+  animation: sway 5s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+/* --- Crops marquee strip --- */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  animation: marquee 32s linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* --- CTA shine sweep + press feedback --- */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+.btn-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 247, 0.5) 50%,
+    transparent 60%
+  );
+  transform: translateX(-130%);
+  transition: transform 0.65s ease;
+  pointer-events: none;
+}
+.btn-shine:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 24px rgba(120, 62, 25, 0.25);
+}
+.btn-shine:hover::after {
+  transform: translateX(130%);
+}
+.btn-shine:active {
+  transform: scale(0.97);
+}
+
+/* --- Custom cursor (desktop only; components/CursorFX.tsx) --- */
+@media (pointer: fine) {
+  body.cursor-fx,
+  body.cursor-fx a,
+  body.cursor-fx button {
+    cursor: none;
+  }
+}
+.cursor-dot,
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 9999;
+  will-change: transform;
+  /* hidden unless CursorFX activates (desktop fine-pointer only) */
+  display: none;
+}
+body.cursor-fx .cursor-dot,
+body.cursor-fx .cursor-ring {
+  display: block;
+}
+.cursor-dot {
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 9999px;
+  background: var(--color-alloy);
+}
+.cursor-ring {
+  width: 38px;
+  height: 38px;
+  margin: -19px 0 0 -19px;
+  border-radius: 9999px;
+  border: 2px solid var(--color-olive);
+  opacity: 0.55;
+  transition:
+    width 0.25s ease,
+    height 0.25s ease,
+    margin 0.25s ease,
+    opacity 0.25s ease,
+    background-color 0.25s ease;
+}
+.cursor-ring.is-hover {
+  width: 60px;
+  height: 60px;
+  margin: -30px 0 0 -30px;
+  background: color-mix(in srgb, var(--color-laurel) 30%, transparent);
+  border-color: var(--color-alloy);
+  opacity: 0.9;
+}
+.cursor-seed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 9998;
+  width: 10px;
+  height: 10px;
+  animation: seed-fall 0.9s ease-out forwards;
+}
+@keyframes seed-fall {
+  from {
+    opacity: 0.9;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--seed-dx, 8px), 34px) rotate(140deg) scale(0.5);
+  }
+}
+
+/* --- Logo micro-interaction --- */
+.logo-wiggle {
+  transition: transform 0.3s ease;
+}
+a:hover > .logo-wiggle {
+  transform: rotate(-4deg) scale(1.06);
+}
+
+/* --- Reduced motion: settle everything instantly --- */
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal-left,
+  .reveal-right {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .animate-float,
+  .animate-drift,
+  .animate-sway,
+  .animate-marquee {
+    animation: none;
+  }
+  .btn-shine,
+  .btn-shine::after {
+    transition: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
 }

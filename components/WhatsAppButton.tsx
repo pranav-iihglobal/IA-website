@@ -32,7 +32,7 @@ export function WhatsAppButton({
       href={waLink(message)}
       target="_blank"
       rel="noopener noreferrer"
-      className={`inline-flex items-center gap-2 rounded-full px-6 py-3 text-base font-semibold shadow-sm transition-colors ${styles}`}
+      className={`btn-shine inline-flex items-center gap-2 rounded-full px-6 py-3 text-base font-semibold shadow-sm ${styles}`}
     >
       <WhatsAppIcon className="h-5 w-5" />
       <T text={label} />

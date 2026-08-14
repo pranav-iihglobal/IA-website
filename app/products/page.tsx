@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { HOME, PRODUCTS } from "@/lib/content";
 import { T } from "@/components/T";
 import { ProductCard } from "@/components/ProductCard";
+import { Reveal } from "@/components/Reveal";
 
 export const metadata: Metadata = {
   title: "Products",
@@ -24,8 +25,10 @@ export default function ProductsPage() {
         <T text={HOME.productsSub} />
       </p>
       <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {PRODUCTS.map((p) => (
-          <ProductCard key={p.slug} product={p} />
+        {PRODUCTS.map((p, i) => (
+          <Reveal key={p.slug} delay={i * 130}>
+            <ProductCard product={p} />
+          </Reveal>
         ))}
       </div>
     </section>

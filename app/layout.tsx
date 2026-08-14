@@ -1,9 +1,26 @@
 import type { Metadata } from "next";
+import { Anek_Gujarati, Noto_Sans_Gujarati } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { CursorFX } from "@/components/CursorFX";
 import { SITE } from "@/lib/content";
+
+// Brand fonts — self-hosted at build time by next/font (served from our own
+// domain, no runtime requests to Google). Both cover Gujarati + Latin.
+const anekGujarati = Anek_Gujarati({
+  subsets: ["gujarati", "latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-anek",
+  display: "swap",
+});
+const notoSansGujarati = Noto_Sans_Gujarati({
+  subsets: ["gujarati", "latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-noto-gujarati",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -63,13 +80,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      className={`${anekGujarati.variable} ${notoSansGujarati.variable}`}
+    >
       <body className="flex min-h-screen flex-col">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
         <LanguageProvider>
+          <CursorFX />
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />
