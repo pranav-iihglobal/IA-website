@@ -24,7 +24,9 @@ npm run build    # production build (all routes prerendered)
 
 **Language:** the site is bilingual with **Gujarati as the default**; visitors switch to English with the header toggle. All Gujarati copy lives in `lib/content.ts` (UI + pages) and `content/learn/gu/*.md` (article translations) — it was drafted conversationally, so **review it with a native speaker** and edit freely. If any string is ever set to a `[GU: …]` placeholder, the site automatically falls back to English for it.
 
-**Images:** the real brand logo lives at `public/logo.svg` (header, footer) and `app/icon.svg` (favicon). All other imagery is inline SVG placeholders in [`components/Illustrations.tsx`](components/Illustrations.tsx) (each marked `PLACEHOLDER`). When real photos/pack shots are ready, drop them in `public/` and swap the SVGs for `next/image` — Vercel serves WebP/AVIF and responsive sizes automatically.
+**Images:** the real brand logo lives at `public/logo.svg` (header, footer) and `app/icon.svg` (favicon).
+
+**Product pack shots:** drop a photo at `public/products/<slug>.jpg` (or `.png`/`.webp`) — `npk-consortia`, `mycho`, `floramax` — and the site automatically uses it on the product card and detail page from the next build (no code change; see `lib/product-images.ts`). Products without a photo fall back to the inline SVG placeholders in [`components/Illustrations.tsx`](components/Illustrations.tsx).
 
 ## Adding Learn articles
 

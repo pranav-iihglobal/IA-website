@@ -275,8 +275,8 @@ export const PRODUCTS: Product[] = [
     name: "Mycho",
     art: "roots",
     category: {
-      en: "Mycorrhizal inoculant",
-      gu: "માયકોરાઇઝા કલ્ચર",
+      en: "Mycorrhizal bio-fertilizer",
+      gu: "માયકોરાઇઝા જૈવિક ખાતર",
     },
     tagline: {
       en: "Grow your roots an underground helper network.",
@@ -317,8 +317,8 @@ export const PRODUCTS: Product[] = [
       gu: "બટાકા, દાડમ, ઘઉં, મકાઈ, શાકભાજી — લગભગ દરેક પાક; ફક્ત રાઈ-કોબી પરિવારના પાક માયકોરાઇઝા સાથે જોડાતા નથી.",
     },
     format: {
-      en: "Powder / granular inoculant",
-      gu: "પાવડર / દાણાદાર કલ્ચર",
+      en: "250g canister — 100% organic, water-soluble",
+      gu: "250 ગ્રામનો ડબ્બો — 100% ઓર્ગેનિક, પાણીમાં ઓગળે",
     },
     whatsappMessage:
       "Hello IKSARVA, I want to know more about Mycho (mycorrhizal inoculant).",
@@ -370,8 +370,8 @@ export const PRODUCTS: Product[] = [
       gu: "બટાકા, ઘઉં, જીરું, દિવેલા, કપાસ, અશ્વગંધા, તરબૂચ, ટેટી, શાકભાજી — બનાસકાંઠા, સાબરકાંઠા અને મહેસાણાના બધા મુખ્ય પાક.",
     },
     format: {
-      en: "Liquid / carrier-based formulation",
-      gu: "પ્રવાહી / કેરિયર આધારિત ફોર્મ્યુલેશન",
+      en: "500g canister — 100% organic, water-soluble",
+      gu: "500 ગ્રામનો ડબ્બો — 100% ઓર્ગેનિક, પાણીમાં ઓગળે",
     },
     whatsappMessage:
       "Hello IKSARVA, I want to know more about NPK Consortia (bacterial consortium).",

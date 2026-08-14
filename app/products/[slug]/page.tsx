@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { MISC, PRODUCTS, SITE, UI, getProduct } from "@/lib/content";
+import { getProductImage } from "@/lib/product-images";
 import { T } from "@/components/T";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { ProductArt } from "@/components/ProductCard";
@@ -74,7 +76,19 @@ export default async function ProductPage({
       </nav>
 
       <header className="grid items-center gap-8 sm:grid-cols-[auto_1fr]">
-        <ProductArt art={product.art} className="mx-auto h-44 w-44 sm:h-52 sm:w-52" />
+        {getProductImage(product.slug) ? (
+          <Image
+            src={getProductImage(product.slug)!}
+            alt={`${product.name} pack`}
+            width={640}
+            height={640}
+            priority
+            className="mx-auto w-full max-w-xs rounded-2xl object-cover shadow-md sm:w-72"
+            sizes="(max-width: 640px) 100vw, 320px"
+          />
+        ) : (
+          <ProductArt art={product.art} className="mx-auto h-44 w-44 sm:h-52 sm:w-52" />
+        )}
         <div>
           {product.flagship && (
             <span className="mb-2 inline-block rounded-full bg-alloy px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cornsilk-light">
