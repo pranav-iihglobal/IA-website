@@ -15,7 +15,7 @@ export function Header() {
   const toggleLang = () => setLang(lang === "en" ? "gu" : "en");
 
   return (
-    <header className="sticky top-0 z-40 border-b border-cornsilk-dark bg-cornsilk-light/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-olive-dark bg-olive/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
         <Link
           href="/"
@@ -32,10 +32,10 @@ export function Header() {
             className="logo-wiggle h-12 w-auto"
           />
           <span className="flex flex-col leading-tight">
-            <span className="font-display text-lg font-bold text-russet">
+            <span className="font-display text-lg font-bold text-cornsilk-light">
               IKSARVA
             </span>
-            <span className="text-[10px] uppercase tracking-widest text-olive">
+            <span className="text-[10px] uppercase tracking-widest text-laurel-light">
               Agritech
             </span>
           </span>
@@ -46,8 +46,10 @@ export function Header() {
             <Link
               key={item.href}
               href={item.href}
-              className={`text-sm font-medium transition-colors hover:text-alloy-dark ${
-                pathname === item.href ? "text-alloy-dark" : "text-olive-dark"
+              className={`text-sm font-medium transition-colors hover:text-alloy-light ${
+                pathname === item.href
+                  ? "text-alloy-light"
+                  : "text-cornsilk/90"
               }`}
             >
               {t(item.label)}
@@ -69,7 +71,7 @@ export function Header() {
 
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-md text-russet md:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-md text-cornsilk-light md:hidden"
             onClick={() => setOpen(!open)}
             aria-expanded={open}
             aria-controls="mobile-nav"
@@ -104,7 +106,7 @@ export function Header() {
       {open && (
         <nav
           id="mobile-nav"
-          className="border-t border-cornsilk-dark bg-cornsilk-light md:hidden"
+          className="border-t border-olive-dark bg-olive md:hidden"
           aria-label="Mobile"
         >
           <ul className="mx-auto max-w-6xl px-4 py-2">
@@ -113,10 +115,10 @@ export function Header() {
                 <Link
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className={`block border-b border-cornsilk-dark py-3 text-base font-medium last:border-b-0 ${
+                  className={`block border-b border-olive-dark/60 py-3 text-base font-medium last:border-b-0 ${
                     pathname === item.href
-                      ? "text-alloy-dark"
-                      : "text-olive-dark"
+                      ? "text-alloy-light"
+                      : "text-cornsilk/90"
                   }`}
                 >
                   {t(item.label)}
