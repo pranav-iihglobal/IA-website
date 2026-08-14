@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+/*
+ * IKSARVA brand palette — finalized. Each color has light / base / dark variants.
+ * Usage: bg-olive, text-russet-dark, border-camel-light, bg-alloy hover:bg-alloy-dark …
+ */
+@theme {
+  /* Dark Olive — primary brand, section backgrounds */
+  --color-olive-light: #7f8f6e;
+  --color-olive: #5e7153;
+  --color-olive-dark: #4a5a42;
+
+  /* Laurel Green — secondary brand, tints */
+  --color-laurel-light: #c2cba3;
+  --color-laurel: #a9b489;
+  --color-laurel-dark: #8a9a6e;
+
+  /* Cornsilk — page backgrounds, light surfaces */
+  --color-cornsilk-light: #fffff7;
+  --color-cornsilk: #fcfce4;
+  --color-cornsilk-dark: #e6e6cc;
+
+  /* Lemon Meringue — warm light surfaces */
+  --color-meringue-light: #faf2e0;
+  --color-meringue: #f9ecc9;
+  --color-meringue-dark: #e0d3b3;
+
+  /* Camel — secondary accents, borders */
+  --color-camel-light: #cbaf8a;
+  --color-camel: #ba9470;
+  --color-camel-dark: #9e7a5c;
+
+  /* Alloy Orange — CTAs, highlights */
+  --color-alloy-light: #d47a42;
+  --color-alloy: #c66828;
+  --color-alloy-dark: #a6531e;
+
+  /* Russet — headings, footer */
+  --color-russet-light: #8f4f33;
+  --color-russet: #783e19;
+  --color-russet-dark: #5f2f14;
+
+  /*
+   * Typography — system stacks only (no webfont downloads; primary audience is
+   * on budget Android over patchy networks). Noto Sans Gujarati ships with
+   * Android/Windows and covers ગુજરાતી text; everything falls back cleanly.
+   */
+  --font-display: Georgia, "Noto Serif Gujarati", "Times New Roman", serif;
+  --font-body: "Noto Sans Gujarati", system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-cornsilk-light);
+  color: var(--color-russet-dark);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Rendered markdown for Knowledge/Learn articles */
+.prose-article {
+  line-height: 1.75;
+}
+.prose-article h2 {
+  font-family: var(--font-display);
+  color: var(--color-russet);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+.prose-article h3 {
+  font-family: var(--font-display);
+  color: var(--color-russet);
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.prose-article p {
+  margin-bottom: 1rem;
+}
+.prose-article ul,
+.prose-article ol {
+  margin: 0 0 1rem 1.25rem;
+}
+.prose-article ul {
+  list-style: disc;
+}
+.prose-article ol {
+  list-style: decimal;
+}
+.prose-article li {
+  margin-bottom: 0.375rem;
+}
+.prose-article strong {
+  color: var(--color-russet);
+}
+.prose-article a {
+  color: var(--color-alloy-dark);
+  text-decoration: underline;
+}
+.prose-article blockquote {
+  border-left: 4px solid var(--color-laurel);
+  padding-left: 1rem;
+  font-style: italic;
+  color: var(--color-olive-dark);
+  margin-bottom: 1rem;
+}
