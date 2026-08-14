@@ -53,15 +53,18 @@ export function FloatingLeaves() {
   );
 }
 
-const CROPS = [
-  "Potato",
-  "Pomegranate",
-  "Cumin",
-  "Castor",
-  "Cotton",
-  "Wheat",
-  "Maize",
-  "Vegetables",
+import { T } from "./T";
+import type { Bi } from "@/lib/content";
+
+const CROPS: Bi[] = [
+  { en: "Potato", gu: "બટાકા" },
+  { en: "Pomegranate", gu: "દાડમ" },
+  { en: "Cumin", gu: "જીરું" },
+  { en: "Castor", gu: "દિવેલા" },
+  { en: "Cotton", gu: "કપાસ" },
+  { en: "Wheat", gu: "ઘઉં" },
+  { en: "Maize", gu: "મકાઈ" },
+  { en: "Vegetables", gu: "શાકભાજી" },
 ];
 
 /** Infinite scrolling strip of the crops we serve. Pauses on hover. */
@@ -77,7 +80,7 @@ export function CropsMarquee() {
                 key={`${half}-${i}`}
                 className="flex items-center gap-8 whitespace-nowrap text-sm font-semibold uppercase tracking-widest text-cornsilk"
               >
-                {crop}
+                <T text={crop} />
                 <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 text-laurel-light" fill="currentColor">
                   <path d="M6 0c1.5 2 2.5 4 2.5 6S7.5 10 6 12C4.5 10 3.5 8 3.5 6S4.5 2 6 0Z" />
                 </svg>
@@ -87,7 +90,8 @@ export function CropsMarquee() {
         ))}
       </div>
       <p className="sr-only">
-        Crops we serve: {CROPS.join(", ")} — across North Gujarat.
+        Crops we serve: {CROPS.map((c) => c.en).join(", ")} — across North
+        Gujarat.
       </p>
     </div>
   );

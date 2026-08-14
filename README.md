@@ -21,9 +21,8 @@ npm run build    # production build (all routes prerendered)
 | Address / PIN | `SITE.address` |
 | Email | `SITE.email` |
 | Founder names | `ABOUT.founders[].name` |
-| Gujarati translations | every string that starts with `[GU:` — replace the whole bracketed string with real Gujarati copy |
 
-Until a `[GU: …]` placeholder is replaced, the site **automatically falls back to English** for that string when a visitor switches to ગુજરાતી — unfinished translations are never shown.
+**Language:** the site is bilingual with **Gujarati as the default**; visitors switch to English with the header toggle. All Gujarati copy lives in `lib/content.ts` (UI + pages) and `content/learn/gu/*.md` (article translations) — it was drafted conversationally, so **review it with a native speaker** and edit freely. If any string is ever set to a `[GU: …]` placeholder, the site automatically falls back to English for it.
 
 **Images:** the real brand logo lives at `public/logo.svg` (header, footer) and `app/icon.svg` (favicon). All other imagery is inline SVG placeholders in [`components/Illustrations.tsx`](components/Illustrations.tsx) (each marked `PLACEHOLDER`). When real photos/pack shots are ready, drop them in `public/` and swap the SVGs for `next/image` — Vercel serves WebP/AVIF and responsive sizes automatically.
 

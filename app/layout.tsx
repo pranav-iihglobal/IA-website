@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     template: `%s | ${SITE.shortName}`,
   },
   description:
-    "Mycorrhizal cultures, NPK consortia and biostimulants formulated to work with the microbial life already in your field — not against it. Made in North Gujarat.",
+    "મૂળથી મજબૂત, પાક ભરપૂર — ઉત્તર ગુજરાતમાં બનેલાં જૈવિક ખાતર: માયકોરાઇઝા કલ્ચર, NPK બેક્ટેરિયા અને બાયોસ્ટિમ્યુલન્ટ. Biofertilizers made in North Gujarat: mycorrhizal cultures, NPK consortia and biostimulants that work with the microbial life in your field.",
   keywords: [
     "biofertilizer",
     "biostimulant",
@@ -81,7 +81,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="gu"
       className={`${anekGujarati.variable} ${notoSansGujarati.variable}`}
     >
       <body className="flex min-h-screen flex-col">

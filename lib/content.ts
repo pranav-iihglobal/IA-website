@@ -3,27 +3,43 @@
  * IKSARVA — SINGLE SOURCE OF TRUTH for site config, copy, and placeholders.
  * ============================================================================
  *
- * EVERYTHING you need to fill in before launch lives in this file:
+ * The site is bilingual with GUJARATI AS THE DEFAULT language; visitors can
+ * switch to English with the header toggle.
+ *
+ * Still to fill in before launch:
  *
  *   1. SITE.whatsappNumber  — replace "919999999999" with the real number
  *                             (country code + number, digits only, no "+")
  *   2. SITE.phoneDisplay    — human-readable phone for the contact page
  *   3. SITE.address         — registered office / operating address
  *   4. SITE.email           — contact email
- *   5. Gujarati translations — every string marked "[GU: …]" is a placeholder.
- *      Replace the whole string (including brackets) with real Gujarati copy.
- *      Until replaced, the site automatically falls back to English when the
- *      visitor switches to ગુજરાતી, so unfinished translations never show.
+ *   5. ABOUT.founders[].name — real founder names
  *   6. Photos — components/Illustrations.tsx holds SVG placeholders; each is
  *      marked with a "PLACEHOLDER" comment for later replacement.
  *
- * The Gujarati tagline (મૂળથી મજબૂત, પાક ભરપૂર) is final approved copy — keep it.
+ * The Gujarati copy below was drafted in plain, conversational Gujarati
+ * (avoiding Sanskritised words) — please review it with a native speaker
+ * before launch and edit freely; it lives only in this file and in
+ * content/learn/gu/*.md (article translations).
  */
 
-/** A bilingual string. `gu` values starting with "[GU:" are unfilled placeholders. */
+/** A bilingual string. If a `gu` value starts with "[GU:" it is treated as
+ *  unfilled and the site falls back to English for that string. */
 export interface Bi {
   en: string;
   gu: string;
+}
+
+export type Lang = "en" | "gu";
+
+/** Resolve a bilingual string for a language, falling back to English when
+ *  the Gujarati value is an unfilled "[GU: …]" placeholder. Pure function —
+ *  usable from both server and client components. */
+export function resolveText(text: Bi, lang: Lang): string {
+  if (lang === "gu" && text.gu && !text.gu.startsWith("[GU:")) {
+    return text.gu;
+  }
+  return text.en;
 }
 
 /* ========================================================================== */
@@ -68,12 +84,12 @@ export function waLink(message: string): string {
 /* ========================================================================== */
 
 export const NAV: { href: string; label: Bi }[] = [
-  { href: "/", label: { en: "Home", gu: "[GU: Home]" } },
-  { href: "/products", label: { en: "Products", gu: "[GU: Products]" } },
-  { href: "/about", label: { en: "About", gu: "[GU: About]" } },
-  { href: "/dealers", label: { en: "For Dealers", gu: "[GU: For Dealers]" } },
-  { href: "/learn", label: { en: "Learn", gu: "[GU: Learn]" } },
-  { href: "/contact", label: { en: "Contact", gu: "[GU: Contact]" } },
+  { href: "/", label: { en: "Home", gu: "હોમ" } },
+  { href: "/products", label: { en: "Products", gu: "પ્રોડક્ટ્સ" } },
+  { href: "/about", label: { en: "About", gu: "અમારા વિશે" } },
+  { href: "/dealers", label: { en: "For Dealers", gu: "ડીલરો માટે" } },
+  { href: "/learn", label: { en: "Learn", gu: "જાણકારી" } },
+  { href: "/contact", label: { en: "Contact", gu: "સંપર્ક" } },
 ];
 
 /* ========================================================================== */
@@ -81,22 +97,23 @@ export const NAV: { href: string; label: Bi }[] = [
 /* ========================================================================== */
 
 export const UI = {
-  askOnWhatsApp: { en: "Ask on WhatsApp", gu: "[GU: Ask on WhatsApp]" },
-  chatOnWhatsApp: { en: "Chat on WhatsApp", gu: "[GU: Chat on WhatsApp]" },
-  becomeADealer: { en: "Become a Dealer", gu: "[GU: Become a Dealer]" },
-  viewAllProducts: { en: "See all products", gu: "[GU: See all products]" },
-  learnMore: { en: "Learn more", gu: "[GU: Learn more]" },
-  readArticle: { en: "Read article", gu: "[GU: Read article]" },
-  dosage: { en: "Dosage", gu: "[GU: Dosage]" },
-  application: { en: "How to apply", gu: "[GU: How to apply]" },
-  crops: { en: "Works well with", gu: "[GU: Works well with]" },
-  benefits: { en: "Why farmers use it", gu: "[GU: Why farmers use it]" },
-  flagship: { en: "Flagship product", gu: "[GU: Flagship product]" },
-  backToProducts: { en: "All products", gu: "[GU: All products]" },
-  backToLearn: { en: "All articles", gu: "[GU: All articles]" },
+  askOnWhatsApp: { en: "Ask on WhatsApp", gu: "વોટ્સએપ પર પૂછો" },
+  chatOnWhatsApp: { en: "Chat on WhatsApp", gu: "વોટ્સએપ પર વાત કરો" },
+  becomeADealer: { en: "Become a Dealer", gu: "ડીલર બનો" },
+  viewAllProducts: { en: "See all products", gu: "બધી પ્રોડક્ટ્સ જુઓ" },
+  learnMore: { en: "Learn more", gu: "વધુ જાણો" },
+  readArticle: { en: "Read article", gu: "લેખ વાંચો" },
+  dosage: { en: "Dosage", gu: "ડોઝ" },
+  application: { en: "How to apply", gu: "કેવી રીતે વાપરવું" },
+  crops: { en: "Works well with", gu: "કયા પાક માટે" },
+  benefits: { en: "Why farmers use it", gu: "ખેડૂતો કેમ વાપરે છે" },
+  flagship: { en: "Flagship product", gu: "મુખ્ય પ્રોડક્ટ" },
+  backToProducts: { en: "All products", gu: "બધી પ્રોડક્ટ્સ" },
+  backToLearn: { en: "All articles", gu: "બધા લેખ" },
+  minRead: { en: "min read", gu: "મિનિટનું વાંચન" },
   footerTagline: {
     en: "Biofertilizers made in North Gujarat, for the soil that has been worked too hard.",
-    gu: "[GU: Biofertilizers made in North Gujarat, for the soil that has been worked too hard.]",
+    gu: "ઉત્તર ગુજરાતમાં બનેલાં જૈવિક ખાતર — જે જમીન પાસેથી બહુ કામ લેવાયું છે, તેના માટે.",
   },
 } as const;
 
@@ -107,68 +124,68 @@ export const UI = {
 export const HOME = {
   heroIntro1: {
     en: "Roots to riches. Built for the soil that has been worked too hard.",
-    gu: "[GU: Roots to riches. Built for the soil that has been worked too hard.]",
+    gu: "મૂળથી મજબૂત, પાક ભરપૂર. થાકેલી જમીન માટે બનાવેલાં જૈવિક ખાતર.",
   },
   heroIntro2: {
     en: "Mycorrhizal cultures, NPK consortia and biostimulants formulated to work with the microbial life already in your field — not against it.",
-    gu: "[GU: Mycorrhizal cultures, NPK consortia and biostimulants formulated to work with the microbial life already in your field — not against it.]",
+    gu: "માયકોરાઇઝા કલ્ચર, NPK બેક્ટેરિયા અને બાયોસ્ટિમ્યુલન્ટ — તમારા ખેતરમાં પહેલેથી રહેલા સૂક્ષ્મ જીવો સાથે મળીને કામ કરે છે, તેમની સામે નહીં.",
   },
   heroCtaMessage:
     "Hello IKSARVA, I would like to know more about your biofertilizer products.",
-  productsHeading: { en: "Our Products", gu: "[GU: Our Products]" },
+  productsHeading: { en: "Our Products", gu: "અમારી પ્રોડક્ટ્સ" },
   productsSub: {
     en: "Three ways to bring your soil back to life — starting with a 25-gram sachet.",
-    gu: "[GU: Three ways to bring your soil back to life — starting with a 25-gram sachet.]",
+    gu: "તમારી જમીનને ફરી જીવતી કરવાના ત્રણ રસ્તા — શરૂઆત ફક્ત 25 ગ્રામની કોથળીથી.",
   },
   regionHeading: {
     en: "Working where you farm",
-    gu: "[GU: Working where you farm]",
+    gu: "જ્યાં તમે ખેતી કરો છો, ત્યાં અમે કામ કરીએ છીએ",
   },
   regionSub: {
     en: "We are a North Gujarat company. Our products are tested in the same soil, water and weather your crops grow in.",
-    gu: "[GU: We are a North Gujarat company. Our products are tested in the same soil, water and weather your crops grow in.]",
+    gu: "અમે ઉત્તર ગુજરાતની કંપની છીએ. અમારી પ્રોડક્ટ્સ એ જ જમીન, પાણી અને હવામાનમાં ચકાસાયેલી છે જ્યાં તમારો પાક ઊગે છે.",
   },
   regions: [
     {
-      district: { en: "Banaskantha", gu: "[GU: Banaskantha]" },
-      focus: { en: "Potato farms", gu: "[GU: Potato farms]" },
+      district: { en: "Banaskantha", gu: "બનાસકાંઠા" },
+      focus: { en: "Potato farms", gu: "બટાકાની ખેતી" },
       note: {
         en: "Supporting potato growers with soil biology that improves tuber size and count.",
-        gu: "[GU: Supporting potato growers with soil biology that improves tuber size and count.]",
+        gu: "બટાકા ઉગાડતા ખેડૂતોને એવું જમીન-જીવન આપીએ છીએ જેનાથી બટાકાનું કદ અને સંખ્યા બંને વધે.",
       },
     },
     {
-      district: { en: "Sabarkantha", gu: "[GU: Sabarkantha]" },
-      focus: { en: "Pomegranate orchards", gu: "[GU: Pomegranate orchards]" },
+      district: { en: "Sabarkantha", gu: "સાબરકાંઠા" },
+      focus: { en: "Pomegranate orchards", gu: "દાડમની વાડીઓ" },
       note: {
         en: "Helping orchard owners get stronger flowering and better fruit set.",
-        gu: "[GU: Helping orchard owners get stronger flowering and better fruit set.]",
+        gu: "વાડીના માલિકોને વધુ જોરદાર ફૂલ અને સારું ફળ બેસવામાં મદદ કરીએ છીએ.",
       },
     },
     {
-      district: { en: "Mehsana", gu: "[GU: Mehsana]" },
-      focus: { en: "Dealer network", gu: "[GU: Dealer network]" },
+      district: { en: "Mehsana", gu: "મહેસાણા" },
+      focus: { en: "Dealer network", gu: "ડીલર નેટવર્ક" },
       note: {
         en: "Our growing dealer network keeps products close to your village.",
-        gu: "[GU: Our growing dealer network keeps products close to your village.]",
+        gu: "અમારું વધતું ડીલર નેટવર્ક પ્રોડક્ટ્સને તમારા ગામની નજીક રાખે છે.",
       },
     },
   ],
   missionHeading: {
     en: "Less chemical. More life.",
-    gu: "[GU: Less chemical. More life.]",
+    gu: "કેમિકલ ઓછું. જીવન વધારે.",
   },
   missionBody: {
     en: "Years of heavy chemical fertilizer and pesticide use have left many fields tired — hard soil, weak roots, rising input costs. Our biofertilizers help you cut back on chemicals step by step, by putting the soil's own microbes back to work. Better crop quality, better yield, and soil that stays fertile for your children.",
-    gu: "[GU: Years of heavy chemical fertilizer and pesticide use have left many fields tired — hard soil, weak roots, rising input costs. Our biofertilizers help you cut back on chemicals step by step, by putting the soil's own microbes back to work. Better crop quality, better yield, and soil that stays fertile for your children.]",
+    gu: "વર્ષોના ભારે રાસાયણિક ખાતર અને દવાના વપરાશે ઘણાં ખેતરોને થકવી નાખ્યાં છે — કઠણ જમીન, નબળાં મૂળ, વધતો ખર્ચ. અમારાં જૈવિક ખાતર જમીનના પોતાના સૂક્ષ્મ જીવોને ફરી કામે લગાડીને તમને ધીરે ધીરે કેમિકલ ઘટાડવામાં મદદ કરે છે. પાકની ગુણવત્તા સારી, ઉપજ સારી, અને જમીન એવી ફળદ્રુપ કે તમારાં સંતાનોને પણ કામ આવે.",
   },
   dealerStripHeading: {
     en: "Sell IKSARVA in your area",
-    gu: "[GU: Sell IKSARVA in your area]",
+    gu: "તમારા વિસ્તારમાં IKSARVA વેચો",
   },
   dealerStripBody: {
     en: "We are expanding our dealer network across North Gujarat. Good margins, farmer demand, and full support from our team.",
-    gu: "[GU: We are expanding our dealer network across North Gujarat. Good margins, farmer demand, and full support from our team.]",
+    gu: "અમે ઉત્તર ગુજરાતમાં અમારું ડીલર નેટવર્ક વધારી રહ્યા છીએ. સારું માર્જિન, ખેડૂતોની માંગ અને અમારી ટીમનો પૂરો સાથ.",
   },
 } as const;
 
@@ -202,53 +219,53 @@ export const PRODUCTS: Product[] = [
     art: "sachet",
     category: {
       en: "Flowering bio-stimulant",
-      gu: "[GU: Flowering bio-stimulant]",
+      gu: "ફૂલ માટેનું બાયોસ્ટિમ્યુલન્ટ",
     },
     tagline: {
       en: "More flowers. Stronger fruit set. One 25g sachet per acre.",
-      gu: "[GU: More flowers. Stronger fruit set. One 25g sachet per acre.]",
+      gu: "વધુ ફૂલ. મજબૂત ફળ. એક એકર માટે ફક્ત 25 ગ્રામની એક કોથળી.",
     },
     description: {
       en: "FloraMax is our flagship flowering bio-stimulant powder. It combines seaweed extract and humic acid to push your crop into strong, uniform flowering — so more flowers turn into fruit, and more fruit reaches harvest. It works with the plant's own growth rhythm, not against it.",
-      gu: "[GU: FloraMax is our flagship flowering bio-stimulant powder. It combines seaweed extract and humic acid to push your crop into strong, uniform flowering — so more flowers turn into fruit, and more fruit reaches harvest. It works with the plant's own growth rhythm, not against it.]",
+      gu: "FloraMax અમારી મુખ્ય પ્રોડક્ટ છે — ફૂલ માટેનો બાયોસ્ટિમ્યુલન્ટ પાવડર. તેમાં સીવીડ (દરિયાઈ વનસ્પતિ)નો અર્ક અને હ્યુમિક એસિડ ભેગાં છે, જે પાકને જોરદાર અને એકસરખાં ફૂલ લાવવામાં મદદ કરે છે — જેથી વધુ ફૂલમાંથી ફળ બેસે અને વધુ ફળ કાપણી સુધી પહોંચે. તે છોડની પોતાની વૃદ્ધિની રીત સાથે કામ કરે છે, તેની સામે નહીં.",
     },
     benefits: [
       {
         en: "More flowering and better fruit set — fewer dropped flowers",
-        gu: "[GU: More flowering and better fruit set — fewer dropped flowers]",
+        gu: "વધુ ફૂલ અને સારું ફળ બેસવું — ફૂલ ખરવાનું ઓછું",
       },
       {
         en: "Seaweed extract feeds the plant natural growth boosters",
-        gu: "[GU: Seaweed extract feeds the plant natural growth boosters]",
+        gu: "સીવીડનો અર્ક છોડને કુદરતી શક્તિ આપે છે",
       },
       {
         en: "Humic acid improves nutrient uptake through the roots",
-        gu: "[GU: Humic acid improves nutrient uptake through the roots]",
+        gu: "હ્યુમિક એસિડ મૂળ દ્વારા પોષણ લેવાની ક્ષમતા વધારે છે",
       },
       {
         en: "Tiny dose, low cost per acre — just 25 grams",
-        gu: "[GU: Tiny dose, low cost per acre — just 25 grams]",
+        gu: "નાનો ડોઝ, એકર દીઠ ઓછો ખર્ચ — ફક્ત 25 ગ્રામ",
       },
     ],
     dosage: {
       en: "25g per acre — one sachet. Dissolve in water and apply as a foliar spray at the start of flowering.",
-      gu: "[GU: 25g per acre — one sachet. Dissolve in water and apply as a foliar spray at the start of flowering.]",
+      gu: "એકર દીઠ 25 ગ્રામ — એક કોથળી. પાણીમાં ઓગાળીને ફૂલ આવવાની શરૂઆતે પાન પર છંટકાવ કરો.",
     },
     application: {
       en: "Mix one 25g sachet in 150–200 litres of water. Spray on leaves in the early morning or late evening, when flowering begins. Repeat once after 15–20 days if the flowering period is long.",
-      gu: "[GU: Mix one 25g sachet in 150–200 litres of water. Spray on leaves in the early morning or late evening, when flowering begins. Repeat once after 15–20 days if the flowering period is long.]",
+      gu: "25 ગ્રામની એક કોથળી 150–200 લિટર પાણીમાં ભેળવો. ફૂલ આવવાની શરૂઆત થાય ત્યારે વહેલી સવારે કે મોડી સાંજે પાન પર છંટકાવ કરો. ફૂલનો સમય લાંબો હોય તો 15–20 દિવસ પછી ફરી એક વાર છાંટો.",
     },
     crops: {
       en: "Pomegranate, cumin, castor, cotton, vegetables, and other flowering crops grown across North Gujarat.",
-      gu: "[GU: Pomegranate, cumin, castor, cotton, vegetables, and other flowering crops grown across North Gujarat.]",
+      gu: "દાડમ, જીરું, દિવેલા, કપાસ, શાકભાજી અને ઉત્તર ગુજરાતના બીજા ફૂલ આવતા પાક.",
     },
     format: {
       en: "25g powder sachet",
-      gu: "[GU: 25g powder sachet]",
+      gu: "25 ગ્રામ પાવડરની કોથળી",
     },
     compliance: {
       en: "FCO Schedule VI compliant — registered biostimulant category under the S.O. 876(E) gazette amendment.",
-      gu: "[GU: FCO Schedule VI compliant — registered biostimulant category under the S.O. 876(E) gazette amendment.]",
+      gu: "FCO શેડ્યૂલ VI માન્ય — S.O. 876(E) ગેઝેટ સુધારા હેઠળ બાયોસ્ટિમ્યુલન્ટ કેટેગરીમાં નોંધાયેલ.",
     },
     whatsappMessage:
       "Hello IKSARVA, I want to know more about FloraMax (25g flowering bio-stimulant).",
@@ -259,49 +276,49 @@ export const PRODUCTS: Product[] = [
     art: "roots",
     category: {
       en: "Mycorrhizal inoculant",
-      gu: "[GU: Mycorrhizal inoculant]",
+      gu: "માયકોરાઇઝા કલ્ચર",
     },
     tagline: {
       en: "Grow your roots an underground helper network.",
-      gu: "[GU: Grow your roots an underground helper network.]",
+      gu: "તમારાં મૂળ માટે જમીનની અંદરનું મદદગાર જાળું.",
     },
     description: {
       en: "Mycho is a mycorrhizal inoculant. Mycorrhizae are friendly fungi that attach to your crop's roots and spread thin threads far into the soil — like extra roots your plant didn't have to grow. They pull in water and nutrients from soil the roots alone could never reach.",
-      gu: "[GU: Mycho is a mycorrhizal inoculant. Mycorrhizae are friendly fungi that attach to your crop's roots and spread thin threads far into the soil — like extra roots your plant didn't have to grow. They pull in water and nutrients from soil the roots alone could never reach.]",
+      gu: "Mycho એ માયકોરાઇઝા કલ્ચર છે. માયકોરાઇઝા એ મિત્ર ફૂગ છે જે પાકનાં મૂળ સાથે જોડાઈને જમીનમાં દૂર સુધી ઝીણા તાંતણા ફેલાવે છે — જાણે છોડને ઉગાડ્યા વગર વધારાનાં મૂળ મળી ગયાં. તે એવી જમીનમાંથી પાણી અને પોષણ ખેંચી લાવે છે જ્યાં મૂળ એકલાં ક્યારેય પહોંચી ન શકે.",
     },
     benefits: [
       {
         en: "Extends root reach for water and nutrients, many times over",
-        gu: "[GU: Extends root reach for water and nutrients, many times over]",
+        gu: "પાણી અને પોષણ માટે મૂળની પહોંચ અનેકગણી વધારે છે",
       },
       {
         en: "Crops handle dry spells better — a real help in low-rain years",
-        gu: "[GU: Crops handle dry spells better — a real help in low-rain years]",
+        gu: "પાક સૂકા દિવસો સારી રીતે સહન કરે છે — ઓછા વરસાદના વર્ષમાં સાચી મદદ",
       },
       {
         en: "Better phosphorus uptake, so applied fertilizer is not wasted",
-        gu: "[GU: Better phosphorus uptake, so applied fertilizer is not wasted]",
+        gu: "ફોસ્ફરસ સારી રીતે મળે છે, એટલે નાખેલું ખાતર વેડફાતું નથી",
       },
       {
         en: "Builds living soil structure that lasts beyond one season",
-        gu: "[GU: Builds living soil structure that lasts beyond one season]",
+        gu: "જીવતી જમીનનું બંધારણ બનાવે છે જે એક સીઝનથી વધુ ટકે છે",
       },
     ],
     dosage: {
       en: "Apply at sowing or transplanting, close to the seed or root zone. Ask us for the right rate for your crop and soil.",
-      gu: "[GU: Apply at sowing or transplanting, close to the seed or root zone. Ask us for the right rate for your crop and soil.]",
+      gu: "વાવણી કે ધરું રોપતી વખતે, બીજ કે મૂળની નજીક આપો. તમારા પાક અને જમીન માટે યોગ્ય માત્રા અમને પૂછો.",
     },
     application: {
       en: "Best applied once, early — at sowing, transplanting, or first irrigation — so the fungi can attach to young roots. Avoid mixing with chemical fungicides in the same application.",
-      gu: "[GU: Best applied once, early — at sowing, transplanting, or first irrigation — so the fungi can attach to young roots. Avoid mixing with chemical fungicides in the same application.]",
+      gu: "એક જ વાર, વહેલા આપવું શ્રેષ્ઠ — વાવણી વખતે, ધરું રોપતી વખતે કે પહેલા પિયતે — જેથી ફૂગ કુમળાં મૂળ સાથે જોડાઈ શકે. એ જ વખતે રાસાયણિક ફૂગનાશક ભેળવવાનું ટાળો.",
     },
     crops: {
       en: "Potato, pomegranate, wheat, maize, vegetables — almost every crop except mustard-family crops, which do not partner with mycorrhizae.",
-      gu: "[GU: Potato, pomegranate, wheat, maize, vegetables — almost every crop except mustard-family crops, which do not partner with mycorrhizae.]",
+      gu: "બટાકા, દાડમ, ઘઉં, મકાઈ, શાકભાજી — લગભગ દરેક પાક; ફક્ત રાઈ-કોબી પરિવારના પાક માયકોરાઇઝા સાથે જોડાતા નથી.",
     },
     format: {
       en: "Powder / granular inoculant",
-      gu: "[GU: Powder / granular inoculant]",
+      gu: "પાવડર / દાણાદાર કલ્ચર",
     },
     whatsappMessage:
       "Hello IKSARVA, I want to know more about Mycho (mycorrhizal inoculant).",
@@ -312,49 +329,49 @@ export const PRODUCTS: Product[] = [
     art: "network",
     category: {
       en: "Bacterial consortium",
-      gu: "[GU: Bacterial consortium]",
+      gu: "બેક્ટેરિયાનું મિશ્રણ",
     },
     tagline: {
       en: "Three teams of bacteria. One job: feed your crop.",
-      gu: "[GU: Three teams of bacteria. One job: feed your crop.]",
+      gu: "બેક્ટેરિયાની ત્રણ ટીમ. કામ એક જ: તમારા પાકને પોષણ આપવું.",
     },
     description: {
       en: "NPK Consortia is a blend of three kinds of helpful bacteria: nitrogen-fixers that pull nitrogen from the air, phosphate-solubilizers that unlock phosphorus stuck in your soil, and potash-mobilizers that free up potassium. Together they supply the same N-P-K your crop needs — from the soil and air, not just from a bag.",
-      gu: "[GU: NPK Consortia is a blend of three kinds of helpful bacteria: nitrogen-fixers that pull nitrogen from the air, phosphate-solubilizers that unlock phosphorus stuck in your soil, and potash-mobilizers that free up potassium. Together they supply the same N-P-K your crop needs — from the soil and air, not just from a bag.]",
+      gu: "NPK Consortia એ ત્રણ પ્રકારના મદદગાર બેક્ટેરિયાનું મિશ્રણ છે: હવામાંથી નાઇટ્રોજન ખેંચનારા, જમીનમાં ફસાયેલો ફોસ્ફરસ છૂટો કરનારા, અને પોટાશ ઉપલબ્ધ કરાવનારા. ત્રણેય મળીને પાકને જોઈતું N-P-K પૂરું પાડે છે — જમીન અને હવામાંથી, ફક્ત થેલીમાંથી નહીં.",
     },
     benefits: [
       {
         en: "Cuts your chemical urea and DAP requirement step by step",
-        gu: "[GU: Cuts your chemical urea and DAP requirement step by step]",
+        gu: "યુરિયા અને DAPની જરૂરિયાત ધીરે ધીરે ઘટાડે છે",
       },
       {
         en: "Unlocks phosphorus and potash already locked in your soil",
-        gu: "[GU: Unlocks phosphorus and potash already locked in your soil]",
+        gu: "જમીનમાં પહેલેથી ફસાયેલાં ફોસ્ફરસ અને પોટાશ છૂટાં કરે છે",
       },
       {
         en: "Keeps feeding the crop through the season, not in one burst",
-        gu: "[GU: Keeps feeding the crop through the season, not in one burst]",
+        gu: "એક ઝાટકે નહીં, આખી સીઝન પાકને પોષણ આપતું રહે છે",
       },
       {
         en: "Safe for soil life, earthworms and the next crop",
-        gu: "[GU: Safe for soil life, earthworms and the next crop]",
+        gu: "જમીનના જીવો, અળસિયાં અને પછીના પાક માટે સલામત",
       },
     ],
     dosage: {
       en: "Apply through seed treatment, soil application with compost, or drip irrigation. Ask us for the right rate for your crop.",
-      gu: "[GU: Apply through seed treatment, soil application with compost, or drip irrigation. Ask us for the right rate for your crop.]",
+      gu: "બીજ માવજતથી, છાણિયા ખાતર સાથે જમીનમાં, કે ટપક સિંચાઈથી આપી શકાય. તમારા પાક માટે યોગ્ય માત્રા અમને પૂછો.",
     },
     application: {
       en: "Works best applied to moist soil, mixed with well-decomposed farmyard manure or through drip. Keep a gap of a few days between this and any chemical fungicide or bactericide.",
-      gu: "[GU: Works best applied to moist soil, mixed with well-decomposed farmyard manure or through drip. Keep a gap of a few days between this and any chemical fungicide or bactericide.]",
+      gu: "ભેજવાળી જમીનમાં, સારી રીતે કોહવાયેલા છાણિયા ખાતર સાથે ભેળવીને કે ટપકથી આપવાથી શ્રેષ્ઠ કામ કરે છે. આની અને કોઈપણ રાસાયણિક ફૂગનાશક કે જંતુનાશક વચ્ચે થોડા દિવસનું અંતર રાખો.",
     },
     crops: {
       en: "Potato, wheat, cumin, castor, cotton, vegetables — all major crops of Banaskantha, Sabarkantha and Mehsana.",
-      gu: "[GU: Potato, wheat, cumin, castor, cotton, vegetables — all major crops of Banaskantha, Sabarkantha and Mehsana.]",
+      gu: "બટાકા, ઘઉં, જીરું, દિવેલા, કપાસ, શાકભાજી — બનાસકાંઠા, સાબરકાંઠા અને મહેસાણાના બધા મુખ્ય પાક.",
     },
     format: {
       en: "Liquid / carrier-based formulation",
-      gu: "[GU: Liquid / carrier-based formulation]",
+      gu: "પ્રવાહી / કેરિયર આધારિત ફોર્મ્યુલેશન",
     },
     whatsappMessage:
       "Hello IKSARVA, I want to know more about NPK Consortia (bacterial consortium).",
@@ -370,36 +387,36 @@ export function getProduct(slug: string): Product | undefined {
 /* ========================================================================== */
 
 export const ABOUT = {
-  heading: { en: "About IKSARVA", gu: "[GU: About IKSARVA]" },
-  missionHeading: { en: "Our mission", gu: "[GU: Our mission]" },
+  heading: { en: "About IKSARVA", gu: "IKSARVA વિશે" },
+  missionHeading: { en: "Our mission", gu: "અમારું ધ્યેય" },
   missionBody1: {
     en: "IKSARVA Agritech was started with one belief: the soil of North Gujarat has been worked too hard, and it deserves better than more chemicals. Every season of heavy urea, DAP and pesticide use pushes yields up for a year — and pushes soil health down for a decade.",
-    gu: "[GU: IKSARVA Agritech was started with one belief: the soil of North Gujarat has been worked too hard, and it deserves better than more chemicals. Every season of heavy urea, DAP and pesticide use pushes yields up for a year — and pushes soil health down for a decade.]",
+    gu: "IKSARVA Agritech એક વિશ્વાસ સાથે શરૂ થઈ: ઉત્તર ગુજરાતની જમીન પાસેથી બહુ કામ લેવાયું છે, અને હવે તેને વધુ કેમિકલ નહીં, કંઈક સારું જોઈએ. ભારે યુરિયા, DAP અને દવાની દરેક સીઝન એક વર્ષ પૂરતી ઉપજ વધારે છે — અને દસ વર્ષ માટે જમીનની તંદુરસ્તી ઘટાડે છે.",
   },
   missionBody2: {
     en: "We make biofertilizers — mycorrhizal cultures, bacterial consortia and biostimulants — that work with the microbial life already in your field, not against it. Our goal is simple: help farmers reduce their dependence on toxic chemical inputs, improve crop quality and quantity, and hand the next generation soil that is alive.",
-    gu: "[GU: We make biofertilizers — mycorrhizal cultures, bacterial consortia and biostimulants — that work with the microbial life already in your field, not against it. Our goal is simple: help farmers reduce their dependence on toxic chemical inputs, improve crop quality and quantity, and hand the next generation soil that is alive.]",
+    gu: "અમે જૈવિક ખાતર બનાવીએ છીએ — માયકોરાઇઝા કલ્ચર, બેક્ટેરિયાનાં મિશ્રણ અને બાયોસ્ટિમ્યુલન્ટ — જે તમારા ખેતરમાં પહેલેથી રહેલા સૂક્ષ્મ જીવો સાથે કામ કરે છે, તેમની સામે નહીં. અમારું લક્ષ્ય સાદું છે: ખેડૂતોને ઝેરી રાસાયણિક ઇનપુટ પરનો આધાર ઘટાડવામાં મદદ કરવી, પાકની ગુણવત્તા અને ઉપજ વધારવી, અને આવતી પેઢીના હાથમાં જીવતી જમીન સોંપવી.",
   },
   philosophyHeading: {
     en: "Our soil-health philosophy",
-    gu: "[GU: Our soil-health philosophy]",
+    gu: "જમીનની તંદુરસ્તી વિશે અમારી સમજ",
   },
   philosophyBody: {
     en: "A handful of healthy soil holds more living organisms than there are people on Earth. Those microbes already know how to feed your crop — fix nitrogen, unlock phosphorus, extend roots, fight disease. Chemicals silence them; biology wakes them up. We don't ask farmers to change everything overnight. Start with one product, one field, one season — and watch the difference.",
-    gu: "[GU: A handful of healthy soil holds more living organisms than there are people on Earth. Those microbes already know how to feed your crop — fix nitrogen, unlock phosphorus, extend roots, fight disease. Chemicals silence them; biology wakes them up. We don't ask farmers to change everything overnight. Start with one product, one field, one season — and watch the difference.]",
+    gu: "તંદુરસ્ત જમીનની એક મુઠ્ઠીમાં પૃથ્વી પરના માણસો કરતાં વધુ જીવો હોય છે. એ સૂક્ષ્મ જીવોને તમારા પાકને પોષવાનું પહેલેથી આવડે છે — નાઇટ્રોજન બાંધવો, ફોસ્ફરસ છૂટો કરવો, મૂળ લંબાવવાં, રોગ સામે લડવું. કેમિકલ તેમને ચૂપ કરી દે છે; જીવવિજ્ઞાન તેમને જગાડે છે. અમે ખેડૂતોને રાતોરાત બધું બદલવાનું નથી કહેતા. એક પ્રોડક્ટ, એક ખેતર, એક સીઝનથી શરૂ કરો — અને ફરક જાતે જુઓ.",
   },
-  teamHeading: { en: "The team", gu: "[GU: The team]" },
+  teamHeading: { en: "The team", gu: "અમારી ટીમ" },
   founders: [
     {
       /** PLACEHOLDER — replace with the founder's name */
       name: "[Founder name]",
       role: {
         en: "Co-founder — Agri Science & Field Operations",
-        gu: "[GU: Co-founder — Agri Science & Field Operations]",
+        gu: "સહ-સ્થાપક — કૃષિ વિજ્ઞાન અને ફિલ્ડ કામગીરી",
       },
       bio: {
         en: "Leads product formulation, field trials and farmer training across Banaskantha, Sabarkantha and Mehsana.",
-        gu: "[GU: Leads product formulation, field trials and farmer training across Banaskantha, Sabarkantha and Mehsana.]",
+        gu: "પ્રોડક્ટ ફોર્મ્યુલેશન, ખેતર પરનાં પરીક્ષણો અને બનાસકાંઠા, સાબરકાંઠા તથા મહેસાણામાં ખેડૂત તાલીમનું નેતૃત્વ કરે છે.",
       },
     },
     {
@@ -407,21 +424,21 @@ export const ABOUT = {
       name: "[Founder name]",
       role: {
         en: "Co-founder — Technology & Marketing",
-        gu: "[GU: Co-founder — Technology & Marketing]",
+        gu: "સહ-સ્થાપક — ટેક્નોલોજી અને માર્કેટિંગ",
       },
       bio: {
         en: "Leads technology, dealer partnerships and getting IKSARVA products into farmers' hands.",
-        gu: "[GU: Leads technology, dealer partnerships and getting IKSARVA products into farmers' hands.]",
+        gu: "ટેક્નોલોજી, ડીલર ભાગીદારી અને IKSARVA પ્રોડક્ટ્સ ખેડૂતો સુધી પહોંચાડવાનું નેતૃત્વ કરે છે.",
       },
     },
   ],
   regionHeading: {
     en: "Rooted in North Gujarat",
-    gu: "[GU: Rooted in North Gujarat]",
+    gu: "ઉત્તર ગુજરાતમાં અમારાં મૂળ",
   },
   regionBody: {
     en: "We work where we live: the potato belts of Banaskantha, the pomegranate orchards of Sabarkantha, and a growing dealer network centred on Mehsana. When we recommend a dose, it is because we have seen it work in this soil, in this water, in this heat.",
-    gu: "[GU: We work where we live: the potato belts of Banaskantha, the pomegranate orchards of Sabarkantha, and a growing dealer network centred on Mehsana. When we recommend a dose, it is because we have seen it work in this soil, in this water, in this heat.]",
+    gu: "અમે જ્યાં રહીએ છીએ ત્યાં જ કામ કરીએ છીએ: બનાસકાંઠાનો બટાકાનો પટ્ટો, સાબરકાંઠાની દાડમની વાડીઓ અને મહેસાણા કેન્દ્રમાં રાખીને વધતું ડીલર નેટવર્ક. અમે કોઈ ડોઝ સૂચવીએ, તો એટલા માટે કે અમે તેને આ જ જમીન, આ જ પાણી અને આ જ ગરમીમાં કામ કરતો જોયો છે.",
   },
 } as const;
 
@@ -432,49 +449,49 @@ export const ABOUT = {
 export const DEALERS = {
   heading: {
     en: "Become an IKSARVA dealer",
-    gu: "[GU: Become an IKSARVA dealer]",
+    gu: "IKSARVAના ડીલર બનો",
   },
   intro: {
     en: "Farmers are asking for alternatives to costly chemicals. Stock the products they are asking for — with good margins and a team that supports you.",
-    gu: "[GU: Farmers are asking for alternatives to costly chemicals. Stock the products they are asking for — with good margins and a team that supports you.]",
+    gu: "ખેડૂતો મોંઘાં કેમિકલના વિકલ્પ માંગી રહ્યા છે. જે પ્રોડક્ટ્સની માંગ છે તે તમારી દુકાનમાં રાખો — સારા માર્જિન અને સાથ આપતી ટીમ સાથે.",
   },
   points: [
     {
-      title: { en: "Growing demand", gu: "[GU: Growing demand]" },
+      title: { en: "Growing demand", gu: "વધતી માંગ" },
       body: {
         en: "Input costs are rising and farmers are actively looking for biofertilizers that work. You sell what the market is already asking for.",
-        gu: "[GU: Input costs are rising and farmers are actively looking for biofertilizers that work. You sell what the market is already asking for.]",
+        gu: "ઇનપુટનો ખર્ચ વધી રહ્યો છે અને ખેડૂતો કામ કરે એવાં જૈવિક ખાતર શોધી રહ્યા છે. બજારમાં જેની માંગ પહેલેથી છે, એ જ તમે વેચો છો.",
       },
     },
     {
-      title: { en: "Healthy margins", gu: "[GU: Healthy margins]" },
+      title: { en: "Healthy margins", gu: "સારું માર્જિન" },
       body: {
         en: "Dealer-first pricing with clear, honest terms. Small pack sizes like the 25g FloraMax sachet mean easy stocking and fast turnover.",
-        gu: "[GU: Dealer-first pricing with clear, honest terms. Small pack sizes like the 25g FloraMax sachet mean easy stocking and fast turnover.]",
+        gu: "ડીલરને પ્રથમ રાખતા ભાવ, સ્પષ્ટ અને પ્રમાણિક શરતો. FloraMaxની 25 ગ્રામની કોથળી જેવાં નાનાં પેક એટલે સહેલો સ્ટોક અને ઝડપી વેચાણ.",
       },
     },
     {
-      title: { en: "Real support", gu: "[GU: Real support]" },
+      title: { en: "Real support", gu: "સાચો સાથ" },
       body: {
         en: "Product training, farmer demos in your area, and marketing material in Gujarati. We help you build trust with your customers.",
-        gu: "[GU: Product training, farmer demos in your area, and marketing material in Gujarati. We help you build trust with your customers.]",
+        gu: "પ્રોડક્ટની તાલીમ, તમારા વિસ્તારમાં ખેડૂત ડેમો અને ગુજરાતીમાં માર્કેટિંગ સામગ્રી. તમારા ગ્રાહકોનો વિશ્વાસ જીતવામાં અમે મદદ કરીએ છીએ.",
       },
     },
     {
-      title: { en: "Compliant products", gu: "[GU: Compliant products]" },
+      title: { en: "Compliant products", gu: "માન્યતાવાળી પ્રોડક્ટ્સ" },
       body: {
         en: "FloraMax is FCO Schedule VI compliant. Sell with confidence — the paperwork is in order.",
-        gu: "[GU: FloraMax is FCO Schedule VI compliant. Sell with confidence — the paperwork is in order.]",
+        gu: "FloraMax FCO શેડ્યૂલ VI માન્ય છે. વિશ્વાસથી વેચો — બધાં કાગળિયાં બરાબર છે.",
       },
     },
   ],
   ctaHeading: {
     en: "Interested? Talk to us today.",
-    gu: "[GU: Interested? Talk to us today.]",
+    gu: "રસ છે? આજે જ વાત કરો.",
   },
   ctaBody: {
     en: "Send us a message on WhatsApp with your name, shop name and taluka. We will get back within one working day.",
-    gu: "[GU: Send us a message on WhatsApp with your name, shop name and taluka. We will get back within one working day.]",
+    gu: "તમારું નામ, દુકાનનું નામ અને તાલુકો લખીને વોટ્સએપ પર મેસેજ કરો. એક કામકાજના દિવસમાં જવાબ આપીશું.",
   },
   whatsappMessage:
     "Hello IKSARVA, I am interested in becoming a dealer. My name / shop / taluka: ",
@@ -485,10 +502,13 @@ export const DEALERS = {
 /* ========================================================================== */
 
 export const LEARN = {
-  heading: { en: "Knowledge for your field", gu: "[GU: Knowledge for your field]" },
+  heading: {
+    en: "Knowledge for your field",
+    gu: "તમારા ખેતર માટે જાણકારી",
+  },
   intro: {
     en: "Plain-language guides on soil health, soil biology, and how to cut chemical inputs without cutting your yield.",
-    gu: "[GU: Plain-language guides on soil health, soil biology, and how to cut chemical inputs without cutting your yield.]",
+    gu: "જમીનની તંદુરસ્તી, જમીનના જીવો અને ઉપજ ઘટાડ્યા વિના કેમિકલ ઘટાડવા વિશે સાદી ભાષામાં માર્ગદર્શન.",
   },
 } as const;
 
@@ -497,21 +517,41 @@ export const LEARN = {
 /* ========================================================================== */
 
 export const CONTACT = {
-  heading: { en: "Talk to us", gu: "[GU: Talk to us]" },
+  heading: { en: "Talk to us", gu: "અમારી સાથે વાત કરો" },
   intro: {
     en: "WhatsApp is the fastest way to reach us — for product questions, dosages, dealer inquiries, or anything about your field.",
-    gu: "[GU: WhatsApp is the fastest way to reach us — for product questions, dosages, dealer inquiries, or anything about your field.]",
+    gu: "અમારા સુધી પહોંચવાનો સૌથી ઝડપી રસ્તો વોટ્સએપ છે — પ્રોડક્ટ, ડોઝ, ડીલરશિપ કે તમારા ખેતર વિશે કંઈ પણ પૂછો.",
   },
   whatsappMessage: "Hello IKSARVA, I have a question.",
-  phoneLabel: { en: "Phone", gu: "[GU: Phone]" },
-  emailLabel: { en: "Email", gu: "[GU: Email]" },
-  locationLabel: { en: "Location", gu: "[GU: Location]" },
+  phoneLabel: { en: "Phone", gu: "ફોન" },
+  emailLabel: { en: "Email", gu: "ઈમેલ" },
+  locationLabel: { en: "Location", gu: "સ્થળ" },
   locationValue: {
     en: "Mehsana, North Gujarat, India",
-    gu: "[GU: Mehsana, North Gujarat, India]",
+    gu: "મહેસાણા, ઉત્તર ગુજરાત, ભારત",
   },
   hoursNote: {
     en: "We reply on WhatsApp between 9 AM and 7 PM, Monday to Saturday.",
-    gu: "[GU: We reply on WhatsApp between 9 AM and 7 PM, Monday to Saturday.]",
+    gu: "સોમવારથી શનિવાર, સવારે 9 થી સાંજે 7 સુધી અમે વોટ્સએપ પર જવાબ આપીએ છીએ.",
   },
+} as const;
+
+/* ========================================================================== */
+/* 10. MISC SHARED STRINGS                                                    */
+/* ========================================================================== */
+
+export const MISC = {
+  productCta: {
+    en: "Have a question about dose, crop, or price? Message us — we reply in Gujarati, Hindi or English.",
+    gu: "ડોઝ, પાક કે ભાવ વિશે પ્રશ્ન છે? અમને મેસેજ કરો — અમે ગુજરાતી, હિન્દી કે અંગ્રેજીમાં જવાબ આપીએ છીએ.",
+  },
+  learnCta: {
+    en: "Questions about your field? Ask us directly.",
+    gu: "તમારા ખેતર વિશે પ્રશ્નો છે? સીધા અમને પૂછો.",
+  },
+  notFoundTitle: {
+    en: "This page doesn't exist.",
+    gu: "આ પાનું અસ્તિત્વમાં નથી.",
+  },
+  backToHome: { en: "Back to home", gu: "હોમ પર પાછા જાઓ" },
 } as const;

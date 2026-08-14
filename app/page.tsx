@@ -31,8 +31,9 @@ export default function HomePage() {
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 md:grid-cols-2 md:py-20">
           <div>
             <Reveal>
+              {/* The pill shows the tagline in the OTHER language, pairing with the headline */}
               <p className="mb-3 inline-block rounded-full bg-laurel-light px-4 py-1 text-sm font-medium text-olive-dark">
-                {SITE.taglineGu}
+                <T text={{ en: SITE.taglineGu, gu: SITE.tagline }} />
               </p>
               <h1 className="font-display text-4xl font-bold leading-tight text-russet sm:text-5xl">
                 <T text={HOME.heroIntro1} />

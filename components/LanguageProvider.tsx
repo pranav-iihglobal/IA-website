@@ -8,9 +8,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Bi } from "@/lib/content";
+import { resolveText, type Bi, type Lang } from "@/lib/content";
 
-export type Lang = "en" | "gu";
+export type { Lang };
 
 interface LanguageContextValue {
   lang: Lang;
@@ -20,29 +20,25 @@ interface LanguageContextValue {
   t: (text: Bi) => string;
 }
 
+// Gujarati is the site's default language.
+const DEFAULT_LANG: Lang = "gu";
+
 const LanguageContext = createContext<LanguageContextValue>({
-  lang: "en",
+  lang: DEFAULT_LANG,
   setLang: () => {},
-  t: (text) => text.en,
+  t: (text) => resolveText(text, DEFAULT_LANG),
 });
 
 const STORAGE_KEY = "iksarva-lang";
 
-export function resolveText(text: Bi, lang: Lang): string {
-  if (lang === "gu" && text.gu && !text.gu.startsWith("[GU:")) {
-    return text.gu;
-  }
-  return text.en;
-}
-
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("en");
+  const [lang, setLangState] = useState<Lang>(DEFAULT_LANG);
 
-  // Read the saved preference after mount so server-rendered HTML (English)
+  // Read the saved preference after mount so server-rendered HTML (Gujarati)
   // always matches the first client render — no hydration mismatch.
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (saved === "gu") setLangState("gu");
+    if (saved === "en") setLangState("en");
   }, []);
 
   useEffect(() => {

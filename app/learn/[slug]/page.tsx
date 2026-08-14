@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getArticle, getArticleSlugs } from "@/lib/articles";
-import { SITE, UI, HOME } from "@/lib/content";
+import { MISC, SITE, UI, HOME, resolveText } from "@/lib/content";
 import { T } from "@/components/T";
+import { BiHtml } from "@/components/BiHtml";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 export function generateStaticParams() {
@@ -19,13 +20,13 @@ export async function generateMetadata({
   const article = getArticle(slug);
   if (!article) return {};
   return {
-    title: article.title,
-    description: article.description,
+    title: resolveText(article.title, "gu"),
+    description: resolveText(article.description, "gu"),
     alternates: { canonical: `/learn/${article.slug}` },
     openGraph: {
       type: "article",
-      title: article.title,
-      description: article.description,
+      title: resolveText(article.title, "gu"),
+      description: resolveText(article.description, "gu"),
       url: `/learn/${article.slug}`,
     },
   };
@@ -43,9 +44,10 @@ export default async function ArticlePage({
   const articleJsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
-    headline: article.title,
-    description: article.description,
+    headline: article.title.en,
+    description: article.description.en,
     datePublished: article.date,
+    inLanguage: ["gu", "en"],
     author: { "@type": "Organization", name: SITE.name, url: SITE.url },
     publisher: { "@type": "Organization", name: SITE.name, url: SITE.url },
     mainEntityOfPage: `${SITE.url}/learn/${article.slug}`,
@@ -64,25 +66,21 @@ export default async function ArticlePage({
       </nav>
 
       <h1 className="font-display text-3xl font-bold leading-tight text-russet sm:text-4xl">
-        {article.title}
+        <T text={article.title} />
       </h1>
       <p className="mt-2 text-xs font-medium uppercase tracking-wide text-camel-dark">
-        {article.readingMinutes} min read
+        {article.readingMinutes} <T text={UI.minRead} />
       </p>
 
-      <div
+      <BiHtml
+        en={article.htmlEn}
+        gu={article.htmlGu}
         className="prose-article mt-8"
-        dangerouslySetInnerHTML={{ __html: article.html }}
       />
 
       <div className="mt-12 rounded-2xl bg-meringue p-6 text-center">
         <p className="font-display text-lg font-bold text-russet">
-          <T
-            text={{
-              en: "Questions about your field? Ask us directly.",
-              gu: "[GU: Questions about your field? Ask us directly.]",
-            }}
-          />
+          <T text={MISC.learnCta} />
         </p>
         <div className="mt-4">
           <WhatsAppButton

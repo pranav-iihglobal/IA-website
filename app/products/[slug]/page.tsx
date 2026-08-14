@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PRODUCTS, SITE, UI, getProduct } from "@/lib/content";
+import { MISC, PRODUCTS, SITE, UI, getProduct } from "@/lib/content";
 import { T } from "@/components/T";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { ProductArt } from "@/components/ProductCard";
@@ -158,12 +158,7 @@ export default async function ProductPage({
           {product.name} — <T text={product.category} />
         </p>
         <p className="mx-auto mt-2 max-w-md text-sm text-cornsilk/90">
-          <T
-            text={{
-              en: "Have a question about dose, crop, or price? Message us — we reply in Gujarati, Hindi or English.",
-              gu: "[GU: Have a question about dose, crop, or price? Message us — we reply in Gujarati, Hindi or English.]",
-            }}
-          />
+          <T text={MISC.productCta} />
         </p>
         <div className="mt-5">
           <WhatsAppButton
