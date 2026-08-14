@@ -30,7 +30,7 @@ export function ProductCard({ product }: { product: Product }) {
               alt={`${product.name} pack`}
               width={800}
               height={450}
-              className="h-52 w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+              className="h-64 w-full object-cover object-[center_22%] transition-transform duration-500 ease-out group-hover:scale-105"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />
           ) : (
