@@ -56,26 +56,55 @@ export function FloatingLeaves() {
 import { T } from "./T";
 import type { Bi } from "@/lib/content";
 
+/**
+ * Every crop we serve — each appears exactly once in the list. (The strip is
+ * rendered twice in the DOM purely to make the scroll loop seamless; with a
+ * list this long, a crop never shows twice on screen at the same time.)
+ */
 const CROPS: Bi[] = [
   { en: "Potato", gu: "બટાકા" },
   { en: "Pomegranate", gu: "દાડમ" },
   { en: "Cumin", gu: "જીરું" },
+  { en: "Ashwagandha", gu: "અશ્વગંધા" },
+  { en: "Watermelon", gu: "તરબૂચ" },
+  { en: "Musk Melon", gu: "ટેટી" },
   { en: "Castor", gu: "દિવેલા" },
   { en: "Cotton", gu: "કપાસ" },
   { en: "Wheat", gu: "ઘઉં" },
   { en: "Maize", gu: "મકાઈ" },
-  { en: "Vegetables", gu: "શાકભાજી" },
+  { en: "Fennel", gu: "વરિયાળી" },
+  { en: "Isabgul", gu: "ઈસબગુલ" },
+  { en: "Groundnut", gu: "મગફળી" },
+  { en: "Mustard", gu: "રાઈ" },
+  { en: "Bajra", gu: "બાજરી" },
+  { en: "Chickpea", gu: "ચણા" },
+  { en: "Sesame", gu: "તલ" },
+  { en: "Guar", gu: "ગુવાર" },
+  { en: "Moong", gu: "મગ" },
+  { en: "Pigeon Pea", gu: "તુવેર" },
+  { en: "Tomato", gu: "ટામેટાં" },
+  { en: "Chilli", gu: "મરચાં" },
+  { en: "Onion", gu: "ડુંગળી" },
+  { en: "Garlic", gu: "લસણ" },
+  { en: "Okra", gu: "ભીંડા" },
+  { en: "Brinjal", gu: "રીંગણ" },
+  { en: "Cucumber", gu: "કાકડી" },
+  { en: "Lemon", gu: "લીંબુ" },
+  { en: "Guava", gu: "જામફળ" },
+  { en: "Papaya", gu: "પપૈયું" },
+  { en: "Banana", gu: "કેળાં" },
+  { en: "Sugarcane", gu: "શેરડી" },
+  { en: "Lucerne", gu: "રજકો" },
 ];
 
 /** Infinite scrolling strip of the crops we serve. Pauses on hover. */
 export function CropsMarquee() {
-  const row = [...CROPS, ...CROPS];
   return (
     <div className="overflow-hidden bg-olive py-3" aria-hidden="true">
-      <div className="animate-marquee flex w-max items-center gap-8">
+      <div className="animate-marquee flex w-max items-center">
         {[0, 1].map((half) => (
           <div key={half} className="flex items-center gap-8 pr-8">
-            {row.map((crop, i) => (
+            {CROPS.map((crop, i) => (
               <span
                 key={`${half}-${i}`}
                 className="flex items-center gap-8 whitespace-nowrap text-sm font-semibold uppercase tracking-widest text-cornsilk"

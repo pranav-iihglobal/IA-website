@@ -256,8 +256,8 @@ export const PRODUCTS: Product[] = [
       gu: "25 ગ્રામની એક કોથળી 150–200 લિટર પાણીમાં ભેળવો. ફૂલ આવવાની શરૂઆત થાય ત્યારે વહેલી સવારે કે મોડી સાંજે પાન પર છંટકાવ કરો. ફૂલનો સમય લાંબો હોય તો 15–20 દિવસ પછી ફરી એક વાર છાંટો.",
     },
     crops: {
-      en: "Pomegranate, cumin, castor, cotton, vegetables, and other flowering crops grown across North Gujarat.",
-      gu: "દાડમ, જીરું, દિવેલા, કપાસ, શાકભાજી અને ઉત્તર ગુજરાતના બીજા ફૂલ આવતા પાક.",
+      en: "Pomegranate, cumin, watermelon, musk melon, ashwagandha, castor, cotton, vegetables, and other flowering crops grown across North Gujarat.",
+      gu: "દાડમ, જીરું, તરબૂચ, ટેટી, અશ્વગંધા, દિવેલા, કપાસ, શાકભાજી અને ઉત્તર ગુજરાતના બીજા ફૂલ આવતા પાક.",
     },
     format: {
       en: "25g powder sachet",
@@ -366,8 +366,8 @@ export const PRODUCTS: Product[] = [
       gu: "ભેજવાળી જમીનમાં, સારી રીતે કોહવાયેલા છાણિયા ખાતર સાથે ભેળવીને કે ટપકથી આપવાથી શ્રેષ્ઠ કામ કરે છે. આની અને કોઈપણ રાસાયણિક ફૂગનાશક કે જંતુનાશક વચ્ચે થોડા દિવસનું અંતર રાખો.",
     },
     crops: {
-      en: "Potato, wheat, cumin, castor, cotton, vegetables — all major crops of Banaskantha, Sabarkantha and Mehsana.",
-      gu: "બટાકા, ઘઉં, જીરું, દિવેલા, કપાસ, શાકભાજી — બનાસકાંઠા, સાબરકાંઠા અને મહેસાણાના બધા મુખ્ય પાક.",
+      en: "Potato, wheat, cumin, castor, cotton, ashwagandha, watermelon, musk melon, vegetables — all major crops of Banaskantha, Sabarkantha and Mehsana.",
+      gu: "બટાકા, ઘઉં, જીરું, દિવેલા, કપાસ, અશ્વગંધા, તરબૂચ, ટેટી, શાકભાજી — બનાસકાંઠા, સાબરકાંઠા અને મહેસાણાના બધા મુખ્ય પાક.",
     },
     format: {
       en: "Liquid / carrier-based formulation",
