@@ -56,45 +56,129 @@ export function FloatingLeaves() {
 import { T } from "./T";
 import type { Bi } from "@/lib/content";
 
+interface Crop extends Bi {
+  emoji: string;
+}
+
 /**
- * Every crop we serve — each appears exactly once in the list. (The strip is
- * rendered twice in the DOM purely to make the scroll loop seamless; with a
- * list this long, a crop never shows twice on screen at the same time.)
+ * Every crop our products serve — 100+ entries, each appearing exactly once.
+ * (The strip is rendered twice in the DOM purely to make the scroll loop
+ * seamless; with a list this long a crop never shows twice on screen.)
+ * Emojis are decorative approximations — not every crop has its own emoji.
  */
-const CROPS: Bi[] = [
-  { en: "Potato", gu: "બટાકા" },
-  { en: "Pomegranate", gu: "દાડમ" },
-  { en: "Cumin", gu: "જીરું" },
-  { en: "Ashwagandha", gu: "અશ્વગંધા" },
-  { en: "Watermelon", gu: "તરબૂચ" },
-  { en: "Musk Melon", gu: "ટેટી" },
-  { en: "Castor", gu: "દિવેલા" },
-  { en: "Cotton", gu: "કપાસ" },
-  { en: "Wheat", gu: "ઘઉં" },
-  { en: "Maize", gu: "મકાઈ" },
-  { en: "Fennel", gu: "વરિયાળી" },
-  { en: "Isabgul", gu: "ઈસબગુલ" },
-  { en: "Groundnut", gu: "મગફળી" },
-  { en: "Mustard", gu: "રાઈ" },
-  { en: "Bajra", gu: "બાજરી" },
-  { en: "Chickpea", gu: "ચણા" },
-  { en: "Sesame", gu: "તલ" },
-  { en: "Guar", gu: "ગુવાર" },
-  { en: "Moong", gu: "મગ" },
-  { en: "Pigeon Pea", gu: "તુવેર" },
-  { en: "Tomato", gu: "ટામેટાં" },
-  { en: "Chilli", gu: "મરચાં" },
-  { en: "Onion", gu: "ડુંગળી" },
-  { en: "Garlic", gu: "લસણ" },
-  { en: "Okra", gu: "ભીંડા" },
-  { en: "Brinjal", gu: "રીંગણ" },
-  { en: "Cucumber", gu: "કાકડી" },
-  { en: "Lemon", gu: "લીંબુ" },
-  { en: "Guava", gu: "જામફળ" },
-  { en: "Papaya", gu: "પપૈયું" },
-  { en: "Banana", gu: "કેળાં" },
-  { en: "Sugarcane", gu: "શેરડી" },
-  { en: "Lucerne", gu: "રજકો" },
+const CROPS: Crop[] = [
+  /* Cereals & millets */
+  { en: "Wheat", gu: "ઘઉં", emoji: "🌾" },
+  { en: "Rice", gu: "ડાંગર", emoji: "🍚" },
+  { en: "Maize", gu: "મકાઈ", emoji: "🌽" },
+  { en: "Bajra", gu: "બાજરી", emoji: "🌾" },
+  { en: "Jowar", gu: "જુવાર", emoji: "🌾" },
+  { en: "Ragi", gu: "નાગલી", emoji: "🌾" },
+  { en: "Barley", gu: "જવ", emoji: "🌾" },
+  { en: "Amaranth", gu: "રાજગરો", emoji: "🌾" },
+  /* Pulses */
+  { en: "Chickpea", gu: "ચણા", emoji: "🫘" },
+  { en: "Pigeon Pea", gu: "તુવેર", emoji: "🫘" },
+  { en: "Moong", gu: "મગ", emoji: "🫘" },
+  { en: "Urad", gu: "અડદ", emoji: "🫘" },
+  { en: "Moth Bean", gu: "મઠ", emoji: "🫘" },
+  { en: "Cowpea", gu: "ચોળા", emoji: "🫘" },
+  { en: "Lentil", gu: "મસૂર", emoji: "🫘" },
+  { en: "Kidney Bean", gu: "રાજમા", emoji: "🫘" },
+  { en: "Field Pea", gu: "વટાણા", emoji: "🫛" },
+  { en: "Val Bean", gu: "વાલ", emoji: "🫘" },
+  { en: "Guar", gu: "ગુવાર", emoji: "🫛" },
+  /* Oilseeds */
+  { en: "Groundnut", gu: "મગફળી", emoji: "🥜" },
+  { en: "Mustard", gu: "રાઈ", emoji: "🌼" },
+  { en: "Castor", gu: "દિવેલા", emoji: "🌿" },
+  { en: "Sesame", gu: "તલ", emoji: "🌱" },
+  { en: "Soybean", gu: "સોયાબીન", emoji: "🫘" },
+  { en: "Sunflower", gu: "સૂર્યમુખી", emoji: "🌻" },
+  { en: "Safflower", gu: "કસુંબી", emoji: "🌼" },
+  { en: "Linseed", gu: "અળસી", emoji: "🌱" },
+  /* Spices & herbs */
+  { en: "Cumin", gu: "જીરું", emoji: "🌿" },
+  { en: "Fennel", gu: "વરિયાળી", emoji: "🌿" },
+  { en: "Coriander", gu: "ધાણા", emoji: "🌿" },
+  { en: "Fenugreek", gu: "મેથી", emoji: "🌿" },
+  { en: "Ajwain", gu: "અજમો", emoji: "🌿" },
+  { en: "Dill", gu: "સૂવા", emoji: "🌿" },
+  { en: "Chilli", gu: "મરચાં", emoji: "🌶️" },
+  { en: "Turmeric", gu: "હળદર", emoji: "🫚" },
+  { en: "Ginger", gu: "આદુ", emoji: "🫚" },
+  { en: "Garlic", gu: "લસણ", emoji: "🧄" },
+  /* Medicinal & aromatic */
+  { en: "Isabgul", gu: "ઈસબગુલ", emoji: "🌿" },
+  { en: "Ashwagandha", gu: "અશ્વગંધા", emoji: "🌿" },
+  { en: "Aloe Vera", gu: "કુંવારપાઠું", emoji: "🌵" },
+  { en: "Tulsi", gu: "તુલસી", emoji: "🌿" },
+  { en: "Mint", gu: "ફુદીનો", emoji: "🌿" },
+  { en: "Lemongrass", gu: "લેમનગ્રાસ", emoji: "🌿" },
+  { en: "Stevia", gu: "સ્ટીવિયા", emoji: "🍃" },
+  /* Cash & fodder crops */
+  { en: "Cotton", gu: "કપાસ", emoji: "🌸" },
+  { en: "Sugarcane", gu: "શેરડી", emoji: "🎋" },
+  { en: "Tobacco", gu: "તમાકુ", emoji: "🍃" },
+  { en: "Lucerne", gu: "રજકો", emoji: "🌱" },
+  { en: "Napier Grass", gu: "નેપિયર ઘાસ", emoji: "🌾" },
+  /* Vegetables */
+  { en: "Potato", gu: "બટાકા", emoji: "🥔" },
+  { en: "Tomato", gu: "ટામેટાં", emoji: "🍅" },
+  { en: "Onion", gu: "ડુંગળી", emoji: "🧅" },
+  { en: "Brinjal", gu: "રીંગણ", emoji: "🍆" },
+  { en: "Okra", gu: "ભીંડા", emoji: "🫛" },
+  { en: "Cucumber", gu: "કાકડી", emoji: "🥒" },
+  { en: "Bottle Gourd", gu: "દૂધી", emoji: "🥒" },
+  { en: "Bitter Gourd", gu: "કારેલાં", emoji: "🥒" },
+  { en: "Ridge Gourd", gu: "તુરિયાં", emoji: "🥒" },
+  { en: "Sponge Gourd", gu: "ગલકાં", emoji: "🥒" },
+  { en: "Ivy Gourd", gu: "ટીંડોળા", emoji: "🥒" },
+  { en: "Pointed Gourd", gu: "પરવળ", emoji: "🥒" },
+  { en: "Pumpkin", gu: "કોળું", emoji: "🎃" },
+  { en: "Cabbage", gu: "કોબીજ", emoji: "🥬" },
+  { en: "Cauliflower", gu: "ફુલાવર", emoji: "🥦" },
+  { en: "Broccoli", gu: "બ્રોકલી", emoji: "🥦" },
+  { en: "Carrot", gu: "ગાજર", emoji: "🥕" },
+  { en: "Radish", gu: "મૂળા", emoji: "🥕" },
+  { en: "Beetroot", gu: "બીટ", emoji: "🍠" },
+  { en: "Sweet Potato", gu: "શક્કરિયાં", emoji: "🍠" },
+  { en: "Yam", gu: "સૂરણ", emoji: "🍠" },
+  { en: "Colocasia", gu: "અળવી", emoji: "🍃" },
+  { en: "Turnip", gu: "સલગમ", emoji: "🥕" },
+  { en: "Spinach", gu: "પાલક", emoji: "🥬" },
+  { en: "Lettuce", gu: "લેટ્યુસ", emoji: "🥬" },
+  { en: "Drumstick", gu: "સરગવો", emoji: "🌿" },
+  { en: "Curry Leaf", gu: "મીઠો લીમડો", emoji: "🍃" },
+  { en: "Capsicum", gu: "શિમલા મરચું", emoji: "🫑" },
+  /* Fruits */
+  { en: "Pomegranate", gu: "દાડમ", emoji: "🍎" },
+  { en: "Mango", gu: "કેરી", emoji: "🥭" },
+  { en: "Banana", gu: "કેળાં", emoji: "🍌" },
+  { en: "Lemon", gu: "લીંબુ", emoji: "🍋" },
+  { en: "Sweet Lime", gu: "મોસંબી", emoji: "🍊" },
+  { en: "Orange", gu: "સંતરા", emoji: "🍊" },
+  { en: "Watermelon", gu: "તરબૂચ", emoji: "🍉" },
+  { en: "Musk Melon", gu: "ટેટી", emoji: "🍈" },
+  { en: "Guava", gu: "જામફળ", emoji: "🍐" },
+  { en: "Papaya", gu: "પપૈયું", emoji: "🍈" },
+  { en: "Chikoo", gu: "ચીકુ", emoji: "🥝" },
+  { en: "Custard Apple", gu: "સીતાફળ", emoji: "🍏" },
+  { en: "Grapes", gu: "દ્રાક્ષ", emoji: "🍇" },
+  { en: "Coconut", gu: "નાળિયેર", emoji: "🥥" },
+  { en: "Date Palm", gu: "ખારેક", emoji: "🌴" },
+  { en: "Ber", gu: "બોર", emoji: "🍒" },
+  { en: "Fig", gu: "અંજીર", emoji: "🍐" },
+  { en: "Strawberry", gu: "સ્ટ્રોબેરી", emoji: "🍓" },
+  { en: "Dragon Fruit", gu: "ડ્રેગન ફ્રૂટ", emoji: "🐉" },
+  { en: "Amla", gu: "આમળાં", emoji: "🍏" },
+  { en: "Jamun", gu: "જાંબુ", emoji: "🫐" },
+  /* Flowers */
+  { en: "Rose", gu: "ગુલાબ", emoji: "🌹" },
+  { en: "Marigold", gu: "ગલગોટા", emoji: "🌼" },
+  { en: "Jasmine", gu: "મોગરો", emoji: "🌸" },
+  { en: "Chrysanthemum", gu: "સેવંતી", emoji: "💮" },
+  { en: "Tuberose", gu: "રજનીગંધા", emoji: "🌸" },
 ];
 
 /** Infinite scrolling strip of the crops we serve. Pauses on hover. */
@@ -107,12 +191,12 @@ export function CropsMarquee() {
             {CROPS.map((crop, i) => (
               <span
                 key={`${half}-${i}`}
-                className="flex items-center gap-8 whitespace-nowrap text-sm font-semibold uppercase tracking-widest text-cornsilk"
+                className="flex items-center gap-2 whitespace-nowrap text-sm font-semibold uppercase tracking-widest text-cornsilk"
               >
+                <span className="text-base" aria-hidden="true">
+                  {crop.emoji}
+                </span>
                 <T text={crop} />
-                <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 text-laurel-light" fill="currentColor">
-                  <path d="M6 0c1.5 2 2.5 4 2.5 6S7.5 10 6 12C4.5 10 3.5 8 3.5 6S4.5 2 6 0Z" />
-                </svg>
               </span>
             ))}
           </div>
