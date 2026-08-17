@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Anek_Gujarati, Noto_Sans_Gujarati } from "next/font/google";
+import { Anek_Gujarati } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { LanguageProvider } from "@/components/LanguageProvider";
@@ -26,12 +26,6 @@ const anekGujarati = Anek_Gujarati({
   subsets: ["gujarati", "latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-anek",
-  display: "swap",
-});
-const notoSansGujarati = Noto_Sans_Gujarati({
-  subsets: ["gujarati", "latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-noto-gujarati",
   display: "swap",
 });
 
@@ -95,7 +89,7 @@ export default function RootLayout({
   return (
     <html
       lang="gu"
-      className={`${laviossa.variable} ${anekGujarati.variable} ${notoSansGujarati.variable}`}
+      className={`${laviossa.variable} ${anekGujarati.variable}`}
     >
       <body className="flex min-h-screen flex-col">
         <script
