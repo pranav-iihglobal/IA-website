@@ -1,11 +1,24 @@
 import type { Metadata } from "next";
 import { Anek_Gujarati, Noto_Sans_Gujarati } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CursorFX } from "@/components/CursorFX";
 import { SITE } from "@/lib/content";
+
+// Brand display face for Latin/English text. Laviossa has no Gujarati
+// glyphs, so in headings the browser renders English in Laviossa and falls
+// back to Anek Gujarati for ગુજરાતી — per-script pairing with zero JS.
+// Declared across weights so bold headings use the true Medium shapes
+// instead of a synthesized faux-bold.
+const laviossa = localFont({
+  src: "./fonts/Laviossa-Medium.woff2",
+  weight: "400 800",
+  variable: "--font-laviossa",
+  display: "swap",
+});
 
 // Brand fonts — self-hosted at build time by next/font (served from our own
 // domain, no runtime requests to Google). Both cover Gujarati + Latin.
@@ -82,7 +95,7 @@ export default function RootLayout({
   return (
     <html
       lang="gu"
-      className={`${anekGujarati.variable} ${notoSansGujarati.variable}`}
+      className={`${laviossa.variable} ${anekGujarati.variable} ${notoSansGujarati.variable}`}
     >
       <body className="flex min-h-screen flex-col">
         <script

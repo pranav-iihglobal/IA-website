@@ -46,7 +46,8 @@
    * variables below are set on <html> in app/layout.tsx), with system
    * fallbacks so text renders instantly on slow connections.
    */
-  --font-display: var(--font-anek), Georgia, "Times New Roman", serif;
+  --font-display: var(--font-laviossa), var(--font-anek), Georgia,
+    "Times New Roman", serif;
   --font-body: var(--font-noto-gujarati), "Noto Sans Gujarati", system-ui,
     -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
