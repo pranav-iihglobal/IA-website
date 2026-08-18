@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ABOUT, SITE } from "@/lib/content";
 import { T } from "@/components/T";
-import { PersonPlaceholder, WaveDivider } from "@/components/Illustrations";
+import { FounderDoodle, WaveDivider } from "@/components/Illustrations";
 
 export const metadata: Metadata = {
   title: "About",
@@ -64,8 +64,8 @@ export default function AboutPage() {
               key={i}
               className="rounded-2xl border border-cornsilk-dark bg-cornsilk-light p-6 text-center"
             >
-              {/* PLACEHOLDER photo — replace with a real headshot via next/image */}
-              <PersonPlaceholder className="mx-auto h-28 w-28" />
+              {/* Doodle stand-in — swap for a real headshot via next/image when ready */}
+              <FounderDoodle variant={f.doodle} className="mx-auto h-28 w-28" />
               <h3 className="mt-4 font-display text-xl font-bold text-russet">
                 {f.name}
               </h3>

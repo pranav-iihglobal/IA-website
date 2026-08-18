@@ -6,16 +6,14 @@
  * The site is bilingual with GUJARATI AS THE DEFAULT language; visitors can
  * switch to English with the header toggle.
  *
- * Still to fill in before launch:
+ * Contact details, address and founder names are filled in. Still optional
+ * before launch:
  *
- *   1. SITE.whatsappNumber  — replace "919999999999" with the real number
- *                             (country code + number, digits only, no "+")
- *   2. SITE.phoneDisplay    — human-readable phone for the contact page
- *   3. SITE.address         — registered office / operating address
- *   4. SITE.email           — contact email
- *   5. ABOUT.founders[].name — real founder names
- *   6. Photos — components/Illustrations.tsx holds SVG placeholders; each is
- *      marked with a "PLACEHOLDER" comment for later replacement.
+ *   1. Founder photos — the About page currently shows illustrated doodles
+ *      (components/Illustrations.tsx → FounderDoodle); swap for real
+ *      headshots when available.
+ *   2. FloraMax pack shot — drop it at public/products/floramax.jpg and it
+ *      appears automatically.
  *
  * The Gujarati copy below was drafted in plain, conversational Gujarati
  * (avoiding Sanskritised words) — please review it with a native speaker
@@ -53,25 +51,25 @@ export const SITE = {
   tagline: "Roots to Riches",
   taglineGu: "મૂળથી મજબૂત, પાક ભરપૂર", // final approved copy
 
-  /** PLACEHOLDER — replace with the real WhatsApp business number.
-   *  Format: country code + number, digits only (e.g. "9198XXXXXXXX"). */
-  whatsappNumber: "919999999999",
+  /** WhatsApp business number: country code + number, digits only. */
+  whatsappNumber: "919227000824",
 
-  /** PLACEHOLDER — human-readable phone shown on the contact page. */
-  phoneDisplay: "+91 99999 99999",
+  /** Human-readable phone shown on the contact page and footer. */
+  phoneDisplay: "+91 92270 00824",
 
-  /** PLACEHOLDER — replace with the registered/operating address. */
+  /** Registered/operating address. */
   address: {
-    street: "[Street address / plot number]",
-    city: "Mehsana",
+    street: "01, Patel Rameshbhai Hemtabhai, Vill. Kheradi, At & Po. Kheradi, Ta. Bhiloda",
+    city: "Bhiloda",
+    district: "Sabarkantha",
     region: "North Gujarat",
     state: "Gujarat",
-    postalCode: "[PIN code]",
+    postalCode: "383355",
     country: "IN",
   },
 
-  /** PLACEHOLDER — contact email. */
-  email: "contact@iksarva.com",
+  /** Contact email. */
+  email: "info@iksarva.com",
 } as const;
 
 /** Build a WhatsApp deep link with a pre-filled message. */
@@ -408,8 +406,8 @@ export const ABOUT = {
   teamHeading: { en: "The team", gu: "અમારી ટીમ" },
   founders: [
     {
-      /** PLACEHOLDER — replace with the founder's name */
-      name: "[Founder name]",
+      name: "Arpit Chaudhary",
+      doodle: "agri" as const,
       role: {
         en: "Co-founder — Agri Science & Field Operations",
         gu: "સહ-સ્થાપક — કૃષિ વિજ્ઞાન અને ફિલ્ડ કામગીરી",
@@ -420,8 +418,8 @@ export const ABOUT = {
       },
     },
     {
-      /** PLACEHOLDER — replace with the founder's name */
-      name: "[Founder name]",
+      name: "Pranav Joshi",
+      doodle: "tech" as const,
       role: {
         en: "Co-founder — Technology & Marketing",
         gu: "સહ-સ્થાપક — ટેક્નોલોજી અને માર્કેટિંગ",
@@ -527,8 +525,8 @@ export const CONTACT = {
   emailLabel: { en: "Email", gu: "ઈમેલ" },
   locationLabel: { en: "Location", gu: "સ્થળ" },
   locationValue: {
-    en: "Mehsana, North Gujarat, India",
-    gu: "મહેસાણા, ઉત્તર ગુજરાત, ભારત",
+    en: "01, Patel Rameshbhai Hemtabhai, Vill. Kheradi, At & Po. Kheradi, Ta. Bhiloda, Sabarkantha, Gujarat — 383355",
+    gu: "01, પટેલ રમેશભાઈ હેમતાભાઈ, મુ.પો. ખેરડી, તા. ભીલોડા, જિ. સાબરકાંઠા, ગુજરાત — 383355",
   },
   hoursNote: {
     en: "We reply on WhatsApp between 9 AM and 7 PM, Monday to Saturday.",

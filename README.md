@@ -10,17 +10,9 @@ npm run dev      # http://localhost:3000
 npm run build    # production build (all routes prerendered)
 ```
 
-## ✏️ Fill in the placeholders (one file)
+## ✏️ Site content (one file)
 
-**Everything you need to replace lives in [`lib/content.ts`](lib/content.ts):**
-
-| What | Where in `lib/content.ts` |
-|---|---|
-| WhatsApp number | `SITE.whatsappNumber` — digits only with country code, e.g. `"9198XXXXXXXX"` |
-| Display phone | `SITE.phoneDisplay` |
-| Address / PIN | `SITE.address` |
-| Email | `SITE.email` |
-| Founder names | `ABOUT.founders[].name` |
+**All contact details, copy and config live in [`lib/content.ts`](lib/content.ts)** — WhatsApp number (`SITE.whatsappNumber`), phone, email, address, founder details, and every page's text in both languages. Contact details and founder names are filled in; edit them there if they change.
 
 **Language:** the site is bilingual with **Gujarati as the default**; visitors switch to English with the header toggle. All Gujarati copy lives in `lib/content.ts` (UI + pages) and `content/learn/gu/*.md` (article translations) — it was drafted conversationally, so **review it with a native speaker** and edit freely. If any string is ever set to a `[GU: …]` placeholder, the site automatically falls back to English for it.
 

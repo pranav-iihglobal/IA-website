@@ -159,19 +159,70 @@ export function NetworkArt({ className = "" }: { className?: string }) {
   );
 }
 
-/** Simple placeholder headshot for team members. PLACEHOLDER for real photos. */
-export function PersonPlaceholder({ className = "" }: { className?: string }) {
+/**
+ * Founder doodles — friendly illustrated stand-ins until real photos are
+ * ready. "agri": field-operations co-founder with turban and leaf sprig;
+ * "tech": technology co-founder with glasses.
+ */
+export function FounderDoodle({
+  variant,
+  className = "",
+}: {
+  variant: "agri" | "tech";
+  className?: string;
+}) {
+  if (variant === "agri") {
+    return (
+      <svg
+        viewBox="0 0 120 120"
+        className={className}
+        role="img"
+        aria-label="Doodle of the agri science co-founder"
+        fill="none"
+      >
+        <circle cx="60" cy="60" r="60" fill="#C2CBA3" />
+        {/* kurta */}
+        <path d="M22 108c6-24 20-34 38-34s32 10 38 34Z" fill="#5E7153" />
+        <path d="M52 76l8 11 8-11" stroke="#FCFCE4" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        {/* head */}
+        <circle cx="60" cy="49" r="19" fill="#C68B59" />
+        {/* smile + eyes */}
+        <circle cx="53" cy="50" r="2.2" fill="#3E2A20" />
+        <circle cx="67" cy="50" r="2.2" fill="#3E2A20" />
+        <path d="M53 58c2.5 3.5 4.5 4.5 7 4.5s4.5-1 7-4.5" stroke="#3E2A20" strokeWidth="2" strokeLinecap="round" />
+        {/* turban */}
+        <path d="M39 44c1-14 9-22 21-22s20 8 21 22c-6-8-12-11-21-11s-15 3-21 11Z" fill="#BA9470" />
+        <path d="M39 44c6-6 12-9 21-9s15 3 21 9c0 2-1 4-3 4H42c-2 0-3-2-3-4Z" fill="#9E7A5C" />
+        {/* leaf sprig on shoulder */}
+        <path d="M86 88c6-8 6-14 2-20 -2 7-6 11-8 13" stroke="#4A5A42" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M88 72c4-1 7-4 8-8-5 0-8 2-10 5Z" fill="#4A5A42" />
+      </svg>
+    );
+  }
   return (
     <svg
       viewBox="0 0 120 120"
       className={className}
       role="img"
-      aria-label="Photo placeholder"
+      aria-label="Doodle of the technology co-founder"
       fill="none"
     >
-      <rect width="120" height="120" rx="60" fill="#C2CBA3" />
-      <circle cx="60" cy="46" r="20" fill="#FCFCE4" />
-      <path d="M24 104c6-22 19-32 36-32s30 10 36 32" fill="#FCFCE4" />
+      <circle cx="60" cy="60" r="60" fill="#F9ECC9" />
+      {/* shirt */}
+      <path d="M22 108c6-24 20-34 38-34s32 10 38 34Z" fill="#8F4F33" />
+      <path d="M52 76l8 9 8-9" fill="#FAF2E0" />
+      {/* head */}
+      <circle cx="60" cy="49" r="19" fill="#D09A6A" />
+      {/* hair */}
+      <path d="M41 46c0-13 8-21 19-21s19 8 19 21c-4-7-10-11-19-11s-15 4-19 11Z" fill="#3E2A20" />
+      {/* glasses */}
+      <circle cx="52" cy="51" r="7" stroke="#4A5A42" strokeWidth="2.5" />
+      <circle cx="68" cy="51" r="7" stroke="#4A5A42" strokeWidth="2.5" />
+      <path d="M59 51h2" stroke="#4A5A42" strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx="52" cy="52" r="2" fill="#3E2A20" />
+      <circle cx="68" cy="52" r="2" fill="#3E2A20" />
+      {/* smile */}
+      <path d="M54 61c2 2.5 4 3.5 6 3.5s4-1 6-3.5" stroke="#3E2A20" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }

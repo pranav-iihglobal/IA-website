@@ -72,8 +72,10 @@ const organizationJsonLd = {
   telephone: SITE.phoneDisplay,
   address: {
     "@type": "PostalAddress",
+    streetAddress: SITE.address.street,
     addressLocality: SITE.address.city,
     addressRegion: SITE.address.state,
+    postalCode: SITE.address.postalCode,
     addressCountry: SITE.address.country,
   },
   areaServed: ["Banaskantha", "Sabarkantha", "Mehsana", "North Gujarat"],
