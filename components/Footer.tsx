@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { NAV, SITE, UI } from "@/lib/content";
 import { T } from "./T";
+import { SocialLinks } from "./SocialLinks";
 
 export function Footer() {
   return (
@@ -27,6 +28,9 @@ export function Footer() {
           <p className="mt-4 max-w-xs text-sm text-cornsilk/80">
             <T text={UI.footerTagline} />
           </p>
+          <div className="mt-5">
+            <SocialLinks tone="dark" />
+          </div>
         </div>
 
         <nav aria-label="Footer">

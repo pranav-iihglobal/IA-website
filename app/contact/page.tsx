@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CONTACT, SITE, UI } from "@/lib/content";
 import { T } from "@/components/T";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { SocialLinks } from "@/components/SocialLinks";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -66,6 +67,15 @@ export default function ContactPage() {
             <p className="mt-2 text-sm">
               <T text={CONTACT.locationValue} />
             </p>
+          </div>
+        </div>
+
+        <div className="mt-10">
+          <h2 className="font-display text-lg font-bold text-russet">
+            <T text={{ en: "Follow us", gu: "અમને ફોલો કરો" }} />
+          </h2>
+          <div className="mt-4">
+            <SocialLinks tone="light" />
           </div>
         </div>
       </section>

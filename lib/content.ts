@@ -77,6 +77,20 @@ export function waLink(message: string): string {
   return `https://wa.me/${SITE.whatsappNumber}?text=${encodeURIComponent(message)}`;
 }
 
+/**
+ * Social profiles — shown in the footer and on the contact page, and listed
+ * in the Organization schema for search engines.
+ *
+ * ⚠️ The URLs below assume an "iksarva" handle on each platform — UPDATE
+ * them to your real profile links. Delete (or comment out) any entry you
+ * don't have; only listed entries are rendered.
+ */
+export const SOCIALS: { name: string; icon: "instagram" | "facebook" | "whatsapp"; href: string }[] = [
+  { name: "Instagram", icon: "instagram", href: "https://instagram.com/iksarva" },
+  { name: "Facebook", icon: "facebook", href: "https://facebook.com/iksarva" },
+  { name: "WhatsApp", icon: "whatsapp", href: `https://wa.me/${SITE.whatsappNumber}` },
+];
+
 /* ========================================================================== */
 /* 2. NAVIGATION                                                              */
 /* ========================================================================== */

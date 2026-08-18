@@ -6,7 +6,7 @@ import { LanguageProvider } from "@/components/LanguageProvider";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CursorFX } from "@/components/CursorFX";
-import { SITE } from "@/lib/content";
+import { SITE, SOCIALS } from "@/lib/content";
 
 // Brand display face for Latin/English text. Laviossa has no Gujarati
 // glyphs, so in headings the browser renders English in Laviossa and falls
@@ -79,6 +79,7 @@ const organizationJsonLd = {
     addressCountry: SITE.address.country,
   },
   areaServed: ["Banaskantha", "Sabarkantha", "Mehsana", "North Gujarat"],
+  sameAs: SOCIALS.map((s) => s.href),
   description:
     "Biofertilizer company making mycorrhizal cultures, NPK consortia and biostimulants for farmers in North Gujarat, India.",
 };
