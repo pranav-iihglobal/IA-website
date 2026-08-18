@@ -100,6 +100,7 @@ export const NAV: { href: string; label: Bi }[] = [
   { href: "/products", label: { en: "Products", gu: "પ્રોડક્ટ્સ" } },
   { href: "/about", label: { en: "About", gu: "અમારા વિશે" } },
   { href: "/dealers", label: { en: "For Dealers", gu: "ડીલરો માટે" } },
+  { href: "/testimonials", label: { en: "Testimonials", gu: "અનુભવો" } },
   { href: "/learn", label: { en: "Learn", gu: "જાણકારી" } },
   { href: "/contact", label: { en: "Contact", gu: "સંપર્ક" } },
 ];
@@ -522,6 +523,96 @@ export const LEARN = {
     en: "Plain-language guides on soil health, soil biology, and how to cut chemical inputs without cutting your yield.",
     gu: "જમીનની તંદુરસ્તી, જમીનના જીવો અને ઉપજ ઘટાડ્યા વિના કેમિકલ ઘટાડવા વિશે સાદી ભાષામાં માર્ગદર્શન.",
   },
+} as const;
+
+/* ========================================================================== */
+/* 8b. TESTIMONIALS PAGE                                                      */
+/* ========================================================================== */
+
+export interface Testimonial {
+  /** Farmer's name as it should appear. */
+  name: string;
+  place: Bi;
+  crop: Bi;
+  /** Which product they used (shown as a chip). */
+  product: string;
+  quote: Bi;
+  /**
+   * URL of the PUBLIC Facebook post to embed (e.g.
+   * "https://www.facebook.com/iksarva/posts/pfbid..."). When set, the page
+   * shows Facebook's official post card instead of the plain quote card.
+   * Only public posts can be embedded.
+   */
+  fbPostUrl?: string;
+  /** Leave true on demo entries; remove when you paste a real story. */
+  sample?: boolean;
+}
+
+/**
+ * ⚠️ SAMPLE DATA — the entries below are demo placeholders and each card
+ * shows a visible "Sample" tag until you replace them. To show your real
+ * Facebook testimonials: copy a post's URL (Share → Copy link) into
+ * `fbPostUrl`, put the farmer's name/place/words in, and delete
+ * `sample: true`.
+ */
+export const TESTIMONIALS: Testimonial[] = [
+  {
+    name: "રમેશભાઈ પટેલ",
+    place: { en: "Deesa, Banaskantha", gu: "ડીસા, બનાસકાંઠા" },
+    crop: { en: "Potato", gu: "બટાકા" },
+    product: "NPK Consortia Bio-Fertilizer",
+    quote: {
+      en: "This season I used one bag of urea less per acre, and the potato size is better than last year. The soil feels softer too.",
+      gu: "આ સીઝનમાં એકર દીઠ યુરિયાની એક થેલી ઓછી વાપરી, અને બટાકાનું કદ ગયા વર્ષ કરતાં સારું છે. જમીન પણ પોચી લાગે છે.",
+    },
+    sample: true,
+  },
+  {
+    name: "ભરતભાઈ ચૌધરી",
+    place: { en: "Idar, Sabarkantha", gu: "ઈડર, સાબરકાંઠા" },
+    crop: { en: "Pomegranate", gu: "દાડમ" },
+    product: "FloraMax",
+    quote: {
+      en: "After the FloraMax spray the flowering was strong and even. Fruit set is clearly better this year.",
+      gu: "FloraMaxનો છંટકાવ કર્યા પછી ફૂલ જોરદાર અને એકસરખાં આવ્યાં. આ વર્ષે ફળ બેસવાનું સ્પષ્ટ સારું છે.",
+    },
+    sample: true,
+  },
+  {
+    name: "કનુભાઈ દેસાઈ",
+    place: { en: "Unjha, Mehsana", gu: "ઊંઝા, મહેસાણા" },
+    crop: { en: "Cumin", gu: "જીરું" },
+    product: "Mycorrhizal Bio-Fertilizer",
+    quote: {
+      en: "In the dry spell my neighbour's field wilted before mine. The roots are holding the moisture better.",
+      gu: "સૂકા દિવસોમાં પડોશીનું ખેતર મારા કરતાં પહેલાં કરમાયું. મૂળ ભેજ સારી રીતે પકડી રાખે છે.",
+    },
+    sample: true,
+  },
+];
+
+export const TESTIMONIALS_PAGE = {
+  heading: { en: "Farmers' experiences", gu: "ખેડૂતોના અનુભવ" },
+  intro: {
+    en: "Real results from real fields — in farmers' own words, straight from our Facebook page.",
+    gu: "સાચાં ખેતરોના સાચા પરિણામ — ખેડૂતોના પોતાના શબ્દોમાં, સીધા અમારા ફેસબુક પેજ પરથી.",
+  },
+  sampleTag: { en: "Sample — real story coming", gu: "નમૂનો — સાચી વાત ટૂંક સમયમાં" },
+  fbHeading: { en: "More on our Facebook page", gu: "અમારા ફેસબુક પેજ પર વધુ" },
+  fbNote: {
+    en: "Follow us on Facebook for field photos, demos and farmer stories.",
+    gu: "ખેતરના ફોટા, ડેમો અને ખેડૂતોની વાતો માટે અમને ફેસબુક પર ફોલો કરો.",
+  },
+  shareHeading: {
+    en: "Used our products? Tell us what changed.",
+    gu: "અમારી પ્રોડક્ટ વાપરી છે? શું ફરક પડ્યો તે અમને જણાવો.",
+  },
+  shareBody: {
+    en: "Send your experience and field photos on WhatsApp — with your permission we will share it here and on Facebook.",
+    gu: "તમારો અનુભવ અને ખેતરના ફોટા વોટ્સએપ પર મોકલો — તમારી રજા લઈને અમે તેને અહીં અને ફેસબુક પર મૂકીશું.",
+  },
+  shareWhatsappMessage:
+    "Hello IKSARVA, I used your product and want to share my experience.",
 } as const;
 
 /* ========================================================================== */
