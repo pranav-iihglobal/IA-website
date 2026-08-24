@@ -25,4 +25,12 @@ if (password.length < 10) {
 }
 
 const hash = bcrypt.hashSync(password, 12);
-console.log("\nADMIN_PASSWORD_HASH=" + JSON.stringify(hash) + "\n");
+
+// Next.js expands `$VAR` inside .env files, and bcrypt hashes are full of `$`.
+// So the .env.local form needs each `$` escaped; Vercel's dashboard does not
+// expand anything, so it takes the raw hash.
+console.log("\n1) For .env.local — note the escaped $ signs:\n");
+console.log(`ADMIN_PASSWORD_HASH="${hash.replace(/\$/g, "\\$")}"`);
+console.log("\n2) For the Vercel dashboard — paste this raw value:\n");
+console.log(hash);
+console.log("");

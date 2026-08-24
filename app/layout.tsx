@@ -3,10 +3,7 @@ import { Anek_Gujarati } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { LanguageProvider } from "@/components/LanguageProvider";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { CursorFX } from "@/components/CursorFX";
-import { SITE, SOCIALS } from "@/lib/content";
+import { SITE } from "@/lib/content";
 
 // Brand display face for Latin/English text. Laviossa has no Gujarati
 // glyphs, so in headings the browser renders English in Laviossa and falls
@@ -61,50 +58,20 @@ export const metadata: Metadata = {
   },
 };
 
-const organizationJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  name: SITE.name,
-  alternateName: "IKSARVA",
-  url: SITE.url,
-  slogan: SITE.tagline,
-  email: SITE.email,
-  telephone: SITE.phoneDisplay,
-  address: {
-    "@type": "PostalAddress",
-    streetAddress: SITE.address.street,
-    addressLocality: SITE.address.city,
-    addressRegion: SITE.address.state,
-    postalCode: SITE.address.postalCode,
-    addressCountry: SITE.address.country,
-  },
-  areaServed: ["Banaskantha", "Sabarkantha", "Mehsana", "North Gujarat"],
-  sameAs: SOCIALS.map((s) => s.href),
-  description:
-    "Biofertilizer company making mycorrhizal cultures, NPK consortia and biostimulants for farmers in North Gujarat, India.",
-};
-
+/**
+ * Root layout — document shell only (fonts, language context).
+ * Public chrome (header/footer/cursor) lives in app/(site)/layout.tsx so the
+ * admin panel at /admin can render its own shell instead.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="gu"
-      className={`${laviossa.variable} ${anekGujarati.variable}`}
-    >
+    <html lang="gu" className={`${laviossa.variable} ${anekGujarati.variable}`}>
       <body className="flex min-h-screen flex-col">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
-        />
-        <LanguageProvider>
-          <CursorFX />
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </LanguageProvider>
+        <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>
   );

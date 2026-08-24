@@ -1,0 +1,45 @@
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { CursorFX } from "@/components/CursorFX";
+import { SITE, SOCIALS } from "@/lib/content";
+
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: SITE.name,
+  alternateName: "IKSARVA",
+  url: SITE.url,
+  slogan: SITE.tagline,
+  email: SITE.email,
+  telephone: SITE.phoneDisplay,
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: SITE.address.street,
+    addressLocality: SITE.address.city,
+    addressRegion: SITE.address.state,
+    postalCode: SITE.address.postalCode,
+    addressCountry: SITE.address.country,
+  },
+  areaServed: ["Banaskantha", "Sabarkantha", "Mehsana", "North Gujarat"],
+  sameAs: SOCIALS.map((s) => s.href),
+  description:
+    "Biofertilizer company making mycorrhizal cultures, NPK consortia and biostimulants for farmers in North Gujarat, India.",
+};
+
+/** Public site chrome. Route group — does not affect URLs. */
+export default function SiteLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+      <CursorFX />
+      <Header />
+      <main className="flex-1">{children}</main>
+      <Footer />
+    </>
+  );
+}
