@@ -10,7 +10,14 @@ import mongoose from "mongoose";
  * The connection is stashed on `globalThis` so it survives both.
  */
 
-const MONGODB_URI = process.env.MONGODB_URI;
+/**
+ * Read lazily, never at module scope: standalone scripts (npm run seed)
+ * load .env.local AFTER their imports are evaluated, so capturing the value
+ * at import time would freeze it as undefined.
+ */
+function getMongoUri(): string | undefined {
+  return process.env.MONGODB_URI;
+}
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -31,14 +38,15 @@ global._mongooseCache = cached;
 export async function connectToDatabase(): Promise<typeof mongoose> {
   if (cached.conn) return cached.conn;
 
-  if (!MONGODB_URI) {
+  const uri = getMongoUri();
+  if (!uri) {
     throw new Error(
       "MONGODB_URI is not set. Add it to .env.local (see .env.example).",
     );
   }
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI, {
+    cached.promise = mongoose.connect(uri, {
       bufferCommands: false,
       // Keep the pool small — many short-lived lambdas share the M0 cluster.
       maxPoolSize: 5,
@@ -58,5 +66,5 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
 
 /** True when a database is configured — lets pages fall back gracefully. */
 export function isDatabaseConfigured(): boolean {
-  return Boolean(MONGODB_URI);
+  return Boolean(getMongoUri());
 }
