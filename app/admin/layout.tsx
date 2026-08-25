@@ -14,5 +14,7 @@ export const metadata: Metadata = {
 export default function AdminLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return <div className="flex min-h-screen flex-1 bg-cornsilk">{children}</div>;
+  // .admin-ui scopes the entire admin design system (globals.css) so nothing
+  // here can leak into the public site.
+  return <div className="admin-ui flex min-h-screen flex-1">{children}</div>;
 }

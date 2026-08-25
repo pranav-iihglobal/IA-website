@@ -341,3 +341,286 @@ a:hover > .logo-wiggle {
     scroll-behavior: auto;
   }
 }
+
+/* ==========================================================================
+   ADMIN PANEL
+   Scoped under .admin-ui so none of this can affect the public site.
+   Same brand palette — depth, motion and hierarchy do the work.
+   ========================================================================== */
+
+@layer components {
+
+.admin-ui {
+  /* Warm neutral workspace: lighter than the public pages so form surfaces
+     read as "paper on a desk" rather than marketing sections. */
+  --admin-bg: #f6f4e6;
+  --admin-surface: #fffff9;
+  --admin-line: color-mix(in srgb, var(--color-camel) 26%, transparent);
+  --admin-line-soft: color-mix(in srgb, var(--color-camel) 14%, transparent);
+  --admin-shadow-sm: 0 1px 2px rgba(95, 47, 20, 0.05),
+    0 1px 3px rgba(95, 47, 20, 0.06);
+  --admin-shadow-md: 0 4px 10px -2px rgba(95, 47, 20, 0.09),
+    0 10px 24px -6px rgba(95, 47, 20, 0.1);
+  --admin-shadow-lg: 0 12px 28px -8px rgba(95, 47, 20, 0.16),
+    0 24px 48px -16px rgba(95, 47, 20, 0.14);
+  --admin-ring: 0 0 0 3px color-mix(in srgb, var(--color-olive) 22%, transparent);
+  background: var(--admin-bg);
+}
+
+/* --- Surfaces ------------------------------------------------------------ */
+.admin-card {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-line-soft);
+  border-radius: 16px;
+  box-shadow: var(--admin-shadow-sm);
+  transition:
+    box-shadow 0.25s ease,
+    transform 0.25s ease,
+    border-color 0.25s ease;
+}
+.admin-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--admin-shadow-md);
+  border-color: color-mix(in srgb, var(--color-olive) 30%, transparent);
+}
+
+/* Sections get a subtle warm header strip so long forms stay scannable. */
+.admin-section-head {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-meringue) 60%, transparent),
+    transparent
+  );
+  border-bottom: 1px solid var(--admin-line-soft);
+}
+
+/* --- Inputs -------------------------------------------------------------- */
+.admin-input {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--admin-line);
+  background: #fff;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-russet-dark);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+.admin-input::placeholder {
+  color: color-mix(in srgb, var(--color-russet-dark) 38%, transparent);
+}
+.admin-input:hover:not(:focus):not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-olive) 45%, transparent);
+}
+.admin-input:focus {
+  outline: none;
+  border-color: var(--color-olive);
+  box-shadow: var(--admin-ring);
+}
+.admin-input:disabled {
+  background: var(--admin-bg);
+  cursor: not-allowed;
+}
+.admin-input[aria-invalid="true"] {
+  border-color: var(--color-alloy);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-alloy) 18%, transparent);
+}
+textarea.admin-input {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+/* Floating-ish label: the caption lifts and tints while the field is active */
+.admin-field:focus-within .admin-label {
+  color: var(--color-olive-dark);
+}
+.admin-label {
+  transition: color 0.18s ease;
+}
+
+/* --- Buttons ------------------------------------------------------------- */
+.admin-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+.admin-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+.admin-btn:not(:disabled):active {
+  transform: translateY(0) scale(0.98);
+}
+.admin-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--admin-ring);
+}
+.admin-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.admin-btn-primary {
+  background: linear-gradient(
+    180deg,
+    var(--color-alloy-light),
+    var(--color-alloy)
+  );
+  color: var(--color-cornsilk-light);
+  box-shadow: 0 1px 2px rgba(95, 47, 20, 0.18);
+}
+.admin-btn-primary:not(:disabled):hover {
+  background: linear-gradient(180deg, var(--color-alloy), var(--color-alloy-dark));
+  box-shadow: 0 6px 16px -4px rgba(166, 83, 30, 0.5);
+}
+
+/* --- Sidebar ------------------------------------------------------------- */
+.admin-nav-link {
+  position: relative;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    padding-left 0.18s ease;
+}
+.admin-nav-link::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--color-alloy-light);
+  transform: translateY(-50%);
+  transition:
+    height 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.admin-nav-link:hover {
+  padding-left: 1rem;
+}
+.admin-nav-link-active::before {
+  height: 60%;
+}
+
+/* --- Toasts -------------------------------------------------------------- */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.admin-toast {
+  animation: toast-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: var(--admin-shadow-lg);
+}
+
+/* --- Dialog -------------------------------------------------------------- */
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.admin-dialog {
+  animation: dialog-in 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: var(--admin-shadow-lg);
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.admin-backdrop {
+  animation: fade-in 0.2s ease;
+  backdrop-filter: blur(2px);
+}
+
+/* --- Skeleton loading ---------------------------------------------------- */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.admin-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-camel) 14%, transparent);
+  border-radius: 8px;
+}
+.admin-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.55),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+/* --- Table rows ---------------------------------------------------------- */
+.admin-row {
+  transition: background-color 0.16s ease;
+}
+.admin-row:hover {
+  background: color-mix(in srgb, var(--color-meringue) 45%, transparent);
+}
+
+/* Row actions stay quiet until the row is hovered or focused within. */
+.admin-row-actions {
+  opacity: 0.55;
+  transition: opacity 0.18s ease;
+}
+.admin-row:hover .admin-row-actions,
+.admin-row:focus-within .admin-row-actions {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-card,
+  .admin-btn,
+  .admin-input,
+  .admin-nav-link,
+  .admin-row,
+  .admin-row-actions {
+    transition: none;
+  }
+  .admin-toast,
+  .admin-dialog,
+  .admin-backdrop,
+  .admin-skeleton::after {
+    animation: none;
+  }
+  .admin-btn:not(:disabled):hover,
+  .admin-card-hover:hover {
+    transform: none;
+  }
+}
+}

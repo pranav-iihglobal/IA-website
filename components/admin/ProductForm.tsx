@@ -6,9 +6,13 @@ import type { Bi } from "@/lib/content";
 import { slugify } from "@/lib/schemas";
 import { ProductCard } from "@/components/ProductCard";
 import { ImageUploader, type AdminImage } from "./ImageUploader";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { useToast } from "./Toast";
 import {
   BiField,
-  Button,
+  ErrorBanner,
+  FieldGroup,
+  FormActions,
   RepeatableList,
   Section,
   SelectField,
@@ -98,11 +102,13 @@ export function ProductForm({
   productId?: string;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [values, setValues] = useState<ProductFormValues>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [slugTouched, setSlugTouched] = useState(Boolean(initial.slug));
 
   function update<K extends keyof ProductFormValues>(
@@ -173,17 +179,32 @@ export function ProductForm({
       if (!response.ok) {
         setFormError(data.error ?? "Could not save");
         if (data.fields) setErrors(data.fields);
+        toast(data.error ?? "Could not save — check the highlighted fields", "error");
         setSaving(false);
         return;
       }
 
       setDirty(false);
+      toast(
+        productId
+          ? `“${values.name.en}” saved`
+          : `“${values.name.en}” created as ${values.status === "published" ? "published" : "a draft"}`,
+      );
       router.push("/admin/products");
       router.refresh();
     } catch {
       setFormError("Network error — please try again");
+      toast("Network error — please try again", "error");
       setSaving(false);
     }
+  }
+
+  function leave() {
+    if (dirty) {
+      setConfirmLeave(true);
+      return;
+    }
+    router.push("/admin/products");
   }
 
   return (
@@ -196,15 +217,15 @@ export function ProductForm({
     >
       <div className="space-y-6">
         {formError && (
-          <p
-            role="alert"
-            className="rounded-lg border border-alloy/40 bg-alloy/10 px-4 py-3 text-sm font-medium text-russet"
-          >
-            {formError}
-          </p>
+          <div className="-mt-4">
+            <ErrorBanner message={formError} />
+          </div>
         )}
 
-        <Section title="Basics">
+        <Section
+          title="Basics"
+          description="Name, category and the one-line tagline shown on the card."
+        >
           <BiField
             label="Product name"
             value={values.name}
@@ -251,7 +272,10 @@ export function ProductForm({
           />
         </Section>
 
-        <Section title="Images">
+        <Section
+          title="Images"
+          description="The image marked Primary is the one shown on the product card."
+        >
           <ImageUploader
             images={values.images}
             onChange={(v) => update("images", v)}
@@ -279,10 +303,8 @@ export function ProductForm({
             errors={{ en: errors["description.en"] }}
             required
           />
-          <div>
-            <span className="text-sm font-semibold text-russet">Benefits</span>
-            <div className="mt-2">
-              <RepeatableList
+          <FieldGroup label="Benefits" hint="Shown as bullets on the product page">
+            <RepeatableList
                 items={values.benefits}
                 emptyLabel="No benefits yet."
                 addLabel="Add benefit"
@@ -303,11 +325,13 @@ export function ProductForm({
                   />
                 )}
               />
-            </div>
-          </div>
+          </FieldGroup>
         </Section>
 
-        <Section title="Dosage & crops">
+        <Section
+          title="Dosage & crops"
+          description="What a farmer needs to know before applying."
+        >
           <BiField
             label="Dosage summary"
             value={values.dosage.summary}
@@ -370,10 +394,8 @@ export function ProductForm({
             />
           </div>
 
-          <div>
-            <span className="text-sm font-semibold text-russet">Pack sizes</span>
-            <div className="mt-2">
-              <RepeatableList
+          <FieldGroup label="Pack sizes" hint="Dealer price stays internal">
+            <RepeatableList
                 items={values.packSizes}
                 emptyLabel="No pack sizes yet."
                 addLabel="Add pack size"
@@ -454,13 +476,10 @@ export function ProductForm({
                   </div>
                 )}
               />
-            </div>
-          </div>
+          </FieldGroup>
 
-          <div>
-            <span className="text-sm font-semibold text-russet">Composition</span>
-            <div className="mt-2">
-              <RepeatableList
+          <FieldGroup label="Composition" hint="As printed on the label">
+            <RepeatableList
                 items={values.composition}
                 emptyLabel="No ingredients listed yet."
                 addLabel="Add ingredient"
@@ -505,8 +524,7 @@ export function ProductForm({
                   </div>
                 )}
               />
-            </div>
-          </div>
+          </FieldGroup>
 
           <Toggle
             label="FCO compliant"
@@ -573,38 +591,42 @@ export function ProductForm({
           />
         </Section>
 
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={saving}>
-            {saving ? "Saving…" : productId ? "Save changes" : "Create product"}
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              if (
-                !dirty ||
-                window.confirm("Discard unsaved changes?")
-              ) {
-                router.push("/admin/products");
-              }
-            }}
-          >
-            Cancel
-          </Button>
-          {dirty && (
-            <span className="text-xs text-russet-dark/60">Unsaved changes</span>
-          )}
-        </div>
+        <FormActions
+          saving={saving}
+          dirty={dirty}
+          submitLabel={productId ? "Save changes" : "Create product"}
+          onCancel={leave}
+        />
+
+        <ConfirmDialog
+          open={confirmLeave}
+          title="Discard unsaved changes?"
+          message="Your edits to this product have not been saved. Leaving now loses them."
+          confirmLabel="Discard"
+          cancelLabel="Keep editing"
+          onConfirm={() => {
+            setConfirmLeave(false);
+            setDirty(false);
+            router.push("/admin/products");
+          }}
+          onCancel={() => setConfirmLeave(false)}
+        />
       </div>
 
       {/* Live preview — the real public ProductCard, not a lookalike. */}
       <aside className="lg:sticky lg:top-8 lg:self-start">
-        <p className="text-xs font-semibold uppercase tracking-widest text-olive">
-          Live preview
-        </p>
-        <p className="mt-1 text-xs text-russet-dark/60">
-          Exactly how this card appears on the site.
-        </p>
-        <div className="mt-3">
+        <div className="admin-card p-4">
+          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-olive">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-laurel opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-olive" />
+            </span>
+            Live preview
+          </p>
+          <p className="mt-1 text-xs text-russet-dark/60">
+            Exactly how this card appears on the site.
+          </p>
+          <div className="mt-3">
           <ProductCard
             linkToDetail={false}
             product={{
@@ -617,6 +639,7 @@ export function ProductForm({
               featured: values.featured,
             }}
           />
+          </div>
         </div>
       </aside>
     </form>

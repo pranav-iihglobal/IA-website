@@ -6,7 +6,17 @@ import { useEffect, useState } from "react";
 import type { Bi } from "@/lib/content";
 import { slugify } from "@/lib/schemas";
 import { ImageUploader, type AdminImage } from "./ImageUploader";
-import { BiField, Button, Section, SelectField, TextField } from "./ui";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { useToast } from "./Toast";
+import {
+  BiField,
+  ErrorBanner,
+  FieldError,
+  FormActions,
+  Section,
+  SelectField,
+  TextField,
+} from "./ui";
 
 // Tiptap is ~100 kB — loaded only when an admin opens the editor, so it
 // never touches the public bundle.
@@ -15,9 +25,7 @@ const RichTextEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="min-h-[320px] rounded-lg border border-camel-light bg-white p-4 text-sm text-russet-dark/50">
-        Loading editor…
-      </div>
+      <div className="admin-skeleton min-h-[320px] rounded-xl" />
     ),
   },
 );
@@ -62,8 +70,10 @@ export function PostForm({
   postId?: string;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [values, setValues] = useState(initial);
   const [lang, setLang] = useState<"en" | "gu">("en");
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -124,16 +134,29 @@ export function PostForm({
       if (!response.ok) {
         setFormError(data.error ?? "Could not save");
         if (data.fields) setErrors(data.fields);
+        toast(data.error ?? "Could not save — check the highlighted fields", "error");
         setSaving(false);
         return;
       }
       setDirty(false);
+      toast(
+        postId ? `“${values.title.en}” saved` : `“${values.title.en}” created`,
+      );
       router.push("/admin/blog");
       router.refresh();
     } catch {
       setFormError("Network error — please try again");
+      toast("Network error — please try again", "error");
       setSaving(false);
     }
+  }
+
+  function leave() {
+    if (dirty) {
+      setConfirmLeave(true);
+      return;
+    }
+    router.push("/admin/blog");
   }
 
   return (
@@ -145,15 +168,12 @@ export function PostForm({
       className="max-w-4xl space-y-6"
     >
       {formError && (
-        <p
-          role="alert"
-          className="rounded-lg border border-alloy/40 bg-alloy/10 px-4 py-3 text-sm font-medium text-russet"
-        >
-          {formError}
-        </p>
+        <div className="-mt-4">
+          <ErrorBanner message={formError} />
+        </div>
       )}
 
-      <Section title="Article">
+      <Section title="Article" description="Title, URL and the list preview.">
         <BiField
           label="Title"
           value={values.title}
@@ -205,22 +225,35 @@ export function PostForm({
         title="Content"
         description="Write each language separately. If Gujarati is left empty, English is shown to everyone."
       >
-        <div className="flex gap-2">
-          {(["en", "gu"] as const).map((code) => (
-            <button
-              key={code}
-              type="button"
-              onClick={() => setLang(code)}
-              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-                lang === code
-                  ? "bg-olive text-cornsilk-light"
-                  : "border border-camel-light text-russet-dark hover:bg-meringue"
-              }`}
-            >
-              {code === "en" ? "English" : "ગુજરાતી"}
-              {values.content[code] ? "" : " (empty)"}
-            </button>
-          ))}
+        <div
+          role="tablist"
+          aria-label="Content language"
+          className="inline-flex rounded-full bg-meringue-light p-1 ring-1 ring-camel-light/70"
+        >
+          {(["en", "gu"] as const).map((code) => {
+            const active = lang === code;
+            const filled = Boolean(values.content[code]?.trim());
+            return (
+              <button
+                key={code}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setLang(code)}
+                className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+                  active
+                    ? "bg-white text-russet shadow-sm"
+                    : "text-russet-dark/60 hover:text-russet"
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${filled ? "bg-olive" : "bg-camel"}`}
+                  title={filled ? "Has content" : "Empty"}
+                />
+                {code === "en" ? "English" : "ગુજરાતી"}
+              </button>
+            );
+          })}
         </div>
         <RichTextEditor
           key={lang}
@@ -229,11 +262,7 @@ export function PostForm({
             update("content", { ...values.content, [lang]: html })
           }
         />
-        {errors["content.en"] && (
-          <p className="text-xs font-medium text-alloy-dark">
-            {errors["content.en"]}
-          </p>
-        )}
+        <FieldError message={errors["content.en"]} />
       </Section>
 
       <Section title="Publishing">
@@ -306,22 +335,26 @@ export function PostForm({
         />
       </Section>
 
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={saving}>
-          {saving ? "Saving…" : postId ? "Save changes" : "Create post"}
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={() => {
-            if (!dirty || window.confirm("Discard unsaved changes?")) {
-              router.push("/admin/blog");
-            }
-          }}
-        >
-          Cancel
-        </Button>
-        {dirty && <span className="text-xs text-russet-dark/60">Unsaved changes</span>}
-      </div>
+      <FormActions
+        saving={saving}
+        dirty={dirty}
+        submitLabel={postId ? "Save changes" : "Create post"}
+        onCancel={leave}
+      />
+
+      <ConfirmDialog
+        open={confirmLeave}
+        title="Discard unsaved changes?"
+        message="This article has unsaved edits. Leaving now loses them."
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        onConfirm={() => {
+          setConfirmLeave(false);
+          setDirty(false);
+          router.push("/admin/blog");
+        }}
+        onCancel={() => setConfirmLeave(false)}
+      />
     </form>
   );
 }

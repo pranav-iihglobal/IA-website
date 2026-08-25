@@ -1,10 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { CLD, cldUrl } from "@/lib/images";
-import { Button, StatusPill } from "./ui";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { useToast } from "./Toast";
+import {
+  EmptyState,
+  ErrorBanner,
+  FilterTabs,
+  Pagination,
+  RowActions,
+  SearchInput,
+  StatusPill,
+  TableSkeleton,
+} from "./ui";
 
 interface Row {
   id: string;
@@ -19,6 +30,7 @@ interface Row {
 }
 
 export function PostList() {
+  const { toast } = useToast();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);
@@ -27,6 +39,8 @@ export function PostList() {
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<Row | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -53,149 +67,167 @@ export function PostList() {
     return () => clearTimeout(timer);
   }, [load, search]);
 
-  async function remove(row: Row) {
-    if (!window.confirm(`Delete “${row.title.en}”? This cannot be undone.`)) return;
-    const response = await fetch(`/api/admin/posts/${row.id}`, { method: "DELETE" });
+  async function confirmDelete() {
+    if (!pending) return;
+    setDeleting(true);
+    const response = await fetch(`/api/admin/posts/${pending.id}`, {
+      method: "DELETE",
+    });
+    setDeleting(false);
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      setError(data.error ?? "Could not delete");
+      toast(data.error ?? "Could not delete the post", "error");
+      setPending(null);
       return;
     }
+    toast(`“${pending.title.en}” deleted`);
+    setPending(null);
     load();
   }
+
+  const filtering = Boolean(search || status);
 
   return (
     <div>
       <div className="flex flex-wrap items-center gap-3">
-        <input
+        <SearchInput
           value={search}
-          onChange={(e) => {
+          onChange={(value) => {
             setPage(1);
-            setSearch(e.target.value);
+            setSearch(value);
           }}
           placeholder="Search title or slug…"
-          className="w-64 rounded-lg border border-camel-light bg-white px-3 py-2 text-sm outline-none focus:border-olive focus:ring-2 focus:ring-olive/25"
         />
-        <select
+        <FilterTabs
           value={status}
-          onChange={(e) => {
+          onChange={(value) => {
             setPage(1);
-            setStatus(e.target.value);
+            setStatus(value);
           }}
-          className="rounded-lg border border-camel-light bg-white px-3 py-2 text-sm outline-none focus:border-olive"
-        >
-          <option value="">All statuses</option>
-          <option value="published">Published</option>
-          <option value="scheduled">Scheduled</option>
-          <option value="draft">Draft</option>
-        </select>
-        <span className="text-sm text-russet-dark/60">
+          options={[
+            { value: "", label: "All" },
+            { value: "published", label: "Published" },
+            { value: "scheduled", label: "Scheduled" },
+            { value: "draft", label: "Draft" },
+          ]}
+        />
+        <span className="text-sm text-russet-dark/55">
           {loading ? "Loading…" : `${total} post${total === 1 ? "" : "s"}`}
         </span>
       </div>
 
-      {error && (
-        <p className="mt-4 rounded-lg border border-alloy/40 bg-alloy/10 px-4 py-3 text-sm text-russet">
-          {error}
-        </p>
-      )}
+      <ErrorBanner message={error} />
+
+      {loading && rows.length === 0 && <TableSkeleton />}
 
       {!loading && rows.length === 0 && !error && (
-        <p className="mt-8 text-sm text-russet-dark/70">
-          No posts yet. Run <code className="rounded bg-cornsilk px-1">npm run seed</code>{" "}
-          to import the three existing articles, or write a new one.
-        </p>
+        <EmptyState
+          title={filtering ? "No matching posts" : "No posts yet"}
+          message={
+            filtering ? (
+              "Try a different search term or clear the status filter."
+            ) : (
+              <>
+                Run <code className="rounded bg-meringue px-1.5 py-0.5">npm run seed</code>{" "}
+                to import the three existing articles, or write a new one.
+              </>
+            )
+          }
+          action={
+            !filtering && (
+              <Link href="/admin/blog/new" className="admin-btn admin-btn-primary">
+                Write a post
+              </Link>
+            )
+          }
+        />
       )}
 
       {rows.length > 0 && (
-        <div className="mt-6 overflow-hidden rounded-2xl border border-cornsilk-dark bg-cornsilk-light">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-cornsilk-dark bg-cornsilk text-xs uppercase tracking-wide text-olive">
-              <tr>
-                <th className="px-4 py-3">Post</th>
-                <th className="px-4 py-3">Category</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id} className="border-b border-cornsilk-dark last:border-0">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-16 shrink-0 overflow-hidden rounded-lg bg-meringue-light">
-                        {row.cover && (
-                          <Image
-                            src={cldUrl(row.cover, CLD.thumb) ?? row.cover}
-                            alt=""
-                            width={64}
-                            height={48}
-                            unoptimized
-                            className="h-12 w-16 object-cover"
-                          />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-russet">{row.title.en}</p>
-                        <p className="text-xs text-russet-dark/60">
-                          /{row.slug} · {row.readingTime} min
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-russet-dark/80">
-                    {row.category?.replace("-", " ")}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-russet-dark/70">
-                    {row.publishAt
-                      ? new Date(row.publishAt).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusPill status={row.status} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      <Link
-                        href={`/admin/blog/${row.id}`}
-                        className="rounded-full border border-olive px-4 py-1.5 text-xs font-semibold text-olive-dark hover:bg-laurel-light/40"
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => remove(row)}
-                        className="rounded-full border border-russet-light px-4 py-1.5 text-xs font-semibold text-russet hover:bg-russet-light/10"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
+        <div className="admin-card mt-6 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead className="admin-section-head text-[11px] uppercase tracking-[0.12em] text-olive">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Post</th>
+                  <th className="px-5 py-3 font-semibold">Category</th>
+                  <th className="px-5 py-3 font-semibold">Date</th>
+                  <th className="px-5 py-3 font-semibold">Status</th>
+                  <th className="px-5 py-3 text-right font-semibold">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="admin-row border-t border-camel-light/25"
+                  >
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-meringue-light ring-1 ring-camel-light/50">
+                          {row.cover ? (
+                            <Image
+                              src={cldUrl(row.cover, CLD.thumb) ?? row.cover}
+                              alt=""
+                              width={64}
+                              height={48}
+                              unoptimized
+                              className="h-12 w-16 object-cover"
+                            />
+                          ) : (
+                            <span className="text-base text-camel">📄</span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-russet">
+                            {row.title.en}
+                          </p>
+                          <p className="truncate text-xs text-russet-dark/55">
+                            /{row.slug} · {row.readingTime} min read
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5 capitalize text-russet-dark/75">
+                      {row.category?.replace("-", " ")}
+                    </td>
+                    <td className="px-5 py-3.5 text-xs text-russet-dark/65">
+                      {row.publishAt
+                        ? new Date(row.publishAt).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "—"}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <StatusPill status={row.status} />
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <RowActions
+                        editHref={`/admin/blog/${row.id}`}
+                        onDelete={() => setPending(row)}
+                        label={row.title.en}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {pages > 1 && (
-        <div className="mt-4 flex items-center gap-3">
-          <Button variant="secondary" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            ← Previous
-          </Button>
-          <span className="text-sm text-russet-dark/70">
-            Page {page} of {pages}
-          </span>
-          <Button variant="secondary" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
-            Next →
-          </Button>
-        </div>
-      )}
+      <Pagination page={page} pages={pages} onChange={setPage} />
+
+      <ConfirmDialog
+        open={Boolean(pending)}
+        busy={deleting}
+        title="Delete this post?"
+        message={`“${pending?.title.en ?? ""}” will be removed from the Learn section. This cannot be undone.`}
+        onConfirm={confirmDelete}
+        onCancel={() => setPending(null)}
+      />
     </div>
   );
 }

@@ -1,10 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { CLD, cldUrl } from "@/lib/images";
-import { Button, StatusPill } from "./ui";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { useToast } from "./Toast";
+import {
+  EmptyState,
+  ErrorBanner,
+  FilterTabs,
+  Pagination,
+  RowActions,
+  SearchInput,
+  StatusPill,
+  TableSkeleton,
+} from "./ui";
 
 interface Row {
   id: string;
@@ -18,7 +29,23 @@ interface Row {
   videoPlatform: string;
 }
 
+/** Small badge showing whether the story carries a video or is text only. */
+function MediaBadge({ platform }: { platform: string }) {
+  if (!platform) {
+    return <span className="text-xs text-russet-dark/55">Text only</span>;
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-meringue px-2.5 py-1 text-[11px] font-semibold capitalize text-russet-dark/80">
+      <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+        <path d="M3 6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6Zm11.5 2.3 2.6-1.7a.6.6 0 0 1 .9.5v5.8a.6.6 0 0 1-.9.5l-2.6-1.7V8.3Z" />
+      </svg>
+      {platform}
+    </span>
+  );
+}
+
 export function TestimonialList() {
+  const { toast } = useToast();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);
@@ -27,6 +54,8 @@ export function TestimonialList() {
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<Row | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -53,145 +82,160 @@ export function TestimonialList() {
     return () => clearTimeout(timer);
   }, [load, search]);
 
-  async function remove(row: Row) {
-    if (!window.confirm(`Delete the testimonial from “${row.farmerName.en}”?`)) return;
-    const response = await fetch(`/api/admin/testimonials/${row.id}`, {
+  async function confirmDelete() {
+    if (!pending) return;
+    setDeleting(true);
+    const response = await fetch(`/api/admin/testimonials/${pending.id}`, {
       method: "DELETE",
     });
+    setDeleting(false);
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      setError(data.error ?? "Could not delete");
+      toast(data.error ?? "Could not delete the testimonial", "error");
+      setPending(null);
       return;
     }
+    toast(`Testimonial from “${pending.farmerName.en}” deleted`);
+    setPending(null);
     load();
   }
+
+  const filtering = Boolean(search || status);
 
   return (
     <div>
       <div className="flex flex-wrap items-center gap-3">
-        <input
+        <SearchInput
           value={search}
-          onChange={(e) => {
+          onChange={(value) => {
             setPage(1);
-            setSearch(e.target.value);
+            setSearch(value);
           }}
           placeholder="Search farmer, village or district…"
-          className="w-72 rounded-lg border border-camel-light bg-white px-3 py-2 text-sm outline-none focus:border-olive focus:ring-2 focus:ring-olive/25"
         />
-        <select
+        <FilterTabs
           value={status}
-          onChange={(e) => {
+          onChange={(value) => {
             setPage(1);
-            setStatus(e.target.value);
+            setStatus(value);
           }}
-          className="rounded-lg border border-camel-light bg-white px-3 py-2 text-sm outline-none focus:border-olive"
-        >
-          <option value="">All statuses</option>
-          <option value="published">Published</option>
-          <option value="draft">Draft</option>
-        </select>
-        <span className="text-sm text-russet-dark/60">
+          options={[
+            { value: "", label: "All" },
+            { value: "published", label: "Published" },
+            { value: "draft", label: "Draft" },
+          ]}
+        />
+        <span className="text-sm text-russet-dark/55">
           {loading ? "Loading…" : `${total} testimonial${total === 1 ? "" : "s"}`}
         </span>
       </div>
 
-      {error && (
-        <p className="mt-4 rounded-lg border border-alloy/40 bg-alloy/10 px-4 py-3 text-sm text-russet">
-          {error}
-        </p>
-      )}
+      <ErrorBanner message={error} />
+
+      {loading && rows.length === 0 && <TableSkeleton />}
 
       {!loading && rows.length === 0 && !error && (
-        <p className="mt-8 text-sm text-russet-dark/70">
-          No testimonials yet. Add one, or run{" "}
-          <code className="rounded bg-cornsilk px-1">npm run seed</code> to import
-          the samples as drafts.
-        </p>
+        <EmptyState
+          title={filtering ? "No matching testimonials" : "No testimonials yet"}
+          message={
+            filtering
+              ? "Try a different search term or clear the status filter."
+              : "Add a farmer story — name, village, crop and what changed in their field."
+          }
+          action={
+            !filtering && (
+              <Link
+                href="/admin/testimonials/new"
+                className="admin-btn admin-btn-primary"
+              >
+                Add a testimonial
+              </Link>
+            )
+          }
+        />
       )}
 
       {rows.length > 0 && (
-        <div className="mt-6 overflow-hidden rounded-2xl border border-cornsilk-dark bg-cornsilk-light">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-cornsilk-dark bg-cornsilk text-xs uppercase tracking-wide text-olive">
-              <tr>
-                <th className="px-4 py-3">Farmer</th>
-                <th className="px-4 py-3">Crop</th>
-                <th className="px-4 py-3">Media</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id} className="border-b border-cornsilk-dark last:border-0">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-meringue-light">
-                        {row.photo && (
-                          <Image
-                            src={cldUrl(row.photo, CLD.thumb) ?? row.photo}
-                            alt=""
-                            width={40}
-                            height={40}
-                            unoptimized
-                            className="h-10 w-10 object-cover"
-                          />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-russet">
-                          {row.farmerName.en}
-                        </p>
-                        <p className="text-xs text-russet-dark/60">
-                          {[row.village, row.district].filter(Boolean).join(", ")}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-russet-dark/80">{row.crop?.en}</td>
-                  <td className="px-4 py-3 text-xs capitalize text-russet-dark/70">
-                    {row.videoPlatform || "text"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusPill status={row.status} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      <Link
-                        href={`/admin/testimonials/${row.id}`}
-                        className="rounded-full border border-olive px-4 py-1.5 text-xs font-semibold text-olive-dark hover:bg-laurel-light/40"
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => remove(row)}
-                        className="rounded-full border border-russet-light px-4 py-1.5 text-xs font-semibold text-russet hover:bg-russet-light/10"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
+        <div className="admin-card mt-6 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[680px] text-left text-sm">
+              <thead className="admin-section-head text-[11px] uppercase tracking-[0.12em] text-olive">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Farmer</th>
+                  <th className="px-5 py-3 font-semibold">Crop</th>
+                  <th className="px-5 py-3 font-semibold">Media</th>
+                  <th className="px-5 py-3 font-semibold">Status</th>
+                  <th className="px-5 py-3 text-right font-semibold">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="admin-row border-t border-camel-light/25"
+                  >
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-laurel-light/40 ring-1 ring-camel-light/50">
+                          {row.photo ? (
+                            <Image
+                              src={cldUrl(row.photo, CLD.thumb) ?? row.photo}
+                              alt=""
+                              width={40}
+                              height={40}
+                              unoptimized
+                              className="h-10 w-10 object-cover"
+                            />
+                          ) : (
+                            <span className="text-sm font-bold text-olive-dark">
+                              {row.farmerName.en.slice(0, 1)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-russet">
+                            {row.farmerName.en}
+                          </p>
+                          <p className="truncate text-xs text-russet-dark/55">
+                            {[row.village, row.district].filter(Boolean).join(", ")}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5 text-russet-dark/75">
+                      {row.crop?.en}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <MediaBadge platform={row.videoPlatform} />
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <StatusPill status={row.status} />
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <RowActions
+                        editHref={`/admin/testimonials/${row.id}`}
+                        onDelete={() => setPending(row)}
+                        label={row.farmerName.en}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {pages > 1 && (
-        <div className="mt-4 flex items-center gap-3">
-          <Button variant="secondary" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            ← Previous
-          </Button>
-          <span className="text-sm text-russet-dark/70">
-            Page {page} of {pages}
-          </span>
-          <Button variant="secondary" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
-            Next →
-          </Button>
-        </div>
-      )}
+      <Pagination page={page} pages={pages} onChange={setPage} />
+
+      <ConfirmDialog
+        open={Boolean(pending)}
+        busy={deleting}
+        title="Delete this testimonial?"
+        message={`The story from “${pending?.farmerName.en ?? ""}” will be removed from the website. This cannot be undone.`}
+        onConfirm={confirmDelete}
+        onCancel={() => setPending(null)}
+      />
     </div>
   );
 }

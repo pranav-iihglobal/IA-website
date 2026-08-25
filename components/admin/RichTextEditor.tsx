@@ -5,6 +5,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import ImageExt from "@tiptap/extension-image";
 import { useRef, useState } from "react";
+import { useToast } from "./Toast";
 
 /**
  * Tiptap rich-text editor for blog content.
@@ -18,26 +19,35 @@ function ToolbarButton({
   onClick,
   children,
   title,
+  disabled,
 }: {
   active?: boolean;
   onClick: () => void;
   children: React.ReactNode;
   title: string;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       title={title}
+      aria-label={title}
+      aria-pressed={active}
+      disabled={disabled}
       onClick={onClick}
-      className={`rounded px-2 py-1 text-sm font-semibold transition-colors ${
+      className={`flex h-8 min-w-8 items-center justify-center gap-1 rounded-lg px-2 text-sm font-semibold transition-colors disabled:opacity-35 ${
         active
           ? "bg-olive text-cornsilk-light"
-          : "text-russet-dark hover:bg-meringue"
+          : "text-russet-dark/80 hover:bg-meringue hover:text-russet"
       }`}
     >
       {children}
     </button>
   );
+}
+
+function Divider() {
+  return <span className="mx-1 h-5 w-px bg-camel-light/70" />;
 }
 
 export function RichTextEditor({
@@ -50,6 +60,7 @@ export function RichTextEditor({
   placeholder?: string;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
 
   const editor = useEditor({
@@ -63,18 +74,14 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "prose-article min-h-[280px] rounded-b-lg border border-t-0 border-camel-light bg-white px-4 py-3 outline-none",
+          "prose-article min-h-[300px] rounded-b-xl border border-t-0 border-camel-light/70 bg-white px-4 py-3 outline-none focus:border-olive",
       },
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
 
   if (!editor) {
-    return (
-      <div className="min-h-[320px] rounded-lg border border-camel-light bg-white p-4 text-sm text-russet-dark/50">
-        Loading editor…
-      </div>
-    );
+    return <div className="admin-skeleton min-h-[340px] rounded-xl" />;
   }
 
   async function insertImage(file: File) {
@@ -108,9 +115,11 @@ export function RichTextEditor({
         "/upload/f_auto,q_auto,w_1200/",
       );
       editor?.chain().focus().setImage({ src: url }).run();
+      toast("Image inserted");
     } catch (error) {
-      window.alert(
+      toast(
         error instanceof Error ? error.message : "Could not upload image",
+        "error",
       );
     } finally {
       setUploading(false);
@@ -141,7 +150,7 @@ export function RichTextEditor({
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{6,})/,
     );
     if (!match) {
-      window.alert("That does not look like a YouTube link.");
+      toast("That does not look like a YouTube link.", "error");
       return;
     }
     editor
@@ -151,26 +160,53 @@ export function RichTextEditor({
         `<iframe src="https://www.youtube-nocookie.com/embed/${match[1]}" loading="lazy" allowfullscreen width="560" height="315"></iframe>`,
       )
       .run();
+    toast("Video embedded");
   }
+
+  const words = editor.getText().trim().split(/\s+/).filter(Boolean).length;
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-1 rounded-t-lg border border-camel-light bg-cornsilk px-2 py-1.5">
+      {/* Sticky so the toolbar stays reachable in a long article. */}
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 rounded-t-xl border border-camel-light/70 bg-meringue-light/95 px-2 py-1.5 backdrop-blur">
+        <ToolbarButton
+          title="Undo"
+          disabled={!editor.can().undo()}
+          onClick={() => editor.chain().focus().undo().run()}
+        >
+          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M7 4 3 8l4 4M3 8h8a5 5 0 0 1 0 10H8" />
+          </svg>
+        </ToolbarButton>
+        <ToolbarButton
+          title="Redo"
+          disabled={!editor.can().redo()}
+          onClick={() => editor.chain().focus().redo().run()}
+        >
+          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <path d="m13 4 4 4-4 4m4-4H9a5 5 0 0 0 0 10h3" />
+          </svg>
+        </ToolbarButton>
+
+        <Divider />
+
         <ToolbarButton
           title="Bold"
           active={editor.isActive("bold")}
           onClick={() => editor.chain().focus().toggleBold().run()}
         >
-          B
+          <strong>B</strong>
         </ToolbarButton>
         <ToolbarButton
           title="Italic"
           active={editor.isActive("italic")}
           onClick={() => editor.chain().focus().toggleItalic().run()}
         >
-          <em>I</em>
+          <em className="font-serif">I</em>
         </ToolbarButton>
-        <span className="mx-1 h-5 w-px bg-camel-light" />
+
+        <Divider />
+
         <ToolbarButton
           title="Heading 2"
           active={editor.isActive("heading", { level: 2 })}
@@ -185,41 +221,72 @@ export function RichTextEditor({
         >
           H3
         </ToolbarButton>
-        <span className="mx-1 h-5 w-px bg-camel-light" />
+
+        <Divider />
+
         <ToolbarButton
           title="Bullet list"
           active={editor.isActive("bulletList")}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
         >
-          • List
+          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor">
+            <path d="M4 5.5a1.2 1.2 0 1 1-2.4 0 1.2 1.2 0 0 1 2.4 0Zm0 4.5a1.2 1.2 0 1 1-2.4 0A1.2 1.2 0 0 1 4 10Zm0 4.5a1.2 1.2 0 1 1-2.4 0 1.2 1.2 0 0 1 2.4 0ZM7 4.75h11v1.5H7v-1.5Zm0 4.5h11v1.5H7v-1.5Zm0 4.5h11v1.5H7v-1.5Z" />
+          </svg>
         </ToolbarButton>
         <ToolbarButton
           title="Numbered list"
           active={editor.isActive("orderedList")}
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
         >
-          1. List
+          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor">
+            <path d="M7 4.75h11v1.5H7v-1.5Zm0 4.5h11v1.5H7v-1.5Zm0 4.5h11v1.5H7v-1.5ZM2.2 3.5h1.4v3.2h-1V4.4h-.4V3.5Zm-.5 5.1h2.4v.8L2.9 11h1.3v.8H1.6V11l1.2-1.6H1.7v-.8Zm0 4.6h2.3v.7l-.8.6.9.7v.8H1.7v-.8h1.2l-.9-.6.9-.6H1.7v-.8Z" />
+          </svg>
         </ToolbarButton>
         <ToolbarButton
           title="Quote"
           active={editor.isActive("blockquote")}
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
         >
-          &ldquo;
+          <span className="text-base leading-none">&ldquo;</span>
         </ToolbarButton>
-        <span className="mx-1 h-5 w-px bg-camel-light" />
+
+        <Divider />
+
         <ToolbarButton title="Link" active={editor.isActive("link")} onClick={setLink}>
-          Link
+          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor">
+            <path d="M8.5 11.5a3.5 3.5 0 0 0 5 0l2-2a3.54 3.54 0 0 0-5-5l-1 1a1 1 0 1 0 1.4 1.4l1-1a1.54 1.54 0 0 1 2.2 2.2l-2 2a1.5 1.5 0 0 1-2.2 0 1 1 0 0 0-1.4 1.4Z" />
+            <path d="M11.5 8.5a3.5 3.5 0 0 0-5 0l-2 2a3.54 3.54 0 0 0 5 5l1-1a1 1 0 0 0-1.4-1.4l-1 1a1.54 1.54 0 0 1-2.2-2.2l2-2a1.5 1.5 0 0 1 2.2 0 1 1 0 0 0 1.4-1.4Z" />
+          </svg>
         </ToolbarButton>
         <ToolbarButton
           title="Insert image"
+          disabled={uploading}
           onClick={() => fileRef.current?.click()}
         >
-          {uploading ? "Uploading…" : "Image"}
+          {uploading ? (
+            <svg viewBox="0 0 20 20" className="h-4 w-4 animate-spin" fill="none">
+              <circle cx="10" cy="10" r="7" stroke="currentColor" strokeOpacity="0.3" strokeWidth="2.5" />
+              <path d="M17 10a7 7 0 0 0-7-7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M3 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5Zm2 0h10v6.2l-2.2-2.2a1 1 0 0 0-1.4 0L8 12.4 6.6 11a1 1 0 0 0-1.4 0L5 11.2V5Zm2.5 1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
         </ToolbarButton>
         <ToolbarButton title="Embed YouTube video" onClick={embedYouTube}>
-          Video
+          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor">
+            <path d="M3 6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6Zm11.5 2.3 2.6-1.7a.6.6 0 0 1 .9.5v5.8a.6.6 0 0 1-.9.5l-2.6-1.7V8.3Z" />
+          </svg>
         </ToolbarButton>
+
+        <span className="ml-auto pr-1 text-[11px] font-medium text-russet-dark/50">
+          {words} word{words === 1 ? "" : "s"}
+        </span>
       </div>
 
       <input

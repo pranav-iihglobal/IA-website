@@ -4,7 +4,8 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import type { Bi } from "@/lib/content";
 import { CLD, cldUrl } from "@/lib/images";
-import { Button } from "./ui";
+import { useToast } from "./Toast";
+import { ErrorBanner, Spinner } from "./ui";
 
 export interface AdminImage {
   url: string;
@@ -62,37 +63,61 @@ export function ImageUploader({
   max?: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
+  const [dropActive, setDropActive] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  const full = images.length >= max;
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     setError(null);
+
+    const room = Math.max(0, max - images.length);
+    const chosen = Array.from(files)
+      .filter((f) => f.type.startsWith("image/"))
+      .slice(0, room);
+
+    if (chosen.length === 0) {
+      const message = full
+        ? `You can upload at most ${max} images.`
+        : "Those files are not images.";
+      setError(message);
+      toast(message, "error");
+      return;
+    }
+
     setBusy(true);
+    setProgress({ done: 0, total: chosen.length });
+    const uploaded: AdminImage[] = [];
     try {
-      const room = Math.max(0, max - images.length);
-      const chosen = Array.from(files).slice(0, room);
-      const uploaded: AdminImage[] = [];
       for (const file of chosen) {
-        if (!file.type.startsWith("image/")) continue;
         const { url, publicId } = await uploadToCloudinary(file, folder);
-        uploaded.push({
-          url,
-          publicId,
-          alt: { en: "", gu: "" },
-          isPrimary: false,
-        });
+        uploaded.push({ url, publicId, alt: { en: "", gu: "" }, isPrimary: false });
+        setProgress({ done: uploaded.length, total: chosen.length });
       }
-      const next = [...images, ...uploaded];
-      if (!next.some((i) => i.isPrimary) && next.length > 0) {
-        next[0].isPrimary = true;
-      }
-      onChange(next);
+      toast(
+        `${uploaded.length} image${uploaded.length === 1 ? "" : "s"} uploaded`,
+      );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed");
+      const message = e instanceof Error ? e.message : "Upload failed";
+      setError(message);
+      toast(message, "error");
     } finally {
+      // Keep whatever made it through before the failure.
+      if (uploaded.length > 0) {
+        const next = [...images, ...uploaded];
+        if (!next.some((i) => i.isPrimary)) next[0].isPrimary = true;
+        onChange(next);
+      }
       setBusy(false);
+      setProgress(null);
+      setDropActive(false);
       if (inputRef.current) inputRef.current.value = "";
     }
   }
@@ -117,32 +142,84 @@ export function ImageUploader({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          hidden
-          onChange={(e) => handleFiles(e.target.files)}
-        />
-        <Button
-          variant="secondary"
-          onClick={() => inputRef.current?.click()}
-          disabled={busy || images.length >= max}
-        >
-          {busy ? "Uploading…" : "+ Upload image"}
-        </Button>
-        <span className="text-xs text-russet-dark/60">
-          {images.length}/{max} · drag to reorder · first image is used on cards
-        </span>
-      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={(e) => handleFiles(e.target.files)}
+      />
 
-      {error && (
-        <p className="mt-3 rounded-lg border border-alloy/40 bg-alloy/10 px-3 py-2 text-sm text-russet">
-          {error}
-        </p>
+      {/* Drop zone — click or drag files in. */}
+      <button
+        type="button"
+        onClick={() => !full && inputRef.current?.click()}
+        disabled={busy || full}
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (!full && !busy) setDropActive(true);
+        }}
+        onDragLeave={() => setDropActive(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          if (full || busy) return;
+          handleFiles(e.dataTransfer.files);
+        }}
+        className={`flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-colors ${
+          dropActive
+            ? "border-olive bg-laurel-light/30"
+            : "border-camel bg-meringue-light/45 hover:border-olive hover:bg-laurel-light/20"
+        } ${full || busy ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
+      >
+        {busy ? (
+          <>
+            <Spinner />
+            <span className="text-sm font-semibold text-russet">
+              Uploading {progress ? `${progress.done + 1} of ${progress.total}` : "…"}
+            </span>
+          </>
+        ) : (
+          <>
+            <svg
+              viewBox="0 0 24 24"
+              className="h-8 w-8 text-olive"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.6}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 16V4m0 0L8 8m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+            </svg>
+            <span className="text-sm font-semibold text-russet">
+              {full
+                ? max === 1
+                  ? "Image added — remove it to swap"
+                  : `Limit of ${max} images reached`
+                : max === 1
+                  ? "Click or drop an image here"
+                  : "Click or drop images here"}
+            </span>
+            <span className="text-xs text-russet-dark/55">
+              {images.length}/{max} uploaded · JPG or PNG
+              {max > 1 && " · drag thumbnails to reorder"}
+            </span>
+          </>
+        )}
+      </button>
+
+      {busy && progress && (
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-meringue-dark/40">
+          <div
+            className="h-full rounded-full bg-olive transition-[width] duration-300"
+            style={{ width: `${(progress.done / progress.total) * 100}%` }}
+          />
+        </div>
       )}
+
+      <ErrorBanner message={error} />
 
       {images.length > 0 && (
         <ul className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -156,11 +233,14 @@ export function ImageUploader({
                 if (dragIndex !== null) reorder(dragIndex, index);
                 setDragIndex(null);
               }}
-              className={`overflow-hidden rounded-xl border bg-cornsilk ${
-                img.isPrimary ? "border-alloy" : "border-cornsilk-dark"
-              }`}
+              onDragEnd={() => setDragIndex(null)}
+              className={`group overflow-hidden rounded-xl border bg-white transition-all ${
+                img.isPrimary
+                  ? "border-alloy ring-2 ring-alloy/20"
+                  : "border-camel-light/70"
+              } ${dragIndex === index ? "scale-[0.97] opacity-60" : ""}`}
             >
-              <div className="relative aspect-[4/3] bg-meringue-light">
+              <div className="relative aspect-4/3 bg-meringue-light">
                 <Image
                   src={cldUrl(img.url, CLD.thumb) ?? img.url}
                   alt={img.alt.en || "Product image"}
@@ -169,12 +249,22 @@ export function ImageUploader({
                   className="cursor-move object-cover"
                 />
                 {img.isPrimary && (
-                  <span className="absolute left-2 top-2 rounded-full bg-alloy px-2 py-0.5 text-[10px] font-semibold uppercase text-cornsilk-light">
+                  <span className="absolute left-2 top-2 rounded-full bg-alloy px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cornsilk-light shadow-sm">
                     Primary
                   </span>
                 )}
+                <button
+                  type="button"
+                  onClick={() => remove(index)}
+                  aria-label="Remove image"
+                  className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-russet-dark/60 opacity-0 shadow-sm transition-opacity hover:text-alloy-dark focus-visible:opacity-100 group-hover:opacity-100"
+                >
+                  <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+                    <path d="M6.3 5A1 1 0 0 0 5 6.3L8.6 10 5 13.7A1 1 0 1 0 6.3 15L10 11.4l3.7 3.6a1 1 0 0 0 1.3-1.3L11.4 10 15 6.3A1 1 0 0 0 13.7 5L10 8.6 6.3 5Z" />
+                  </svg>
+                </button>
               </div>
-              <div className="space-y-2 p-2">
+              <div className="space-y-2 p-2.5">
                 <input
                   value={img.alt.en}
                   placeholder="Alt text (English)"
@@ -187,7 +277,7 @@ export function ImageUploader({
                       ),
                     )
                   }
-                  className="w-full rounded border border-camel-light px-2 py-1 text-xs outline-none focus:border-olive"
+                  className="admin-input px-2 py-1 text-xs"
                 />
                 <input
                   value={img.alt.gu ?? ""}
@@ -201,28 +291,17 @@ export function ImageUploader({
                       ),
                     )
                   }
-                  className="w-full rounded border border-camel-light px-2 py-1 text-xs outline-none focus:border-olive"
+                  className="admin-input px-2 py-1 text-xs"
                 />
-                <div className="flex items-center justify-between">
-                  {!img.isPrimary ? (
-                    <button
-                      type="button"
-                      onClick={() => makePrimary(index)}
-                      className="text-xs font-semibold text-olive-dark hover:text-alloy-dark"
-                    >
-                      Make primary
-                    </button>
-                  ) : (
-                    <span />
-                  )}
+                {!img.isPrimary && (
                   <button
                     type="button"
-                    onClick={() => remove(index)}
-                    className="text-xs font-semibold text-russet-dark/60 hover:text-alloy-dark"
+                    onClick={() => makePrimary(index)}
+                    className="w-full rounded-lg py-1 text-xs font-semibold text-olive-dark transition-colors hover:bg-laurel-light/40"
                   >
-                    Remove
+                    Make primary
                   </button>
-                </div>
+                )}
               </div>
             </li>
           ))}

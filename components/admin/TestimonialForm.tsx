@@ -5,7 +5,17 @@ import { useEffect, useState } from "react";
 import type { Bi } from "@/lib/content";
 import { parseVideoEmbedId } from "@/lib/schemas";
 import { ImageUploader, type AdminImage } from "./ImageUploader";
-import { BiField, Button, Section, SelectField, TextField, Toggle } from "./ui";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { useToast } from "./Toast";
+import {
+  BiField,
+  ErrorBanner,
+  FormActions,
+  Section,
+  SelectField,
+  TextField,
+  Toggle,
+} from "./ui";
 
 const EMPTY_BI: Bi = { en: "", gu: "" };
 
@@ -51,11 +61,13 @@ export function TestimonialForm({
   products: { id: string; name: string }[];
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [values, setValues] = useState(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
 
   function update<K extends keyof TestimonialFormValues>(
     key: K,
@@ -121,16 +133,31 @@ export function TestimonialForm({
       if (!response.ok) {
         setFormError(data.error ?? "Could not save");
         if (data.fields) setErrors(data.fields);
+        toast(data.error ?? "Could not save — check the highlighted fields", "error");
         setSaving(false);
         return;
       }
       setDirty(false);
+      toast(
+        testimonialId
+          ? "Testimonial saved"
+          : `Testimonial from “${values.farmerName.en}” added`,
+      );
       router.push("/admin/testimonials");
       router.refresh();
     } catch {
       setFormError("Network error — please try again");
+      toast("Network error — please try again", "error");
       setSaving(false);
     }
+  }
+
+  function leave() {
+    if (dirty) {
+      setConfirmLeave(true);
+      return;
+    }
+    router.push("/admin/testimonials");
   }
 
   return (
@@ -142,15 +169,12 @@ export function TestimonialForm({
       className="max-w-3xl space-y-6"
     >
       {formError && (
-        <p
-          role="alert"
-          className="rounded-lg border border-alloy/40 bg-alloy/10 px-4 py-3 text-sm font-medium text-russet"
-        >
-          {formError}
-        </p>
+        <div className="-mt-4">
+          <ErrorBanner message={formError} />
+        </div>
       )}
 
-      <Section title="Farmer">
+      <Section title="Farmer" description="Who the story belongs to.">
         <BiField
           label="Farmer name"
           value={values.farmerName}
@@ -212,13 +236,14 @@ export function TestimonialForm({
             value={values.video.url}
             onChange={(v) => update("video", { ...values.video, url: v })}
             placeholder="https://…"
-            error={errors["video.url"]}
+            error={
+              errors["video.url"] ??
+              (values.video.url && !videoValid
+                ? "That does not look like a valid link for the chosen platform."
+                : undefined)
+            }
             hint={
-              values.video.url
-                ? videoValid
-                  ? "Link looks good."
-                  : "That does not look like a valid link for the chosen platform."
-                : undefined
+              values.video.url && videoValid ? "✓ Link looks good." : undefined
             }
           />
         </div>
@@ -285,22 +310,26 @@ export function TestimonialForm({
         />
       </Section>
 
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={saving}>
-          {saving ? "Saving…" : testimonialId ? "Save changes" : "Add testimonial"}
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={() => {
-            if (!dirty || window.confirm("Discard unsaved changes?")) {
-              router.push("/admin/testimonials");
-            }
-          }}
-        >
-          Cancel
-        </Button>
-        {dirty && <span className="text-xs text-russet-dark/60">Unsaved changes</span>}
-      </div>
+      <FormActions
+        saving={saving}
+        dirty={dirty}
+        submitLabel={testimonialId ? "Save changes" : "Add testimonial"}
+        onCancel={leave}
+      />
+
+      <ConfirmDialog
+        open={confirmLeave}
+        title="Discard unsaved changes?"
+        message="This testimonial has unsaved edits. Leaving now loses them."
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        onConfirm={() => {
+          setConfirmLeave(false);
+          setDirty(false);
+          router.push("/admin/testimonials");
+        }}
+        onCancel={() => setConfirmLeave(false)}
+      />
     </form>
   );
 }
