@@ -72,9 +72,21 @@ export function Footer() {
         </div>
       </div>
       <div className="border-t border-russet/60">
-        <p className="mx-auto max-w-6xl px-4 py-4 text-xs text-cornsilk/60">
-          © {new Date().getFullYear()} {SITE.name}. All rights reserved.
-        </p>
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-4">
+          <p className="text-xs text-cornsilk/60">
+            © {new Date().getFullYear()} {SITE.name}. All rights reserved.
+          </p>
+          {/* Staff entry point to the admin panel. Deliberately quiet: it is
+              not navigation for visitors, and /admin is disallowed in
+              robots.txt, so it is marked nofollow too. */}
+          <Link
+            href="/admin"
+            rel="nofollow"
+            className="text-xs text-cornsilk/40 transition-colors hover:text-cornsilk/80"
+          >
+            <T text={UI.backoffice} />
+          </Link>
+        </div>
       </div>
     </footer>
   );

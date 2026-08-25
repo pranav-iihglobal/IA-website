@@ -124,6 +124,8 @@ export const UI = {
   backToProducts: { en: "All products", gu: "બધી પ્રોડક્ટ્સ" },
   backToLearn: { en: "All articles", gu: "બધા લેખ" },
   minRead: { en: "min read", gu: "મિનિટનું વાંચન" },
+  /** Quiet staff link in the footer bar to the admin panel. */
+  backoffice: { en: "Backoffice", gu: "બેકઓફિસ" },
   footerTagline: {
     en: "Biofertilizers made in North Gujarat, for the soil that has been worked too hard.",
     gu: "ઉત્તર ગુજરાતમાં બનેલાં જૈવિક ખાતર — જે જમીન પાસેથી બહુ કામ લેવાયું છે, તેના માટે.",
