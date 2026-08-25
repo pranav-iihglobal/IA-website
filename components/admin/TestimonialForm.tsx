@@ -1,0 +1,306 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import type { Bi } from "@/lib/content";
+import { parseVideoEmbedId } from "@/lib/schemas";
+import { ImageUploader, type AdminImage } from "./ImageUploader";
+import { BiField, Button, Section, SelectField, TextField, Toggle } from "./ui";
+
+const EMPTY_BI: Bi = { en: "", gu: "" };
+
+export interface TestimonialFormValues {
+  farmerName: Bi;
+  village: string;
+  taluka: string;
+  district: string;
+  crop: Bi;
+  quote: Bi;
+  photo: { url: string; publicId: string };
+  video: { platform: string; url: string; embedId: string };
+  productUsed: string | null;
+  rating: number | string | null;
+  status: "draft" | "published";
+  featured: boolean;
+  displayOrder: number | string;
+}
+
+export const EMPTY_TESTIMONIAL: TestimonialFormValues = {
+  farmerName: { ...EMPTY_BI },
+  village: "",
+  taluka: "",
+  district: "",
+  crop: { ...EMPTY_BI },
+  quote: { ...EMPTY_BI },
+  photo: { url: "", publicId: "" },
+  video: { platform: "", url: "", embedId: "" },
+  productUsed: null,
+  rating: "",
+  status: "draft",
+  featured: false,
+  displayOrder: 0,
+};
+
+export function TestimonialForm({
+  initial,
+  testimonialId,
+  products,
+}: {
+  initial: TestimonialFormValues;
+  testimonialId?: string;
+  products: { id: string; name: string }[];
+}) {
+  const router = useRouter();
+  const [values, setValues] = useState(initial);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+
+  function update<K extends keyof TestimonialFormValues>(
+    key: K,
+    value: TestimonialFormValues[K],
+  ) {
+    setValues((v) => ({ ...v, [key]: value }));
+    setDirty(true);
+  }
+
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+
+  // Immediate feedback on the pasted video link.
+  const videoValid =
+    !values.video.url ||
+    (values.video.platform &&
+      Boolean(parseVideoEmbedId(values.video.platform, values.video.url)));
+
+  // The uploader works in lists; a testimonial has at most one photo.
+  const photoAsImages: AdminImage[] = values.photo.url
+    ? [
+        {
+          url: values.photo.url,
+          publicId: values.photo.publicId,
+          alt: { en: "", gu: "" },
+          isPrimary: true,
+        },
+      ]
+    : [];
+
+  async function save() {
+    setSaving(true);
+    setErrors({});
+    setFormError(null);
+    try {
+      const payload = {
+        ...values,
+        rating:
+          values.rating === "" || values.rating === null
+            ? null
+            : Number(values.rating),
+        displayOrder: Number(values.displayOrder) || 0,
+        productUsed: values.productUsed || null,
+      };
+      const response = await fetch(
+        testimonialId
+          ? `/api/admin/testimonials/${testimonialId}`
+          : "/api/admin/testimonials",
+        {
+          method: testimonialId ? "PATCH" : "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setFormError(data.error ?? "Could not save");
+        if (data.fields) setErrors(data.fields);
+        setSaving(false);
+        return;
+      }
+      setDirty(false);
+      router.push("/admin/testimonials");
+      router.refresh();
+    } catch {
+      setFormError("Network error — please try again");
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        save();
+      }}
+      className="max-w-3xl space-y-6"
+    >
+      {formError && (
+        <p
+          role="alert"
+          className="rounded-lg border border-alloy/40 bg-alloy/10 px-4 py-3 text-sm font-medium text-russet"
+        >
+          {formError}
+        </p>
+      )}
+
+      <Section title="Farmer">
+        <BiField
+          label="Farmer name"
+          value={values.farmerName}
+          onChange={(v) => update("farmerName", v)}
+          errors={{ en: errors["farmerName.en"] }}
+          required
+        />
+        <div className="grid gap-4 sm:grid-cols-3">
+          <TextField
+            label="Village"
+            value={values.village}
+            onChange={(v) => update("village", v)}
+          />
+          <TextField
+            label="Taluka"
+            value={values.taluka}
+            onChange={(v) => update("taluka", v)}
+          />
+          <TextField
+            label="District"
+            value={values.district}
+            onChange={(v) => update("district", v)}
+          />
+        </div>
+        <BiField
+          label="Crop"
+          value={values.crop}
+          onChange={(v) => update("crop", v)}
+        />
+      </Section>
+
+      <Section
+        title="Their words"
+        description="Add a quote, a video, or both."
+      >
+        <BiField
+          label="Quote"
+          value={values.quote}
+          onChange={(v) => update("quote", v)}
+          multiline
+          rows={4}
+          errors={{ en: errors["quote.en"] }}
+        />
+        <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
+          <SelectField
+            label="Video platform"
+            value={values.video.platform}
+            onChange={(v) => update("video", { ...values.video, platform: v })}
+            options={[
+              { value: "", label: "No video" },
+              { value: "youtube", label: "YouTube" },
+              { value: "instagram", label: "Instagram" },
+              { value: "facebook", label: "Facebook" },
+            ]}
+            error={errors["video.platform"]}
+          />
+          <TextField
+            label="Video link"
+            value={values.video.url}
+            onChange={(v) => update("video", { ...values.video, url: v })}
+            placeholder="https://…"
+            error={errors["video.url"]}
+            hint={
+              values.video.url
+                ? videoValid
+                  ? "Link looks good."
+                  : "That does not look like a valid link for the chosen platform."
+                : undefined
+            }
+          />
+        </div>
+      </Section>
+
+      <Section title="Photo" description="Optional — shown beside the name.">
+        <ImageUploader
+          images={photoAsImages}
+          folder="testimonials"
+          max={1}
+          onChange={(imgs) =>
+            update(
+              "photo",
+              imgs[0]
+                ? { url: imgs[0].url, publicId: imgs[0].publicId }
+                : { url: "", publicId: "" },
+            )
+          }
+        />
+      </Section>
+
+      <Section title="Publishing">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SelectField
+            label="Product used"
+            value={values.productUsed ?? ""}
+            onChange={(v) => update("productUsed", v || null)}
+            options={[
+              { value: "", label: "Not linked" },
+              ...products.map((p) => ({ value: p.id, label: p.name })),
+            ]}
+          />
+          <TextField
+            label="Rating (1–5, optional)"
+            type="number"
+            value={values.rating ?? ""}
+            onChange={(v) => update("rating", v)}
+            error={errors.rating}
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SelectField
+            label="Status"
+            value={values.status}
+            onChange={(v) => update("status", v as "draft" | "published")}
+            options={[
+              { value: "draft", label: "Draft (hidden)" },
+              { value: "published", label: "Published (live)" },
+            ]}
+          />
+          <TextField
+            label="Display order"
+            type="number"
+            value={values.displayOrder}
+            onChange={(v) => update("displayOrder", v)}
+            hint="Lower numbers appear first."
+          />
+        </div>
+        <Toggle
+          label="Featured"
+          checked={values.featured}
+          onChange={(v) => update("featured", v)}
+          hint="Featured testimonials are shown first."
+        />
+      </Section>
+
+      <div className="flex items-center gap-3">
+        <Button type="submit" disabled={saving}>
+          {saving ? "Saving…" : testimonialId ? "Save changes" : "Add testimonial"}
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            if (!dirty || window.confirm("Discard unsaved changes?")) {
+              router.push("/admin/testimonials");
+            }
+          }}
+        >
+          Cancel
+        </Button>
+        {dirty && <span className="text-xs text-russet-dark/60">Unsaved changes</span>}
+      </div>
+    </form>
+  );
+}
