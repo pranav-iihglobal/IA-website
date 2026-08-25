@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
-import { HOME, PRODUCTS } from "@/lib/content";
+import { HOME } from "@/lib/content";
 import { T } from "@/components/T";
 import { ProductCard } from "@/components/ProductCard";
 import { Reveal } from "@/components/Reveal";
+import { getDisplayProducts } from "@/lib/products-source";
+
+/** Rebuilt hourly, and immediately whenever an admin saves a product. */
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Products",
@@ -15,7 +19,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ProductsPage() {
+export default async function ProductsPage() {
+  const products = await getDisplayProducts();
+
   return (
     <section className="mx-auto max-w-6xl px-4 py-14">
       <h1 className="font-display text-4xl font-bold text-russet">
@@ -25,9 +31,19 @@ export default function ProductsPage() {
         <T text={HOME.productsSub} />
       </p>
       <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {PRODUCTS.map((p, i) => (
+        {products.map((p, i) => (
           <Reveal key={p.slug} delay={i * 130}>
-            <ProductCard product={p} />
+            <ProductCard
+              product={{
+                slug: p.slug,
+                name: p.name,
+                categoryLabel: p.categoryLabel,
+                tagline: p.tagline,
+                imageUrl: p.imageUrl,
+                artFallback: p.artFallback,
+                featured: p.featured,
+              }}
+            />
           </Reveal>
         ))}
       </div>

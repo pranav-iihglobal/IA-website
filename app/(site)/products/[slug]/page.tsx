@@ -2,14 +2,23 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { MISC, PRODUCTS, SITE, UI, getProduct } from "@/lib/content";
-import { getProductImage } from "@/lib/product-images";
+import { MISC, SITE, UI, resolveText } from "@/lib/content";
+import { CLD, cldUrl, isCloudinaryUrl } from "@/lib/images";
+import {
+  getDisplayProduct,
+  getDisplayProductSlugs,
+} from "@/lib/products-source";
 import { T } from "@/components/T";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { ProductArt } from "@/components/ProductCard";
 
-export function generateStaticParams() {
-  return PRODUCTS.map((p) => ({ slug: p.slug }));
+export const revalidate = 3600;
+/** Products added in the admin after build render on first request. */
+export const dynamicParams = true;
+
+export async function generateStaticParams() {
+  const slugs = await getDisplayProductSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
@@ -18,16 +27,20 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const product = await getDisplayProduct(slug);
   if (!product) return {};
+  const name = resolveText(product.name, "en");
   return {
-    title: `${product.name} — ${product.category.en}`,
+    title: `${name} — ${product.categoryLabel.en}`,
     description: product.tagline.en,
     alternates: { canonical: `/products/${product.slug}` },
     openGraph: {
-      title: `${product.name} | ${SITE.shortName}`,
+      title: `${name} | ${SITE.shortName}`,
       description: product.tagline.en,
       url: `/products/${product.slug}`,
+      images: product.imageUrl
+        ? [{ url: cldUrl(product.imageUrl, CLD.productDetail)! }]
+        : undefined,
     },
   };
 }
@@ -38,24 +51,25 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const product = await getDisplayProduct(slug);
   if (!product) notFound();
+
+  const name = resolveText(product.name, "en");
+  const image = cldUrl(product.imageUrl, CLD.productDetail);
 
   const productJsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: product.name,
+    name,
     description: product.description.en,
-    category: product.category.en,
-    brand: {
-      "@type": "Brand",
-      name: "IKSARVA",
-    },
+    category: product.categoryLabel.en,
+    brand: { "@type": "Brand", name: "IKSARVA" },
     manufacturer: {
       "@type": "Organization",
       name: SITE.name,
       url: SITE.url,
     },
+    image: image ? [image] : undefined,
     url: `${SITE.url}/products/${product.slug}`,
   };
 
@@ -76,37 +90,43 @@ export default async function ProductPage({
       </nav>
 
       <header className="grid items-center gap-8 sm:grid-cols-[auto_1fr]">
-        {getProductImage(product.slug) ? (
+        {image ? (
           <Image
-            src={getProductImage(product.slug)!}
-            alt={`${product.name} pack`}
+            src={image}
+            alt={`${name} pack`}
             width={640}
             height={640}
             priority
+            unoptimized={isCloudinaryUrl(product.imageUrl)}
             className="mx-auto w-full max-w-xs rounded-2xl object-cover shadow-md sm:w-72"
             sizes="(max-width: 640px) 100vw, 320px"
           />
         ) : (
-          <ProductArt art={product.art} className="mx-auto h-44 w-44 sm:h-52 sm:w-52" />
+          <ProductArt
+            art={product.artFallback}
+            className="mx-auto h-44 w-44 sm:h-52 sm:w-52"
+          />
         )}
         <div>
-          {product.flagship && (
+          {product.featured && (
             <span className="mb-2 inline-block rounded-full bg-alloy px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cornsilk-light">
               <T text={UI.flagship} />
             </span>
           )}
           <p className="text-sm font-semibold uppercase tracking-widest text-olive">
-            <T text={product.category} />
+            <T text={product.categoryLabel} />
           </p>
           <h1 className="mt-1 font-display text-4xl font-bold text-russet sm:text-5xl">
-            {product.name}
+            <T text={product.name} />
           </h1>
           <p className="mt-3 text-lg leading-relaxed text-olive-dark">
             <T text={product.tagline} />
           </p>
-          <p className="mt-2 text-sm font-medium text-camel-dark">
-            <T text={product.format} />
-          </p>
+          {product.format.en && (
+            <p className="mt-2 text-sm font-medium text-camel-dark">
+              <T text={product.format} />
+            </p>
+          )}
         </div>
       </header>
 
@@ -114,30 +134,32 @@ export default async function ProductPage({
         <T text={product.description} />
       </p>
 
-      {product.compliance && (
+      {product.complianceNote.en && (
         <p className="mt-6 rounded-xl border border-laurel bg-laurel-light/40 px-5 py-4 text-sm font-medium leading-relaxed text-olive-dark">
-          ✓ <T text={product.compliance} />
+          ✓ <T text={product.complianceNote} />
         </p>
       )}
 
-      <section className="mt-10">
-        <h2 className="font-display text-2xl font-bold text-russet">
-          <T text={UI.benefits} />
-        </h2>
-        <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-          {product.benefits.map((b, i) => (
-            <li
-              key={i}
-              className="flex gap-3 rounded-xl bg-meringue-light p-4 text-sm leading-relaxed"
-            >
-              <span aria-hidden="true" className="text-alloy">
-                ✦
-              </span>
-              <T text={b} />
-            </li>
-          ))}
-        </ul>
-      </section>
+      {product.benefits.length > 0 && (
+        <section className="mt-10">
+          <h2 className="font-display text-2xl font-bold text-russet">
+            <T text={UI.benefits} />
+          </h2>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+            {product.benefits.map((b, i) => (
+              <li
+                key={i}
+                className="flex gap-3 rounded-xl bg-meringue-light p-4 text-sm leading-relaxed"
+              >
+                <span aria-hidden="true" className="text-alloy">
+                  ✦
+                </span>
+                <T text={b} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="mt-10 grid gap-6 sm:grid-cols-2">
         <div className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-6">
@@ -145,7 +167,7 @@ export default async function ProductPage({
             <T text={UI.dosage} />
           </h2>
           <p className="mt-2 text-sm leading-relaxed">
-            <T text={product.dosage} />
+            <T text={product.dosageSummary} />
           </p>
         </div>
         <div className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-6">
@@ -153,7 +175,7 @@ export default async function ProductPage({
             <T text={UI.application} />
           </h2>
           <p className="mt-2 text-sm leading-relaxed">
-            <T text={product.application} />
+            <T text={product.applicationMethod} />
           </p>
         </div>
       </section>
@@ -163,13 +185,13 @@ export default async function ProductPage({
           <T text={UI.crops} />
         </h2>
         <p className="mt-2 text-sm leading-relaxed">
-          <T text={product.crops} />
+          <T text={product.cropsNote} />
         </p>
       </section>
 
       <div className="mt-10 rounded-3xl bg-olive p-8 text-center text-cornsilk-light">
         <p className="font-display text-xl font-bold">
-          {product.name} — <T text={product.category} />
+          <T text={product.name} /> — <T text={product.categoryLabel} />
         </p>
         <p className="mx-auto mt-2 max-w-md text-sm text-cornsilk/90">
           <T text={MISC.productCta} />

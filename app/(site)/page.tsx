@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { HOME, PRODUCTS, SITE, UI, DEALERS } from "@/lib/content";
+import { HOME, SITE, UI, DEALERS } from "@/lib/content";
+import { getDisplayProducts } from "@/lib/products-source";
 import { T } from "@/components/T";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { ProductCard } from "@/components/ProductCard";
@@ -19,9 +20,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function HomePage() {
-  const flagship = PRODUCTS.find((p) => p.flagship)!;
-  const others = PRODUCTS.filter((p) => !p.flagship);
+export const revalidate = 3600;
+
+export default async function HomePage() {
+  const products = await getDisplayProducts();
+  const flagship = products.find((p) => p.featured) ?? products[0];
+  const others = products.filter((p) => p.slug !== flagship?.slug);
 
   return (
     <>
@@ -90,10 +94,10 @@ export default function HomePage() {
                 <T text={UI.flagship} />
               </span>
               <h3 className="mt-4 font-display text-3xl font-bold sm:text-4xl">
-                {flagship.name}
+                <T text={flagship.name} />
               </h3>
               <p className="mt-1 text-laurel-light">
-                <T text={flagship.category} />
+                <T text={flagship.categoryLabel} />
               </p>
               <p className="mt-4 max-w-xl leading-relaxed text-cornsilk">
                 <T text={flagship.description} />
@@ -124,7 +128,7 @@ export default function HomePage() {
             <Link
               href={`/products/${flagship.slug}`}
               className="animate-float mx-auto block w-48 md:w-56"
-              aria-label={`${flagship.name} product page`}
+              aria-label="Flagship product page"
             >
               {/* PLACEHOLDER pack shot */}
               <svg viewBox="0 0 200 260" fill="none" className="w-full drop-shadow-lg" aria-hidden="true">
@@ -143,7 +147,17 @@ export default function HomePage() {
         <div className="mt-8 grid gap-6 sm:grid-cols-2">
           {others.map((p, i) => (
             <Reveal key={p.slug} delay={i * 130}>
-              <ProductCard product={p} />
+              <ProductCard
+                product={{
+                  slug: p.slug,
+                  name: p.name,
+                  categoryLabel: p.categoryLabel,
+                  tagline: p.tagline,
+                  imageUrl: p.imageUrl,
+                  artFallback: p.artFallback,
+                  featured: p.featured,
+                }}
+              />
             </Reveal>
           ))}
         </div>
