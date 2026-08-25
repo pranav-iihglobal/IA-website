@@ -6,6 +6,7 @@ import { parseVideoEmbedId, testimonialSchema } from "@/lib/schemas";
 import { deleteAssets } from "@/lib/cloudinary";
 import type { LeanDoc } from "@/lib/db/lean";
 import {
+  currentEditor,
   errorResponse,
   fieldErrors,
   requireAdmin,
@@ -66,10 +67,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const previous = await Testimonial.findById(id).select("photo").lean();
     if (!previous) return badId();
 
-    const updated = await Testimonial.findByIdAndUpdate(id, data, {
-      new: true,
-      runValidators: true,
-    });
+    const updated = await Testimonial.findByIdAndUpdate(
+      id,
+      { ...data, updatedBy: await currentEditor() },
+      { new: true, runValidators: true },
+    );
     if (!updated) return badId();
 
     // Drop the old photo from Cloudinary when it was replaced or removed.

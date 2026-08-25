@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { EMPTY_POST, PostForm } from "@/components/admin/PostForm";
+import { getTestimonialOptions } from "@/lib/admin/products-options";
 
 export const dynamic = "force-dynamic";
 
-export default function NewPostPage() {
+export default async function NewPostPage() {
+  const testimonials = await getTestimonialOptions();
+
   return (
     <>
       <nav className="mb-5">
@@ -19,7 +22,14 @@ export default function NewPostPage() {
       </nav>
       <h1 className="font-display text-3xl font-bold text-russet">New post</h1>
       <div className="mt-8">
-        <PostForm initial={EMPTY_POST} />
+        <PostForm
+          initial={EMPTY_POST}
+          testimonials={testimonials.map((t) => ({
+            id: t.id,
+            label: t.name,
+            hint: t.hint,
+          }))}
+        />
       </div>
     </>
   );

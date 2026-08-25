@@ -5,6 +5,7 @@ import { postSchema } from "@/lib/schemas";
 import { sanitizeHtml } from "@/lib/sanitize";
 import type { LeanDoc } from "@/lib/db/lean";
 import {
+  currentEditor,
   errorResponse,
   fieldErrors,
   requireAdmin,
@@ -92,7 +93,10 @@ export async function POST(request: NextRequest) {
     await connectToDatabase();
     // create() (not insertMany/updateOne) so the pre-save hook computes
     // readingTime.
-    const created = await Post.create(data);
+    const created = await Post.create({
+      ...data,
+      updatedBy: await currentEditor(),
+    });
     revalidatePost(created.slug);
 
     return NextResponse.json({ id: String(created._id) }, { status: 201 });

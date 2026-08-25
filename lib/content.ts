@@ -653,7 +653,78 @@ export const TESTIMONIALS_PAGE = {
   },
   shareWhatsappMessage:
     "Hello IKSARVA, I used your product and want to share my experience.",
+
+  /**
+   * Prefilled template for the "share your result" deep link.
+   *
+   * WhatsApp is the intake channel — there is no public form and no public
+   * write access to the database. An admin reads the chat and creates the
+   * testimonial with source = whatsapp_submission.
+   *
+   * The blanks are what we need to publish a story, in the order a farmer
+   * would naturally fill them in.
+   */
+  shareTemplate: {
+    gu: `નમસ્તે IKSARVA, મારો અનુભવ શેર કરવો છે.
+
+નામ:
+ગામ / જિલ્લો:
+પાક:
+કઈ પ્રોડક્ટ વાપરી:
+શું ફરક પડ્યો:
+
+(ખેતરનો ફોટો પણ મોકલી શકો છો)`,
+    en: `Hello IKSARVA, I would like to share my experience.
+
+Name:
+Village / District:
+Crop:
+Product used:
+What changed:
+
+(You can send a field photo too)`,
+  },
+  shareCtaLabel: {
+    en: "Share your result",
+    gu: "તમારો અનુભવ શેર કરો",
+  },
+
+  // ---- filters -------------------------------------------------------------
+  filterDistrict: { en: "District", gu: "જિલ્લો" },
+  filterCrop: { en: "Crop", gu: "પાક" },
+  filterProduct: { en: "Product", gu: "પ્રોડક્ટ" },
+  filterAll: { en: "All", gu: "બધા" },
+  clearFilters: { en: "Clear filters", gu: "ફિલ્ટર હટાવો" },
+  noMatches: {
+    en: "No stories match these filters yet.",
+    gu: "આ ફિલ્ટર પ્રમાણે હજી કોઈ વાત નથી.",
+  },
+  noMatchesHint: {
+    en: "Clear the filters to see every farmer's experience.",
+    gu: "બધા ખેડૂતોના અનુભવ જોવા માટે ફિલ્ટર હટાવો.",
+  },
+  countOne: { en: "story", gu: "અનુભવ" },
+  countMany: { en: "stories", gu: "અનુભવ" },
+
+  // ---- verified mark -------------------------------------------------------
+  verified: { en: "Verified", gu: "ચકાસેલ" },
+  verifiedWhatsapp: { en: "Verified on WhatsApp", gu: "વોટ્સએપ પર ચકાસેલ" },
+  verifiedFieldVisit: { en: "Verified by field visit", gu: "ખેતરે જઈને ચકાસેલ" },
+  verifiedPhoto: { en: "Verified by photo", gu: "ફોટા દ્વારા ચકાસેલ" },
 } as const;
+
+/**
+ * "Farmers in <district> say…" — built here so the district heading reads
+ * naturally in both languages instead of being glued together at the callsite.
+ */
+export function districtHeading(district: string, lang: Lang): string {
+  if (!district) {
+    return lang === "gu" ? "ખેડૂતો શું કહે છે" : "What farmers say";
+  }
+  return lang === "gu"
+    ? `${district}ના ખેડૂતો કહે છે…`
+    : `Farmers in ${district} say…`;
+}
 
 /* ========================================================================== */
 /* 9. CONTACT PAGE                                                            */

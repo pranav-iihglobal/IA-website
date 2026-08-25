@@ -125,11 +125,16 @@ export function buildTestimonialDocs(idByProductName: Map<string, string>) {
       video: { platform: "" as const, url: "", embedId: "" },
       productUsed: idByProductName.get(t.product) ?? null,
       rating: null,
+      // Seeded stories were written by us, not sent in by a farmer.
+      source: "admin_entered" as const,
+      verified: false,
+      verifiedVia: "" as const,
       // Seeded entries are the SAMPLE stories from the old site — they stay
       // drafts so they can never appear publicly by accident.
       status: (t.sample ? "draft" : "published") as "draft" | "published",
       featured: false,
       displayOrder: index,
+      updatedBy: "",
     };
   });
 }
@@ -180,7 +185,9 @@ export function buildPostDocs() {
         author: "IKSARVA Team",
         metaTitle: { en: "", gu: "" },
         metaDescription: { en: "", gu: "" },
+        pinnedTestimonials: [] as string[],
         readingTime: Number(en.data.readingMinutes ?? 3),
+        updatedBy: "",
       };
     });
 }

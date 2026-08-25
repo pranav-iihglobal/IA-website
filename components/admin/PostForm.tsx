@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { Bi } from "@/lib/content";
 import { slugify } from "@/lib/schemas";
 import { ImageUploader, type AdminImage } from "./ImageUploader";
+import { EntityPicker, type PickerOption } from "./EntityPicker";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { useToast } from "./Toast";
 import {
@@ -45,6 +46,7 @@ export interface PostFormValues {
   author: string;
   metaTitle: Bi;
   metaDescription: Bi;
+  pinnedTestimonials: string[];
 }
 
 export const EMPTY_POST: PostFormValues = {
@@ -60,14 +62,18 @@ export const EMPTY_POST: PostFormValues = {
   author: "IKSARVA Team",
   metaTitle: { ...EMPTY_BI },
   metaDescription: { ...EMPTY_BI },
+  pinnedTestimonials: [],
 };
 
 export function PostForm({
   initial,
   postId,
+  testimonials = [],
 }: {
   initial: PostFormValues;
   postId?: string;
+  /** Published testimonials, for pinning to the end of the post. */
+  testimonials?: PickerOption[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -317,6 +323,22 @@ export function PostForm({
           label="Author"
           value={values.author}
           onChange={(v) => update("author", v)}
+        />
+      </Section>
+
+      <Section
+        title="Farmer proof"
+        description="Pinned stories render as compact quote cards at the end of the post."
+      >
+        <EntityPicker
+          label="Pinned testimonials"
+          options={testimonials}
+          selected={values.pinnedTestimonials}
+          onChange={(ids) => update("pinnedTestimonials", ids)}
+          max={2}
+          placeholder="Search published testimonials…"
+          emptyLabel="No testimonials pinned to this post."
+          error={errors.pinnedTestimonials}
         />
       </Section>
 

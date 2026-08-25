@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { SOCIALS, TESTIMONIALS_PAGE, UI } from "@/lib/content";
+import { SOCIALS, TESTIMONIALS_PAGE } from "@/lib/content";
 import { getDisplayTestimonials } from "@/lib/testimonials-source";
+import { Suspense } from "react";
 import { T } from "@/components/T";
 import { Reveal } from "@/components/Reveal";
-import { TestimonialCard } from "@/components/TestimonialCard";
-import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { TestimonialsBrowser } from "@/components/TestimonialsBrowser";
+import { ShareResultCta } from "@/components/ShareResultCta";
 import { FloatingLeaves } from "@/components/Decor";
 
 /** Rebuilt hourly, and immediately when an admin saves a testimonial. */
@@ -41,31 +42,29 @@ export default async function TestimonialsPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-12">
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {testimonials.map((t, i) => (
-            <Reveal key={t.id} delay={(i % 3) * 130}>
-              <TestimonialCard t={t} />
-            </Reveal>
-          ))}
-        </div>
+        {/* Filtering runs in the browser so this page keeps its ISR cache. */}
+        <Suspense>
+          <TestimonialsBrowser
+            testimonials={testimonials.map((t) => ({
+              id: t.id,
+              farmerName: t.farmerName,
+              place: t.place,
+              district: t.district,
+              crop: t.crop,
+              quote: t.quote,
+              photo: t.photo,
+              video: t.video,
+              productName: t.productName,
+              productSlug: t.productSlug,
+              verified: t.verified,
+              verifiedVia: t.verifiedVia,
+              sample: t.sample,
+            }))}
+          />
+        </Suspense>
       </section>
 
-      <section className="bg-olive text-cornsilk-light">
-        <div className="mx-auto max-w-4xl px-4 py-12 text-center">
-          <h2 className="font-display text-3xl font-bold">
-            <T text={TESTIMONIALS_PAGE.shareHeading} />
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-cornsilk/90">
-            <T text={TESTIMONIALS_PAGE.shareBody} />
-          </p>
-          <div className="mt-6">
-            <WhatsAppButton
-              message={TESTIMONIALS_PAGE.shareWhatsappMessage}
-              label={UI.chatOnWhatsApp}
-            />
-          </div>
-        </div>
-      </section>
+      <ShareResultCta />
 
       {FACEBOOK_PAGE && (
         <section className="mx-auto max-w-4xl px-4 py-12">

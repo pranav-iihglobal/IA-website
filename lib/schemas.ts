@@ -233,6 +233,12 @@ export const testimonialSchema = z
     productUsed: z.string().trim().nullable().default(null),
     rating: z.coerce.number().min(1).max(5).nullable().default(null),
 
+    source: z
+      .enum(["admin_entered", "whatsapp_submission"])
+      .default("admin_entered"),
+    verified: z.boolean().default(false),
+    verifiedVia: z.enum(["whatsapp", "field_visit", "photo", ""]).default(""),
+
     status: z.enum(["draft", "published"]).default("draft"),
     featured: z.boolean().default(false),
     displayOrder: z.coerce.number().default(0),
@@ -260,6 +266,14 @@ export const testimonialSchema = z
           message: `That does not look like a valid ${value.video.platform} link`,
         });
       }
+    }
+    // "Verified" is a claim about how it was checked — say which way.
+    if (value.verified && !value.verifiedVia) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["verifiedVia"],
+        message: "Choose how this was verified",
+      });
     }
   });
 
@@ -296,6 +310,11 @@ export const postSchema = z
 
     metaTitle: biOptionalSchema.default({ en: "", gu: "" }),
     metaDescription: biOptionalSchema.default({ en: "", gu: "" }),
+
+    pinnedTestimonials: z
+      .array(objectIdSchema)
+      .max(2, "Pin at most 2 testimonials")
+      .default([]),
   })
   .superRefine((value, ctx) => {
     if (value.status === "scheduled" && !value.publishAt) {

@@ -9,6 +9,7 @@ import {
   PostForm,
   type PostFormValues,
 } from "@/components/admin/PostForm";
+import { getTestimonialOptions } from "@/lib/admin/products-options";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,7 @@ function toFormValues(doc: LeanDoc): PostFormValues {
     status: doc.status ?? "draft",
     publishAt: toLocalInput(doc.publishAt),
     author: doc.author ?? "IKSARVA Team",
+    pinnedTestimonials: (doc.pinnedTestimonials ?? []).map(String),
     metaTitle: bi(doc.metaTitle),
     metaDescription: bi(doc.metaDescription),
   };
@@ -53,7 +55,10 @@ export default async function EditPostPage({
   if (!isValidObjectId(id)) notFound();
 
   await connectToDatabase();
-  const doc = await Post.findById(id).lean();
+  const [doc, testimonials] = await Promise.all([
+    Post.findById(id).lean(),
+    getTestimonialOptions(),
+  ]);
   if (!doc) notFound();
 
   return (
@@ -73,7 +78,15 @@ export default async function EditPostPage({
         Edit {(doc as LeanDoc).title?.en}
       </h1>
       <div className="mt-8">
-        <PostForm initial={toFormValues(doc)} postId={id} />
+        <PostForm
+          initial={toFormValues(doc)}
+          postId={id}
+          testimonials={testimonials.map((t) => ({
+            id: t.id,
+            label: t.name,
+            hint: t.hint,
+          }))}
+        />
       </div>
     </>
   );

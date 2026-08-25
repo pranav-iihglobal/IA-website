@@ -12,6 +12,7 @@ import { T } from "@/components/T";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { ProductArt } from "@/components/ProductCard";
 import { TestimonialCard } from "@/components/TestimonialCard";
+import { ShareResultCta } from "@/components/ShareResultCta";
 import { Downloads } from "@/components/product/Downloads";
 import { ApplicationSteps } from "@/components/product/ApplicationSteps";
 import { FieldResults } from "@/components/product/FieldResults";
@@ -267,6 +268,8 @@ export default async function ProductPage({
                   photo: t.photo,
                   video: t.video,
                   productName: t.productName,
+                  verified: t.verified,
+                  verifiedVia: t.verifiedVia,
                 }}
               />
             ))}
@@ -310,6 +313,9 @@ export default async function ProductPage({
           />
         </div>
       </div>
+
+      {/* WhatsApp is the testimonial intake channel — ask right after the CTA. */}
+      <ShareResultCta variant="inline" />
 
       <ProductStrip
         heading={UI.relatedProducts}

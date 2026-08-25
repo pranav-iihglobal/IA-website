@@ -7,6 +7,7 @@ import { CLD, cldUrl } from "@/lib/images";
 import { getDisplayPost, getDisplayPostSlugs } from "@/lib/posts-source";
 import { T } from "@/components/T";
 import { BiHtml } from "@/components/BiHtml";
+import { TestimonialCard } from "@/components/TestimonialCard";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 export const revalidate = 3600;
@@ -109,6 +110,37 @@ export default async function ArticlePage({
         gu={article.content.gu}
         className="prose-article mt-8"
       />
+
+      {article.pinnedTestimonials.length > 0 && (
+        <section className="mt-12">
+          <h2 className="font-display text-2xl font-bold text-russet">
+            <T text={UI.farmersSay} />
+          </h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {article.pinnedTestimonials.map((t) => (
+              <TestimonialCard
+                key={t.id}
+                compact
+                t={{
+                  id: t.id,
+                  farmerName: t.farmerName,
+                  place: {
+                    en: [t.village, t.district].filter(Boolean).join(", "),
+                    gu: [t.village, t.district].filter(Boolean).join(", "),
+                  },
+                  crop: t.crop,
+                  quote: t.quote,
+                  photo: t.photo,
+                  video: t.video,
+                  productName: t.productName,
+                  verified: t.verified,
+                  verifiedVia: t.verifiedVia,
+                }}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="mt-12 rounded-2xl bg-meringue p-6 text-center">
         <p className="font-display text-lg font-bold text-russet">

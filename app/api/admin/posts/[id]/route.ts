@@ -7,6 +7,7 @@ import { sanitizeHtml } from "@/lib/sanitize";
 import { deleteAssets } from "@/lib/cloudinary";
 import type { LeanDoc } from "@/lib/db/lean";
 import {
+  currentEditor,
   errorResponse,
   fieldErrors,
   requireAdmin,
@@ -70,6 +71,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         en: sanitizeHtml(parsed.data.content.en),
         gu: sanitizeHtml(parsed.data.content.gu),
       },
+      updatedBy: await currentEditor(),
     });
     // save() rather than findByIdAndUpdate so readingTime is recomputed.
     await existing.save();

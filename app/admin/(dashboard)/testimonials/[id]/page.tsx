@@ -34,6 +34,10 @@ function toFormValues(doc: LeanDoc): TestimonialFormValues {
     },
     productUsed: doc.productUsed ? String(doc.productUsed) : null,
     rating: doc.rating ?? "",
+    // Added after these documents were written — read back as undefined.
+    source: doc.source ?? "admin_entered",
+    verified: Boolean(doc.verified),
+    verifiedVia: doc.verifiedVia ?? "",
     status: doc.status ?? "draft",
     featured: Boolean(doc.featured),
     displayOrder: doc.displayOrder ?? 0,

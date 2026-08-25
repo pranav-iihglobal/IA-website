@@ -30,6 +30,9 @@ export interface TestimonialFormValues {
   video: { platform: string; url: string; embedId: string };
   productUsed: string | null;
   rating: number | string | null;
+  source: "admin_entered" | "whatsapp_submission";
+  verified: boolean;
+  verifiedVia: "whatsapp" | "field_visit" | "photo" | "";
   status: "draft" | "published";
   featured: boolean;
   displayOrder: number | string;
@@ -46,6 +49,9 @@ export const EMPTY_TESTIMONIAL: TestimonialFormValues = {
   video: { platform: "", url: "", embedId: "" },
   productUsed: null,
   rating: "",
+  source: "admin_entered",
+  verified: false,
+  verifiedVia: "",
   status: "draft",
   featured: false,
   displayOrder: 0,
@@ -263,6 +269,48 @@ export function TestimonialForm({
             )
           }
         />
+      </Section>
+
+      <Section
+        title="Verification"
+        description="An editorial mark, set by hand. Only tick it once someone at IKSARVA has actually confirmed the story."
+      >
+        <SelectField
+          label="How this story reached us"
+          value={values.source}
+          onChange={(v) =>
+            update("source", v as TestimonialFormValues["source"])
+          }
+          options={[
+            { value: "admin_entered", label: "Entered by admin" },
+            { value: "whatsapp_submission", label: "Sent by the farmer on WhatsApp" },
+          ]}
+        />
+        <Toggle
+          label="Verified"
+          checked={values.verified}
+          onChange={(v) =>
+            update("verified", v)
+          }
+          hint="Shows a ✓ badge beside the farmer's name."
+        />
+        {values.verified && (
+          <SelectField
+            label="Verified how"
+            value={values.verifiedVia}
+            onChange={(v) =>
+              update("verifiedVia", v as TestimonialFormValues["verifiedVia"])
+            }
+            options={[
+              { value: "", label: "Choose…" },
+              { value: "whatsapp", label: "On WhatsApp" },
+              { value: "field_visit", label: "By field visit" },
+              { value: "photo", label: "By photo" },
+            ]}
+            error={errors.verifiedVia}
+            hint="The badge names the method, so it has to be true."
+          />
+        )}
       </Section>
 
       <Section title="Publishing">

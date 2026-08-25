@@ -58,8 +58,16 @@ const postSchema = new Schema(
     metaTitle: { type: biSchema, default: () => ({ en: "", gu: "" }) },
     metaDescription: { type: biSchema, default: () => ({ en: "", gu: "" }) },
 
+    /** At most 2 — enforced in lib/schemas.ts so the admin sees the error. */
+    pinnedTestimonials: {
+      type: [{ type: Schema.Types.ObjectId, ref: "Testimonial" }],
+      default: [],
+    },
+
     /** Minutes, computed from content length on save. */
     readingTime: { type: Number, default: 3 },
+    /** Email of the admin who last saved this. Set server-side from the session. */
+    updatedBy: { type: String, default: "", trim: true },
   },
   { timestamps: true },
 );

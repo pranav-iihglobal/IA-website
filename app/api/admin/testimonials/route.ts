@@ -4,6 +4,7 @@ import { Testimonial } from "@/lib/db/models/Testimonial";
 import { parseVideoEmbedId, testimonialSchema } from "@/lib/schemas";
 import type { LeanDoc } from "@/lib/db/lean";
 import {
+  currentEditor,
   errorResponse,
   fieldErrors,
   requireAdmin,
@@ -40,7 +41,9 @@ export async function GET(request: NextRequest) {
 
     const [items, total] = await Promise.all([
       Testimonial.find(filter)
-        .select("farmerName village district crop status featured photo video displayOrder updatedAt")
+        .select(
+          "farmerName village district crop status featured photo video displayOrder updatedAt updatedBy verified verifiedVia source",
+        )
         .sort({ featured: -1, displayOrder: 1, updatedAt: -1 })
         .skip((page - 1) * PAGE_SIZE)
         .limit(PAGE_SIZE)
@@ -59,6 +62,11 @@ export async function GET(request: NextRequest) {
         featured: t.featured,
         photo: t.photo?.url ?? null,
         videoPlatform: t.video?.platform ?? "",
+        verified: Boolean(t.verified),
+        verifiedVia: t.verifiedVia ?? "",
+        source: t.source ?? "admin_entered",
+        updatedAt: t.updatedAt,
+        updatedBy: t.updatedBy ?? "",
       })),
       total,
       page,

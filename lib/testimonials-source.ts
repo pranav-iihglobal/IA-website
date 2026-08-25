@@ -14,11 +14,16 @@ export interface DisplayTestimonial {
   id: string;
   farmerName: Bi;
   place: Bi;
+  /** Raw district string — the key the public district filter groups on. */
+  district: string;
   crop: Bi;
   quote: Bi;
   photo: string | null;
   video: { platform: string; url: string; embedId: string } | null;
   productName: Bi | null;
+  productSlug: string | null;
+  verified: boolean;
+  verifiedVia: "whatsapp" | "field_visit" | "photo" | "";
   sample: boolean;
 }
 
@@ -35,11 +40,15 @@ export async function getDisplayTestimonials(): Promise<DisplayTestimonial[]> {
         id: t.id,
         farmerName: t.farmerName,
         place: joinPlace(t.village, t.district),
+        district: t.district,
         crop: t.crop,
         quote: t.quote,
         photo: t.photo,
         video: t.video,
         productName: t.productName,
+        productSlug: t.productSlug,
+        verified: t.verified,
+        verifiedVia: t.verifiedVia,
         sample: false,
       }));
     }
@@ -51,11 +60,16 @@ export async function getDisplayTestimonials(): Promise<DisplayTestimonial[]> {
     id: `legacy-${i}`,
     farmerName: { en: t.name, gu: t.name },
     place: t.place,
+    // The bundled samples store "Village, District" as one bilingual string.
+    district: (t.place.en ?? "").split(",").pop()?.trim() ?? "",
     crop: t.crop,
     quote: t.quote,
     photo: null,
     video: null,
     productName: { en: t.product, gu: t.product },
+    productSlug: null,
+    verified: false,
+    verifiedVia: "" as const,
     sample: Boolean(t.sample),
   }));
 }

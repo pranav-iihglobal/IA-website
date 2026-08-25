@@ -1,6 +1,8 @@
 import Image from "next/image";
 import type { Bi } from "@/lib/content";
 import { TESTIMONIALS_PAGE } from "@/lib/content";
+import type { VerifiedVia } from "@/lib/verified";
+import { verifiedLabel } from "@/lib/verified";
 import { CLD, cldUrl } from "@/lib/images";
 import { T } from "./T";
 import { VideoEmbed } from "./VideoEmbed";
@@ -26,7 +28,7 @@ export interface TestimonialCardData {
   /** Bundled demo content, tagged visibly so it is never mistaken for real. */
   sample?: boolean;
   verified?: boolean;
-  verifiedLabel?: Bi;
+  verifiedVia?: VerifiedVia;
 }
 
 function QuoteMark() {
@@ -42,10 +44,11 @@ function QuoteMark() {
   );
 }
 
-export function VerifiedBadge({ label }: { label?: Bi }) {
+export function VerifiedBadge({ via = "" }: { via?: VerifiedVia }) {
+  const label = verifiedLabel(via);
   return (
     <span
-      title={label?.en}
+      title={label.en}
       className="inline-flex items-center gap-1 rounded-full bg-laurel-light/70 px-2 py-0.5 text-[11px] font-semibold text-olive-dark"
     >
       <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
@@ -55,7 +58,7 @@ export function VerifiedBadge({ label }: { label?: Bi }) {
           clipRule="evenodd"
         />
       </svg>
-      {label && <T text={label} />}
+      <T text={label} />
     </span>
   );
 }
@@ -115,7 +118,7 @@ export function TestimonialCard({
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 font-display text-lg font-bold text-russet">
             <T text={t.farmerName} />
-            {t.verified && <VerifiedBadge label={t.verifiedLabel} />}
+            {t.verified && <VerifiedBadge via={t.verifiedVia} />}
           </p>
           {t.place.en && (
             <p className="text-sm text-olive-dark">

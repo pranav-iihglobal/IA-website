@@ -59,6 +59,7 @@ export async function getDisplayPost(slug: string): Promise<DisplayPost | null> 
     content: { en: article.htmlEn, gu: article.htmlGu },
     metaTitle: empty,
     metaDescription: empty,
+    pinnedTestimonials: [],
   };
 }
 

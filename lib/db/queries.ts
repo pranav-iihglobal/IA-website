@@ -267,7 +267,7 @@ export async function getPublishedProductBySlug(
     .populate({
       path: "pinnedTestimonials",
       match: { status: "published" },
-      populate: { path: "productUsed", select: "name" },
+      populate: { path: "productUsed", select: "name slug" },
     })
     .lean();
   return doc ? toPublicProduct(doc) : null;
@@ -293,8 +293,12 @@ export interface PublicTestimonial {
   photo: string | null;
   video: { platform: string; url: string; embedId: string } | null;
   productName: Bi | null;
+  /** Stable key for the public product filter; null when not linked. */
+  productSlug: string | null;
   rating: number | null;
   featured: boolean;
+  verified: boolean;
+  verifiedVia: "whatsapp" | "field_visit" | "photo" | "";
 }
 
 export function toPublicTestimonial(doc: any): PublicTestimonial {
@@ -315,8 +319,11 @@ export function toPublicTestimonial(doc: any): PublicTestimonial {
         }
       : null,
     productName: doc.productUsed?.name ? bi(doc.productUsed.name) : null,
+    productSlug: doc.productUsed?.slug ?? null,
     rating: doc.rating ?? null,
     featured: Boolean(doc.featured),
+    verified: Boolean(doc.verified),
+    verifiedVia: doc.verifiedVia ?? "",
   };
 }
 
@@ -325,7 +332,7 @@ export async function getPublishedTestimonials(): Promise<PublicTestimonial[]> {
   await connectToDatabase();
   const docs = await Testimonial.find({ status: "published" })
     .sort({ featured: -1, displayOrder: 1, createdAt: -1 })
-    .populate({ path: "productUsed", select: "name" })
+    .populate({ path: "productUsed", select: "name slug" })
     .lean();
 
   return docs.map(toPublicTestimonial);
@@ -350,6 +357,7 @@ export interface PublicPost extends PublicPostMeta {
   content: Bi;
   metaTitle: Bi;
   metaDescription: Bi;
+  pinnedTestimonials: PublicTestimonial[];
 }
 
 /**
@@ -406,13 +414,22 @@ export async function getPublishedPostBySlug(
   const doc: any = await Post.findOne({
     slug,
     ...publishedPostFilter(),
-  }).lean();
+  })
+    .populate({
+      path: "pinnedTestimonials",
+      match: { status: "published" },
+      populate: { path: "productUsed", select: "name slug" },
+    })
+    .lean();
   if (!doc) return null;
   return {
     ...toPostMeta(doc),
     content: bi(doc.content),
     metaTitle: bi(doc.metaTitle),
     metaDescription: bi(doc.metaDescription),
+    pinnedTestimonials: (doc.pinnedTestimonials ?? [])
+      .filter((t: any) => t && typeof t === "object" && t.farmerName)
+      .map(toPublicTestimonial),
   };
 }
 

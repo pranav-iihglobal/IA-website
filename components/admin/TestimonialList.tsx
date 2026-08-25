@@ -27,6 +27,27 @@ interface Row {
   featured: boolean;
   photo: string | null;
   videoPlatform: string;
+  verified: boolean;
+  verifiedVia: string;
+  source: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+const VERIFIED_LABEL: Record<string, string> = {
+  whatsapp: "Verified on WhatsApp",
+  field_visit: "Verified by field visit",
+  photo: "Verified by photo",
+};
+
+/** "Last edited" line: date plus who saved it, when known. */
+function lastEdited(row: Row): string {
+  if (!row.updatedAt) return "";
+  const when = new Date(row.updatedAt).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+  });
+  return row.updatedBy ? `${when} · ${row.updatedBy}` : when;
 }
 
 /** Small badge showing whether the story carries a video or is text only. */
@@ -193,8 +214,32 @@ export function TestimonialList() {
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate font-semibold text-russet">
-                            {row.farmerName.en}
+                          <p className="flex items-center gap-1.5 font-semibold text-russet">
+                            <span className="truncate">{row.farmerName.en}</span>
+                            {row.verified && (
+                              <span
+                                title={
+                                  VERIFIED_LABEL[row.verifiedVia] ?? "Verified"
+                                }
+                                className="shrink-0 text-olive"
+                              >
+                                <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.7-9.3a1 1 0 0 0-1.4-1.4L9 10.6 7.7 9.3a1 1 0 0 0-1.4 1.4l2 2a1 1 0 0 0 1.4 0l4-4Z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              </span>
+                            )}
+                            {row.source === "whatsapp_submission" && (
+                              <span
+                                title="Sent by the farmer on WhatsApp"
+                                className="shrink-0 rounded-full bg-laurel-light/60 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-olive-dark"
+                              >
+                                WA
+                              </span>
+                            )}
                           </p>
                           <p className="truncate text-xs text-russet-dark/55">
                             {[row.village, row.district].filter(Boolean).join(", ")}
@@ -210,6 +255,14 @@ export function TestimonialList() {
                     </td>
                     <td className="px-5 py-3.5">
                       <StatusPill status={row.status} />
+                      {lastEdited(row) && (
+                        <p
+                          className="mt-1 truncate text-[11px] text-russet-dark/50"
+                          title={`Last edited ${lastEdited(row)}`}
+                        >
+                          {lastEdited(row)}
+                        </p>
+                      )}
                     </td>
                     <td className="px-5 py-3.5">
                       <RowActions
