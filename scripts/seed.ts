@@ -11,9 +11,7 @@
  * The document mapping lives in scripts/seed-data.ts (pure, no DB access).
  */
 
-import fs from "fs";
-import path from "path";
-
+import { loadEnv } from "./load-env";
 import { connectToDatabase } from "../lib/db/connect";
 import { Product } from "../lib/db/models/Product";
 import { Testimonial } from "../lib/db/models/Testimonial";
@@ -24,26 +22,15 @@ import {
   buildTestimonialDocs,
 } from "./seed-data";
 
-/* --- minimal .env.local loader (tsx does not load it the way Next does) --- */
-function loadEnvLocal() {
-  if (process.env.MONGODB_URI) return;
-  const file = path.join(process.cwd(), ".env.local");
-  if (!fs.existsSync(file)) return;
-  for (const line of fs.readFileSync(file, "utf8").split("\n")) {
-    const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
-    if (!match) continue;
-    const [, key, rawValue = ""] = match;
-    if (process.env[key]) continue;
-    process.env[key] = rawValue.replace(/^["']|["']$/g, "").trim();
-  }
-}
-
 async function main() {
-  loadEnvLocal();
+  const files = loadEnv();
   if (!process.env.MONGODB_URI) {
     console.error(
       "\n  MONGODB_URI is not set.\n" +
-        "  Put it in .env.local (see .env.example) and run again.\n",
+        (files.length
+          ? `  Loaded ${files.join(", ")} but MONGODB_URI was not in it.\n`
+          : "  No .env file found — copy .env.example to .env.local.\n") +
+        "  Then run: npm run check-connection\n",
     );
     process.exit(1);
   }
