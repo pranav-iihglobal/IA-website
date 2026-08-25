@@ -9,6 +9,10 @@ import {
   ProductForm,
   type ProductFormValues,
 } from "@/components/admin/ProductForm";
+import {
+  getProductOptions,
+  getTestimonialOptions,
+} from "@/lib/admin/products-options";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +65,49 @@ function toFormValues(doc: LeanDoc): ProductFormValues {
       alt: bi(i.alt),
       isPrimary: Boolean(i.isPrimary),
     })),
+    // Fields added after these documents were written read back undefined.
+    assets: (doc.assets ?? []).map((a: LeanDoc) => ({
+      type: a.type ?? "other",
+      title: bi(a.title),
+      fileUrl: a.fileUrl ?? "",
+      publicId: a.publicId ?? "",
+      resourceType: a.resourceType ?? "raw",
+      sizeBytes: a.sizeBytes ?? 0,
+    })),
+    applicationSteps: (doc.applicationSteps ?? []).map(
+      (s: LeanDoc, i: number) => ({
+        image: { url: s.image?.url ?? "", publicId: s.image?.publicId ?? "" },
+        caption: bi(s.caption),
+        order: s.order ?? i,
+      }),
+    ),
+    fieldResults: (doc.fieldResults ?? []).map((r: LeanDoc) => ({
+      beforeImage: {
+        url: r.beforeImage?.url ?? "",
+        publicId: r.beforeImage?.publicId ?? "",
+      },
+      afterImage: {
+        url: r.afterImage?.url ?? "",
+        publicId: r.afterImage?.publicId ?? "",
+      },
+      crop: r.crop ?? "",
+      district: r.district ?? "",
+      description: bi(r.description),
+      farmerName: r.farmerName ?? "",
+    })),
+    faqs: (doc.faqs ?? []).map((f: LeanDoc, i: number) => ({
+      question: bi(f.question),
+      answer: bi(f.answer),
+      order: f.order ?? i,
+    })),
+    relatedProducts: (doc.relatedProducts ?? []).map(String),
+    pairsWellWith: (doc.pairsWellWith ?? []).map((p: LeanDoc) => ({
+      product: String(p.product ?? ""),
+      note: bi(p.note),
+    })),
+    pinnedTestimonials: (doc.pinnedTestimonials ?? []).map(String),
+    availability: doc.availability ?? "in_stock",
+    availabilityNote: bi(doc.availabilityNote),
     artFallback: doc.artFallback ?? "sachet",
     status: doc.status ?? "draft",
     featured: Boolean(doc.featured),
@@ -77,7 +124,11 @@ export default async function EditProductPage({
   if (!isValidObjectId(id)) notFound();
 
   await connectToDatabase();
-  const doc = await Product.findById(id).lean();
+  const [doc, products, testimonials] = await Promise.all([
+    Product.findById(id).lean(),
+    getProductOptions(),
+    getTestimonialOptions(),
+  ]);
   if (!doc) notFound();
 
   return (
@@ -97,7 +148,16 @@ export default async function EditProductPage({
         Edit {(doc as LeanDoc).name?.en}
       </h1>
       <div className="mt-8">
-        <ProductForm initial={toFormValues(doc)} productId={id} />
+        <ProductForm
+          initial={toFormValues(doc)}
+          productId={id}
+          products={products.map((p) => ({ id: p.id, label: p.name, hint: p.hint }))}
+          testimonials={testimonials.map((t) => ({
+            id: t.id,
+            label: t.name,
+            hint: t.hint,
+          }))}
+        />
       </div>
     </>
   );

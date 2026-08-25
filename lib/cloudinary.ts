@@ -40,21 +40,43 @@ export function getCloudinary() {
   return cloudinary;
 }
 
+/** Cloudinary stores PDFs and other documents as "raw", not "image". */
+export type CloudinaryResourceType = "image" | "raw";
+
 /**
  * Delete assets by public_id, ignoring failures.
  * A missing image must never block deleting the record that referenced it.
+ *
+ * `resourceType` must match how the asset was uploaded — destroying a raw
+ * PDF as an image silently succeeds without deleting anything.
  */
-export async function deleteAssets(publicIds: string[]): Promise<void> {
+export async function deleteAssets(
+  publicIds: string[],
+  resourceType: CloudinaryResourceType = "image",
+): Promise<void> {
   const ids = publicIds.filter(Boolean);
   if (ids.length === 0 || !isCloudinaryConfigured()) return;
   const cld = getCloudinary();
   await Promise.all(
     ids.map((id) =>
       cld.uploader
-        .destroy(id, { invalidate: true })
+        .destroy(id, { invalidate: true, resource_type: resourceType })
         .catch((error) =>
           console.error(`[cloudinary] could not delete ${id}:`, error),
         ),
     ),
   );
+}
+
+/** Delete a mixed set of assets, each with its own resource type. */
+export async function deleteTypedAssets(
+  assets: { publicId: string; resourceType?: CloudinaryResourceType }[],
+): Promise<void> {
+  const images = assets
+    .filter((a) => (a.resourceType ?? "image") === "image")
+    .map((a) => a.publicId);
+  const raws = assets
+    .filter((a) => a.resourceType === "raw")
+    .map((a) => a.publicId);
+  await Promise.all([deleteAssets(images, "image"), deleteAssets(raws, "raw")]);
 }

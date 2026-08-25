@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { isAdminAuthenticated } from "@/lib/auth/session";
+import { getAdminSession, isAdminAuthenticated } from "@/lib/auth/session";
 
 /**
  * Shared helpers for admin API route handlers.
@@ -14,6 +14,21 @@ import { isAdminAuthenticated } from "@/lib/auth/session";
 export async function requireAdmin(): Promise<NextResponse | null> {
   if (await isAdminAuthenticated()) return null;
   return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+}
+
+/**
+ * Who is saving this, for the "last edited by" line in the admin.
+ *
+ * Read from the session cookie, never from the request body — otherwise a
+ * client could claim to be anyone.
+ */
+export async function currentEditor(): Promise<string> {
+  try {
+    const session = await getAdminSession();
+    return session.email ?? "";
+  } catch {
+    return "";
+  }
 }
 
 /** Map thrown errors to a useful response instead of a generic 500. */

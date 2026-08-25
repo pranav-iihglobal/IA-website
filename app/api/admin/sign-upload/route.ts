@@ -12,6 +12,8 @@ export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   folder: z.enum(["products", "testimonials", "blog"]),
+  /** "raw" for PDFs and other documents; Cloudinary uses a separate endpoint. */
+  resourceType: z.enum(["image", "raw"]).default("image"),
 });
 
 /**
@@ -42,8 +44,10 @@ export async function POST(request: NextRequest) {
     const cld = getCloudinary();
     const timestamp = Math.round(Date.now() / 1000);
     const folder = CLOUDINARY_FOLDERS[parsed.data.folder];
+    const resourceType = parsed.data.resourceType;
 
     // Everything signed here must be sent by the browser, unchanged.
+    // resource_type is part of the URL, not the signed payload.
     const paramsToSign = { timestamp, folder };
     const signature = cld.utils.api_sign_request(
       paramsToSign,
@@ -54,6 +58,8 @@ export async function POST(request: NextRequest) {
       signature,
       timestamp,
       folder,
+      resourceType,
+      uploadUrl: `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`,
       apiKey: process.env.CLOUDINARY_API_KEY,
       cloudName: process.env.CLOUDINARY_CLOUD_NAME,
     });

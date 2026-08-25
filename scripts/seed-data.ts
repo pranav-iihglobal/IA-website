@@ -87,10 +87,23 @@ export function buildProductDocs() {
             },
           ]
         : [],
+      // Rich sections start empty — the legacy content file has no brochures,
+      // step photos, field results or FAQs to import. They are filled in from
+      // the admin panel.
+      assets: [] as never[],
+      applicationSteps: [] as never[],
+      fieldResults: [] as never[],
+      faqs: [] as never[],
+      relatedProducts: [] as string[],
+      pairsWellWith: [] as never[],
+      pinnedTestimonials: [] as string[],
+      availability: "in_stock" as const,
+      availabilityNote: { en: "", gu: "" },
       artFallback: p.art,
       status: "published" as const,
       featured: Boolean(p.flagship),
       displayOrder: index,
+      updatedBy: "",
     };
   });
 }

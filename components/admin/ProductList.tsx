@@ -25,7 +25,37 @@ interface Row {
   featured: boolean;
   categoryLabel: { en: string; gu?: string };
   image: string | null;
+  availability: string;
   updatedAt: string;
+  updatedBy: string;
+}
+
+const AVAILABILITY: Record<string, { label: string; className: string }> = {
+  in_stock: { label: "In stock", className: "bg-laurel-light/60 text-olive-dark" },
+  out_of_stock: { label: "Out of stock", className: "bg-camel-light/50 text-russet" },
+  seasonal: { label: "Seasonal", className: "bg-alloy/15 text-alloy-dark" },
+};
+
+function AvailabilityBadge({ value }: { value: string }) {
+  const style = AVAILABILITY[value] ?? AVAILABILITY.in_stock;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${style.className}`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {style.label}
+    </span>
+  );
+}
+
+/** "Last edited" line: relative date plus who saved it, when known. */
+function lastEdited(row: Row): string {
+  if (!row.updatedAt) return "";
+  const when = new Date(row.updatedAt).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+  });
+  return row.updatedBy ? `${when} · ${row.updatedBy}` : when;
 }
 
 export function ProductList() {
@@ -144,11 +174,12 @@ export function ProductList() {
       {rows.length > 0 && (
         <div className="admin-card mt-6 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
+            <table className="w-full min-w-[760px] text-left text-sm">
               <thead className="admin-section-head text-[11px] uppercase tracking-[0.12em] text-olive">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Product</th>
                   <th className="px-5 py-3 font-semibold">Category</th>
+                  <th className="px-5 py-3 font-semibold">Stock</th>
                   <th className="px-5 py-3 font-semibold">Status</th>
                   <th className="px-5 py-3 text-right font-semibold">Actions</th>
                 </tr>
@@ -197,7 +228,18 @@ export function ProductList() {
                       {row.categoryLabel?.en}
                     </td>
                     <td className="px-5 py-3.5">
+                      <AvailabilityBadge value={row.availability} />
+                    </td>
+                    <td className="px-5 py-3.5">
                       <StatusPill status={row.status} />
+                      {lastEdited(row) && (
+                        <p
+                          className="mt-1 truncate text-[11px] text-russet-dark/50"
+                          title={`Last edited ${lastEdited(row)}`}
+                        >
+                          {lastEdited(row)}
+                        </p>
+                      )}
                     </td>
                     <td className="px-5 py-3.5">
                       <RowActions

@@ -1,9 +1,18 @@
 import Link from "next/link";
 import { EMPTY_PRODUCT, ProductForm } from "@/components/admin/ProductForm";
+import {
+  getProductOptions,
+  getTestimonialOptions,
+} from "@/lib/admin/products-options";
 
 export const dynamic = "force-dynamic";
 
-export default function NewProductPage() {
+export default async function NewProductPage() {
+  const [products, testimonials] = await Promise.all([
+    getProductOptions(),
+    getTestimonialOptions(),
+  ]);
+
   return (
     <>
       <nav className="mb-5">
@@ -22,7 +31,15 @@ export default function NewProductPage() {
         Saved as a draft unless you set the status to published.
       </p>
       <div className="mt-8">
-        <ProductForm initial={EMPTY_PRODUCT} />
+        <ProductForm
+          initial={EMPTY_PRODUCT}
+          products={products.map((p) => ({ id: p.id, label: p.name, hint: p.hint }))}
+          testimonials={testimonials.map((t) => ({
+            id: t.id,
+            label: t.name,
+            hint: t.hint,
+          }))}
+        />
       </div>
     </>
   );

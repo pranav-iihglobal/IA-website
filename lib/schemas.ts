@@ -50,6 +50,65 @@ export const compositionItemSchema = z.object({
   quantity: z.string().trim().default(""),
 });
 
+/** A Mongo ObjectId arriving from the admin form as a 24-char hex string. */
+export const objectIdSchema = z
+  .string()
+  .trim()
+  .regex(/^[0-9a-fA-F]{24}$/, "Pick an item from the list");
+
+const mediaRefSchema = z
+  .object({
+    url: z.string().default(""),
+    publicId: z.string().default(""),
+  })
+  .default({ url: "", publicId: "" });
+
+export const productAssetSchema = z.object({
+  type: z.enum(["brochure", "label", "leaflet", "other"]).default("other"),
+  title: biSchema,
+  fileUrl: z.string().min(1, "Upload the file first"),
+  publicId: z.string().default(""),
+  resourceType: z.enum(["raw", "image"]).default("raw"),
+  sizeBytes: z.coerce.number().min(0).default(0),
+});
+
+export const applicationStepSchema = z.object({
+  image: mediaRefSchema,
+  caption: biSchema,
+  order: z.coerce.number().default(0),
+});
+
+export const fieldResultSchema = z
+  .object({
+    beforeImage: mediaRefSchema,
+    afterImage: mediaRefSchema,
+    crop: z.string().trim().default(""),
+    district: z.string().trim().default(""),
+    description: biSchema,
+    farmerName: z.string().trim().default(""),
+  })
+  .superRefine((value, ctx) => {
+    // A before/after pair with only one photo has nothing to compare.
+    if (!value.beforeImage.url || !value.afterImage.url) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["beforeImage", "url"],
+        message: "Add both the before and the after photo",
+      });
+    }
+  });
+
+export const faqSchema = z.object({
+  question: biSchema,
+  answer: biSchema,
+  order: z.coerce.number().default(0),
+});
+
+export const pairingSchema = z.object({
+  product: objectIdSchema,
+  note: biOptionalSchema.default({ en: "", gu: "" }),
+});
+
 export const productSchema = z.object({
   name: biSchema,
   slug: slugSchema,
@@ -94,6 +153,21 @@ export const productSchema = z.object({
       licenseNo: z.string().trim().default(""),
     })
     .default({ fcoCompliant: false, fcoSchedule: "", licenseNo: "" }),
+
+  assets: z.array(productAssetSchema).default([]),
+  applicationSteps: z.array(applicationStepSchema).default([]),
+  fieldResults: z.array(fieldResultSchema).default([]),
+  faqs: z.array(faqSchema).default([]),
+  relatedProducts: z.array(objectIdSchema).default([]),
+  pairsWellWith: z.array(pairingSchema).default([]),
+  pinnedTestimonials: z
+    .array(objectIdSchema)
+    .max(2, "Pin at most 2 testimonials")
+    .default([]),
+  availability: z
+    .enum(["in_stock", "out_of_stock", "seasonal"])
+    .default("in_stock"),
+  availabilityNote: biOptionalSchema.default({ en: "", gu: "" }),
 
   images: z.array(imageSchema).default([]),
   artFallback: z.enum(["sachet", "roots", "network"]).default("sachet"),

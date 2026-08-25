@@ -126,6 +126,44 @@ export const UI = {
   minRead: { en: "min read", gu: "મિનિટનું વાંચન" },
   /** Quiet staff link in the footer bar to the admin panel. */
   backoffice: { en: "Backoffice", gu: "બેકઓફિસ" },
+
+  // ---- product page: downloads, gallery, results, FAQ, related ----
+  downloads: { en: "Downloads", gu: "ડાઉનલોડ" },
+  downloadsNote: {
+    en: "Product documents you can save or ask us to send on WhatsApp.",
+    gu: "પ્રોડક્ટના કાગળો — સાચવી લો, અથવા વોટ્સએપ પર મંગાવો.",
+  },
+  download: { en: "Download", gu: "ડાઉનલોડ કરો" },
+  getOnWhatsApp: { en: "Get on WhatsApp", gu: "વોટ્સએપ પર મંગાવો" },
+  howToUse: { en: "How to use", gu: "કેવી રીતે વાપરવું" },
+  howToUseNote: {
+    en: "Step by step, the way farmers do it in the field.",
+    gu: "પગલું પગલું — ખેતરમાં ખેડૂતો જે રીતે કરે છે તે રીતે.",
+  },
+  fieldResults: { en: "Results from the field", gu: "ખેતરમાંથી પરિણામ" },
+  fieldResultsNote: {
+    en: "Real fields, before and after. Photographs shared by farmers.",
+    gu: "સાચાં ખેતર — પહેલાં અને પછી. ખેડૂતોએ મોકલેલા ફોટા.",
+  },
+  before: { en: "Before", gu: "પહેલાં" },
+  after: { en: "After", gu: "પછી" },
+  faqHeading: { en: "Common questions", gu: "વારંવાર પુછાતા સવાલ" },
+  useTogether: { en: "Use together", gu: "સાથે વાપરો" },
+  useTogetherNote: {
+    en: "These work well alongside this product.",
+    gu: "આ પ્રોડક્ટ સાથે આ પણ સારું કામ કરે છે.",
+  },
+  relatedProducts: { en: "You may also need", gu: "આ પણ કામ આવશે" },
+  farmersSay: { en: "What farmers say", gu: "ખેડૂતો શું કહે છે" },
+
+  // ---- availability ----
+  inStock: { en: "Available", gu: "ઉપલબ્ધ છે" },
+  outOfStock: { en: "Out of stock", gu: "હાલ સ્ટોકમાં નથી" },
+  seasonal: { en: "Seasonal", gu: "સીઝન પ્રમાણે" },
+  notifyOnWhatsApp: {
+    en: "Notify me on WhatsApp",
+    gu: "આવે ત્યારે વોટ્સએપ પર જણાવો",
+  },
   footerTagline: {
     en: "Biofertilizers made in North Gujarat, for the soil that has been worked too hard.",
     gu: "ઉત્તર ગુજરાતમાં બનેલાં જૈવિક ખાતર — જે જમીન પાસેથી બહુ કામ લેવાયું છે, તેના માટે.",

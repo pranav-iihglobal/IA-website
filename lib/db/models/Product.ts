@@ -47,6 +47,77 @@ const packSizeSchema = new Schema(
   { _id: false },
 );
 
+/** Downloadable document (brochure, label …) hosted on Cloudinary. */
+const assetSchema = new Schema(
+  {
+    type: {
+      type: String,
+      enum: ["brochure", "label", "leaflet", "other"],
+      default: "other",
+    },
+    title: { type: biSchema, required: true },
+    fileUrl: { type: String, required: true },
+    publicId: { type: String, default: "" },
+    /**
+     * Cloudinary stores PDFs as "raw" and images as "image", and deletion
+     * needs the right one — so it travels with the asset.
+     */
+    resourceType: { type: String, enum: ["raw", "image"], default: "raw" },
+    sizeBytes: { type: Number, min: 0, default: 0 },
+  },
+  { _id: false },
+);
+
+/** One step of the "how to apply" photo strip. */
+const applicationStepSchema = new Schema(
+  {
+    image: {
+      url: { type: String, default: "" },
+      publicId: { type: String, default: "" },
+    },
+    caption: { type: biSchema, required: true },
+    order: { type: Number, default: 0 },
+  },
+  { _id: false },
+);
+
+/** Before/after pair from a real field. */
+const fieldResultSchema = new Schema(
+  {
+    beforeImage: {
+      url: { type: String, default: "" },
+      publicId: { type: String, default: "" },
+    },
+    afterImage: {
+      url: { type: String, default: "" },
+      publicId: { type: String, default: "" },
+    },
+    crop: { type: String, trim: true, default: "" },
+    district: { type: String, trim: true, default: "" },
+    description: { type: biSchema, required: true },
+    farmerName: { type: String, trim: true, default: "" },
+  },
+  { _id: false },
+);
+
+const faqSchema = new Schema(
+  {
+    question: { type: biSchema, required: true },
+    answer: { type: biSchema, required: true },
+    order: { type: Number, default: 0 },
+  },
+  { _id: false },
+);
+
+/** "Use together" pairing, e.g. Mycho at sowing + FloraMax at flowering. */
+const pairingSchema = new Schema(
+  {
+    product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+    note: { type: biSchema, default: () => ({ en: "", gu: "" }) },
+  },
+  { _id: false },
+);
+
 const productSchema = new Schema(
   {
     name: { type: biSchema, required: true },
@@ -109,6 +180,29 @@ const productSchema = new Schema(
       licenseNo: { type: String, trim: true, default: "" },
     },
 
+    // ---- rich public sections (all optional; absent on older documents) ----
+    assets: { type: [assetSchema], default: [] },
+    applicationSteps: { type: [applicationStepSchema], default: [] },
+    fieldResults: { type: [fieldResultSchema], default: [] },
+    faqs: { type: [faqSchema], default: [] },
+    relatedProducts: {
+      type: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+      default: [],
+    },
+    pairsWellWith: { type: [pairingSchema], default: [] },
+    /** At most 2 — enforced in lib/schemas.ts so the admin sees the error. */
+    pinnedTestimonials: {
+      type: [{ type: Schema.Types.ObjectId, ref: "Testimonial" }],
+      default: [],
+    },
+
+    availability: {
+      type: String,
+      enum: ["in_stock", "out_of_stock", "seasonal"],
+      default: "in_stock",
+    },
+    availabilityNote: { type: biSchema, default: () => ({ en: "", gu: "" }) },
+
     // ---- media & state ----
     images: { type: [imageSchema], default: [] },
     /** SVG illustration used when a product has no photo yet. */
@@ -125,11 +219,14 @@ const productSchema = new Schema(
     },
     featured: { type: Boolean, default: false },
     displayOrder: { type: Number, default: 0 },
+    /** Email of the admin who last saved this. Set server-side from the session. */
+    updatedBy: { type: String, default: "", trim: true },
   },
   { timestamps: true },
 );
 
 productSchema.index({ status: 1, featured: -1, displayOrder: 1 });
+productSchema.index({ status: 1, availability: 1 });
 
 export type ProductDoc = InferSchemaType<typeof productSchema>;
 

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import type { Bi } from "@/lib/content";
 import { CLD, cldUrl } from "@/lib/images";
+import { uploadToCloudinary, type UploadFolder } from "@/lib/admin/upload";
 import { useToast } from "./Toast";
 import { ErrorBanner, Spinner } from "./ui";
 
@@ -14,43 +15,6 @@ export interface AdminImage {
   isPrimary: boolean;
 }
 
-/**
- * Uploads straight from the browser to Cloudinary using a signature minted
- * by /api/admin/sign-upload — the file never touches our server, and the API
- * secret never reaches the client. Only url + public_id are kept.
- */
-async function uploadToCloudinary(
-  file: File,
-  folder: "products" | "testimonials" | "blog",
-): Promise<{ url: string; publicId: string }> {
-  const signResponse = await fetch("/api/admin/sign-upload", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ folder }),
-  });
-  const signed = await signResponse.json();
-  if (!signResponse.ok) {
-    throw new Error(signed.error ?? "Could not start the upload");
-  }
-
-  const form = new FormData();
-  form.append("file", file);
-  form.append("api_key", signed.apiKey);
-  form.append("timestamp", String(signed.timestamp));
-  form.append("signature", signed.signature);
-  form.append("folder", signed.folder);
-
-  const uploadResponse = await fetch(
-    `https://api.cloudinary.com/v1_1/${signed.cloudName}/image/upload`,
-    { method: "POST", body: form },
-  );
-  const result = await uploadResponse.json();
-  if (!uploadResponse.ok) {
-    throw new Error(result?.error?.message ?? "Cloudinary rejected the upload");
-  }
-  return { url: result.secure_url as string, publicId: result.public_id as string };
-}
-
 export function ImageUploader({
   images,
   onChange,
@@ -59,7 +23,7 @@ export function ImageUploader({
 }: {
   images: AdminImage[];
   onChange: (images: AdminImage[]) => void;
-  folder?: "products" | "testimonials" | "blog";
+  folder?: UploadFolder;
   max?: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);

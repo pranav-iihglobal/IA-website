@@ -5,6 +5,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import ImageExt from "@tiptap/extension-image";
 import { useRef, useState } from "react";
+import { uploadToCloudinary } from "@/lib/admin/upload";
 import { useToast } from "./Toast";
 
 /**
@@ -87,30 +88,9 @@ export function RichTextEditor({
   async function insertImage(file: File) {
     setUploading(true);
     try {
-      const signResponse = await fetch("/api/admin/sign-upload", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ folder: "blog" }),
-      });
-      const signed = await signResponse.json();
-      if (!signResponse.ok) throw new Error(signed.error);
-
-      const form = new FormData();
-      form.append("file", file);
-      form.append("api_key", signed.apiKey);
-      form.append("timestamp", String(signed.timestamp));
-      form.append("signature", signed.signature);
-      form.append("folder", signed.folder);
-
-      const uploadResponse = await fetch(
-        `https://api.cloudinary.com/v1_1/${signed.cloudName}/image/upload`,
-        { method: "POST", body: form },
-      );
-      const result = await uploadResponse.json();
-      if (!uploadResponse.ok) throw new Error("Upload failed");
-
+      const uploaded = await uploadToCloudinary(file, "blog");
       // f_auto,q_auto so inline images are delivered optimized too.
-      const url = String(result.secure_url).replace(
+      const url = uploaded.url.replace(
         "/upload/",
         "/upload/f_auto,q_auto,w_1200/",
       );

@@ -6,6 +6,9 @@ import type { Bi } from "@/lib/content";
 import { slugify } from "@/lib/schemas";
 import { ProductCard } from "@/components/ProductCard";
 import { ImageUploader, type AdminImage } from "./ImageUploader";
+import { FileUploader, type AdminAsset } from "./FileUploader";
+import { SingleImageField, type MediaRef } from "./SingleImageField";
+import { EntityPicker, EntitySelect, type PickerOption } from "./EntityPicker";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { useToast } from "./Toast";
 import {
@@ -54,6 +57,24 @@ export interface ProductFormValues {
     dealerPrice?: number | string;
   }[];
   regulatory: { fcoCompliant: boolean; fcoSchedule: string; licenseNo: string };
+
+  assets: AdminAsset[];
+  applicationSteps: { image: MediaRef; caption: Bi; order: number }[];
+  fieldResults: {
+    beforeImage: MediaRef;
+    afterImage: MediaRef;
+    crop: string;
+    district: string;
+    description: Bi;
+    farmerName: string;
+  }[];
+  faqs: { question: Bi; answer: Bi; order: number }[];
+  relatedProducts: string[];
+  pairsWellWith: { product: string; note: Bi }[];
+  pinnedTestimonials: string[];
+  availability: "in_stock" | "out_of_stock" | "seasonal";
+  availabilityNote: Bi;
+
   images: AdminImage[];
   artFallback: "sachet" | "roots" | "network";
   status: "draft" | "published";
@@ -87,6 +108,17 @@ export const EMPTY_PRODUCT: ProductFormValues = {
   composition: [],
   packSizes: [],
   regulatory: { fcoCompliant: false, fcoSchedule: "", licenseNo: "" },
+
+  assets: [],
+  applicationSteps: [],
+  fieldResults: [],
+  faqs: [],
+  relatedProducts: [],
+  pairsWellWith: [],
+  pinnedTestimonials: [],
+  availability: "in_stock",
+  availabilityNote: { ...EMPTY_BI },
+
   images: [],
   artFallback: "sachet",
   status: "draft",
@@ -97,9 +129,15 @@ export const EMPTY_PRODUCT: ProductFormValues = {
 export function ProductForm({
   initial,
   productId,
+  products = [],
+  testimonials = [],
 }: {
   initial: ProductFormValues;
   productId?: string;
+  /** All products, for the related / pairing pickers. */
+  products?: PickerOption[];
+  /** Published testimonials, for pinning. */
+  testimonials?: PickerOption[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -140,6 +178,12 @@ export function ProductForm({
     const primary = values.images.find((i) => i.isPrimary) ?? values.images[0];
     return primary?.url ?? null;
   }, [values.images]);
+
+  // A product can't be related to, or paired with, itself.
+  const otherProducts = useMemo(
+    () => products.filter((p) => p.id !== productId),
+    [products, productId],
+  );
 
   async function save() {
     setSaving(true);
@@ -558,7 +602,341 @@ export function ProductForm({
           />
         </Section>
 
+        <Section
+          title="Downloads"
+          description="PDFs farmers can download or ask for on WhatsApp."
+        >
+          <FileUploader
+            assets={values.assets}
+            onChange={(assets) => update("assets", assets)}
+            folder="products"
+          />
+        </Section>
+
+        <Section
+          title="How to use"
+          description="A numbered photo strip on the product page. Add the steps in order."
+        >
+          <RepeatableList
+            items={values.applicationSteps}
+            emptyLabel="No steps yet."
+            addLabel="Add step"
+            onAdd={() =>
+              update("applicationSteps", [
+                ...values.applicationSteps,
+                {
+                  image: { url: "", publicId: "" },
+                  caption: { ...EMPTY_BI },
+                  order: values.applicationSteps.length,
+                },
+              ])
+            }
+            onRemove={(i) =>
+              update(
+                "applicationSteps",
+                values.applicationSteps
+                  .filter((_, idx) => idx !== i)
+                  .map((s, idx) => ({ ...s, order: idx })),
+              )
+            }
+            renderItem={(i) => (
+              <div className="grid gap-3 sm:grid-cols-[7rem_1fr]">
+                <SingleImageField
+                  label="Photo"
+                  value={values.applicationSteps[i].image}
+                  onChange={(image) =>
+                    update(
+                      "applicationSteps",
+                      values.applicationSteps.map((s, idx) =>
+                        idx === i ? { ...s, image } : s,
+                      ),
+                    )
+                  }
+                />
+                <BiField
+                  label="Caption"
+                  value={values.applicationSteps[i].caption}
+                  onChange={(caption) =>
+                    update(
+                      "applicationSteps",
+                      values.applicationSteps.map((s, idx) =>
+                        idx === i ? { ...s, caption } : s,
+                      ),
+                    )
+                  }
+                  multiline
+                  rows={2}
+                  errors={{
+                    en: errors[`applicationSteps.${i}.caption.en`],
+                  }}
+                  required
+                />
+              </div>
+            )}
+          />
+        </Section>
+
+        <Section
+          title="Results from the field"
+          description="Before/after photo pairs. These sit above the FAQ — they do more for sales than any other section."
+        >
+          <RepeatableList
+            items={values.fieldResults}
+            emptyLabel="No field results yet."
+            addLabel="Add a before/after pair"
+            onAdd={() =>
+              update("fieldResults", [
+                ...values.fieldResults,
+                {
+                  beforeImage: { url: "", publicId: "" },
+                  afterImage: { url: "", publicId: "" },
+                  crop: "",
+                  district: "",
+                  description: { ...EMPTY_BI },
+                  farmerName: "",
+                },
+              ])
+            }
+            onRemove={(i) =>
+              update(
+                "fieldResults",
+                values.fieldResults.filter((_, idx) => idx !== i),
+              )
+            }
+            renderItem={(i) => {
+              const row = values.fieldResults[i];
+              const patch = (change: Partial<typeof row>) =>
+                update(
+                  "fieldResults",
+                  values.fieldResults.map((r, idx) =>
+                    idx === i ? { ...r, ...change } : r,
+                  ),
+                );
+              return (
+                <div className="space-y-3">
+                  <div className="grid max-w-xs grid-cols-2 gap-3">
+                    <SingleImageField
+                      label="Before"
+                      value={row.beforeImage}
+                      onChange={(beforeImage) => patch({ beforeImage })}
+                      error={errors[`fieldResults.${i}.beforeImage.url`]}
+                    />
+                    <SingleImageField
+                      label="After"
+                      value={row.afterImage}
+                      onChange={(afterImage) => patch({ afterImage })}
+                    />
+                  </div>
+                  {errors[`fieldResults.${i}.beforeImage.url`] && (
+                    <p className="text-xs font-semibold text-alloy-dark">
+                      {errors[`fieldResults.${i}.beforeImage.url`]}
+                    </p>
+                  )}
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <TextField
+                      label="Crop"
+                      value={row.crop}
+                      onChange={(crop) => patch({ crop })}
+                    />
+                    <TextField
+                      label="District"
+                      value={row.district}
+                      onChange={(district) => patch({ district })}
+                    />
+                    <TextField
+                      label="Farmer (optional)"
+                      value={row.farmerName}
+                      onChange={(farmerName) => patch({ farmerName })}
+                    />
+                  </div>
+                  <BiField
+                    label="What changed"
+                    value={row.description}
+                    onChange={(description) => patch({ description })}
+                    multiline
+                    rows={2}
+                    errors={{ en: errors[`fieldResults.${i}.description.en`] }}
+                    required
+                  />
+                </div>
+              );
+            }}
+          />
+        </Section>
+
+        <Section
+          title="Common questions"
+          description="Shown as an accordion, and published as FAQ structured data for Google."
+        >
+          <RepeatableList
+            items={values.faqs}
+            emptyLabel="No questions yet."
+            addLabel="Add question"
+            onAdd={() =>
+              update("faqs", [
+                ...values.faqs,
+                {
+                  question: { ...EMPTY_BI },
+                  answer: { ...EMPTY_BI },
+                  order: values.faqs.length,
+                },
+              ])
+            }
+            onRemove={(i) =>
+              update(
+                "faqs",
+                values.faqs
+                  .filter((_, idx) => idx !== i)
+                  .map((f, idx) => ({ ...f, order: idx })),
+              )
+            }
+            renderItem={(i) => (
+              <div className="space-y-3">
+                <BiField
+                  label="Question"
+                  value={values.faqs[i].question}
+                  onChange={(question) =>
+                    update(
+                      "faqs",
+                      values.faqs.map((f, idx) =>
+                        idx === i ? { ...f, question } : f,
+                      ),
+                    )
+                  }
+                  errors={{ en: errors[`faqs.${i}.question.en`] }}
+                  required
+                />
+                <BiField
+                  label="Answer"
+                  value={values.faqs[i].answer}
+                  onChange={(answer) =>
+                    update(
+                      "faqs",
+                      values.faqs.map((f, idx) =>
+                        idx === i ? { ...f, answer } : f,
+                      ),
+                    )
+                  }
+                  multiline
+                  rows={3}
+                  errors={{ en: errors[`faqs.${i}.answer.en`] }}
+                  required
+                />
+              </div>
+            )}
+          />
+        </Section>
+
+        <Section
+          title="Related & pinned"
+          description="Cross-links and proof shown alongside this product."
+        >
+          <FieldGroup
+            label="Use together"
+            hint="Shown with the note under each card"
+          >
+            <RepeatableList
+              items={values.pairsWellWith}
+              emptyLabel="No pairings yet."
+              addLabel="Add a pairing"
+              onAdd={() =>
+                update("pairsWellWith", [
+                  ...values.pairsWellWith,
+                  { product: "", note: { ...EMPTY_BI } },
+                ])
+              }
+              onRemove={(i) =>
+                update(
+                  "pairsWellWith",
+                  values.pairsWellWith.filter((_, idx) => idx !== i),
+                )
+              }
+              renderItem={(i) => (
+                <div className="space-y-3">
+                  <EntitySelect
+                    label="Product"
+                    options={otherProducts}
+                    value={values.pairsWellWith[i].product}
+                    onChange={(product) =>
+                      update(
+                        "pairsWellWith",
+                        values.pairsWellWith.map((p, idx) =>
+                          idx === i ? { ...p, product } : p,
+                        ),
+                      )
+                    }
+                    error={errors[`pairsWellWith.${i}.product`]}
+                  />
+                  <BiField
+                    label="Note"
+                    value={values.pairsWellWith[i].note}
+                    onChange={(note) =>
+                      update(
+                        "pairsWellWith",
+                        values.pairsWellWith.map((p, idx) =>
+                          idx === i ? { ...p, note } : p,
+                        ),
+                      )
+                    }
+                    hint="e.g. Mycho at sowing + FloraMax at flowering"
+                  />
+                </div>
+              )}
+            />
+          </FieldGroup>
+
+          <EntityPicker
+            label="Related products"
+            options={otherProducts}
+            selected={values.relatedProducts}
+            onChange={(ids) => update("relatedProducts", ids)}
+            placeholder="Search products…"
+            emptyLabel="No related products — the row at the page bottom is hidden."
+          />
+
+          <EntityPicker
+            label="Pinned testimonials"
+            options={testimonials}
+            selected={values.pinnedTestimonials}
+            onChange={(ids) => update("pinnedTestimonials", ids)}
+            max={2}
+            placeholder="Search published testimonials…"
+            emptyLabel="No testimonials pinned to this product."
+            error={errors.pinnedTestimonials}
+          />
+        </Section>
+
         <Section title="Publishing">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              label="Availability"
+              value={values.availability}
+              onChange={(v) =>
+                update("availability", v as ProductFormValues["availability"])
+              }
+              options={[
+                { value: "in_stock", label: "In stock" },
+                { value: "out_of_stock", label: "Out of stock" },
+                { value: "seasonal", label: "Seasonal" },
+              ]}
+              hint={
+                values.availability === "out_of_stock"
+                  ? "The CTA becomes “Notify me on WhatsApp”."
+                  : undefined
+              }
+            />
+            <div />
+          </div>
+          {values.availability !== "in_stock" && (
+            <BiField
+              label="Availability note"
+              value={values.availabilityNote}
+              onChange={(v) => update("availabilityNote", v)}
+              multiline
+              rows={2}
+              hint="Shown next to the badge, and in place of the usual CTA text when out of stock."
+            />
+          )}
           <TextField
             label="WhatsApp message"
             value={values.whatsappMessage}

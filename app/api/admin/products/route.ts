@@ -4,6 +4,7 @@ import { Product } from "@/lib/db/models/Product";
 import { productSchema } from "@/lib/schemas";
 import type { LeanDoc } from "@/lib/db/lean";
 import {
+  currentEditor,
   errorResponse,
   fieldErrors,
   requireAdmin,
@@ -36,7 +37,9 @@ export async function GET(request: NextRequest) {
 
     const [items, total] = await Promise.all([
       Product.find(filter)
-        .select("name slug status featured categoryLabel images updatedAt displayOrder")
+        .select(
+          "name slug status featured categoryLabel images updatedAt displayOrder availability updatedBy",
+        )
         .sort({ featured: -1, displayOrder: 1, updatedAt: -1 })
         .skip((page - 1) * PAGE_SIZE)
         .limit(PAGE_SIZE)
@@ -53,7 +56,9 @@ export async function GET(request: NextRequest) {
         featured: p.featured,
         categoryLabel: p.categoryLabel,
         image: p.images?.find((i: LeanDoc) => i.isPrimary)?.url ?? p.images?.[0]?.url ?? null,
+        availability: p.availability ?? "in_stock",
         updatedAt: p.updatedAt,
+        updatedBy: p.updatedBy ?? "",
       })),
       total,
       page,
@@ -80,7 +85,10 @@ export async function POST(request: NextRequest) {
     }
 
     await connectToDatabase();
-    const created = await Product.create(parsed.data);
+    const created = await Product.create({
+      ...parsed.data,
+      updatedBy: await currentEditor(),
+    });
     revalidateProduct(created.slug);
 
     return NextResponse.json({ id: String(created._id) }, { status: 201 });

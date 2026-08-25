@@ -5,7 +5,15 @@ import {
   getPublishedProductBySlug,
   getPublishedProducts,
   getPublishedProductSlugs,
+  type Availability,
+  type PublicApplicationStep,
+  type PublicFaq,
+  type PublicFieldResult,
+  type PublicPairing,
   type PublicProduct,
+  type PublicProductAsset,
+  type PublicProductRef,
+  type PublicTestimonial,
 } from "./db/queries";
 
 /**
@@ -33,7 +41,30 @@ export interface DisplayProduct {
   imageUrl: string | null;
   artFallback: "sachet" | "roots" | "network";
   featured: boolean;
+
+  assets: PublicProductAsset[];
+  applicationSteps: PublicApplicationStep[];
+  fieldResults: PublicFieldResult[];
+  faqs: PublicFaq[];
+  relatedProducts: PublicProductRef[];
+  pairsWellWith: PublicPairing[];
+  pinnedTestimonials: PublicTestimonial[];
+  availability: Availability;
+  availabilityNote: Bi;
 }
+
+/** Empty rich sections, used by the bundled-content fallback. */
+const NO_RICH_SECTIONS = {
+  assets: [] as PublicProductAsset[],
+  applicationSteps: [] as PublicApplicationStep[],
+  fieldResults: [] as PublicFieldResult[],
+  faqs: [] as PublicFaq[],
+  relatedProducts: [] as PublicProductRef[],
+  pairsWellWith: [] as PublicPairing[],
+  pinnedTestimonials: [] as PublicTestimonial[],
+  availability: "in_stock" as Availability,
+  availabilityNote: { en: "", gu: "" },
+};
 
 function fromDb(p: PublicProduct): DisplayProduct {
   return {
@@ -52,6 +83,16 @@ function fromDb(p: PublicProduct): DisplayProduct {
     imageUrl: p.primaryImage,
     artFallback: p.artFallback,
     featured: p.featured,
+
+    assets: p.assets,
+    applicationSteps: p.applicationSteps,
+    fieldResults: p.fieldResults,
+    faqs: p.faqs,
+    relatedProducts: p.relatedProducts,
+    pairsWellWith: p.pairsWellWith,
+    pinnedTestimonials: p.pinnedTestimonials,
+    availability: p.availability,
+    availabilityNote: p.availabilityNote,
   };
 }
 
@@ -72,6 +113,9 @@ function fromLegacy(p: (typeof LEGACY_PRODUCTS)[number]): DisplayProduct {
     imageUrl: getProductImage(p.slug),
     artFallback: p.art,
     featured: Boolean(p.flagship),
+    // The bundled content predates the rich sections — a DB outage degrades
+    // to the original page rather than crashing on a missing array.
+    ...NO_RICH_SECTIONS,
   };
 }
 

@@ -3,14 +3,45 @@ import { isValidObjectId } from "mongoose";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Product } from "@/lib/db/models/Product";
 import { productSchema } from "@/lib/schemas";
-import { deleteAssets } from "@/lib/cloudinary";
+import { deleteTypedAssets } from "@/lib/cloudinary";
 import type { LeanDoc } from "@/lib/db/lean";
 import {
+  currentEditor,
   errorResponse,
   fieldErrors,
   requireAdmin,
   revalidateProduct,
 } from "@/lib/admin/api";
+
+/**
+ * Every Cloudinary public_id a product document references, with the resource
+ * type each was uploaded as. Used to spot assets dropped by an edit, and to
+ * clean up everything when a product is deleted.
+ */
+function referencedAssets(
+  doc: LeanDoc,
+): { publicId: string; resourceType: "image" | "raw" }[] {
+  const out: { publicId: string; resourceType: "image" | "raw" }[] = [];
+  const image = (publicId?: string) => {
+    if (publicId) out.push({ publicId, resourceType: "image" });
+  };
+
+  for (const img of doc.images ?? []) image(img.publicId);
+  for (const step of doc.applicationSteps ?? []) image(step.image?.publicId);
+  for (const result of doc.fieldResults ?? []) {
+    image(result.beforeImage?.publicId);
+    image(result.afterImage?.publicId);
+  }
+  for (const asset of doc.assets ?? []) {
+    if (asset.publicId) {
+      out.push({
+        publicId: asset.publicId,
+        resourceType: asset.resourceType ?? "raw",
+      });
+    }
+  }
+  return out;
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,21 +92,25 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
 
     await connectToDatabase();
-    const previous = await Product.findById(id).select("slug images").lean();
+    const previous = await Product.findById(id)
+      .select("slug images applicationSteps fieldResults assets")
+      .lean();
     if (!previous) return badId();
 
-    const updated = await Product.findByIdAndUpdate(id, parsed.data, {
-      new: true,
-      runValidators: true,
-    });
+    const updated = await Product.findByIdAndUpdate(
+      id,
+      { ...parsed.data, updatedBy: await currentEditor() },
+      { new: true, runValidators: true },
+    );
     if (!updated) return badId();
 
-    // Remove Cloudinary assets dropped from the images array.
-    const keptIds = new Set(parsed.data.images.map((i: LeanDoc) => i.publicId).filter(Boolean));
-    const orphaned = ((previous as LeanDoc).images ?? [])
-        .map((i: LeanDoc) => i.publicId)
-      .filter((pid: string) => pid && !keptIds.has(pid));
-    await deleteAssets(orphaned);
+    // Remove Cloudinary assets this edit dropped — images and PDFs alike.
+    const kept = new Set(
+      referencedAssets(updated.toObject() as LeanDoc).map((a) => a.publicId),
+    );
+    await deleteTypedAssets(
+      referencedAssets(previous as LeanDoc).filter((a) => !kept.has(a.publicId)),
+    );
 
     revalidateProduct(updated.slug);
     // The slug may have changed — refresh the old URL too.
@@ -102,7 +137,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     const doc = await Product.findByIdAndDelete(id).lean();
     if (!doc) return badId();
 
-    await deleteAssets(((doc as LeanDoc).images ?? []).map((i: LeanDoc) => i.publicId));
+    await deleteTypedAssets(referencedAssets(doc as LeanDoc));
     revalidateProduct((doc as LeanDoc).slug);
 
     return NextResponse.json({ ok: true });

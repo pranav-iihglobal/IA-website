@@ -11,6 +11,13 @@ import {
 import { T } from "@/components/T";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { ProductArt } from "@/components/ProductCard";
+import { TestimonialCard } from "@/components/TestimonialCard";
+import { Downloads } from "@/components/product/Downloads";
+import { ApplicationSteps } from "@/components/product/ApplicationSteps";
+import { FieldResults } from "@/components/product/FieldResults";
+import { ProductFaq } from "@/components/product/ProductFaq";
+import { ProductStrip } from "@/components/product/ProductStrip";
+import { AvailabilityBadge } from "@/components/product/Availability";
 
 export const revalidate = 3600;
 /** Products added in the admin after build render on first request. */
@@ -56,6 +63,7 @@ export default async function ProductPage({
 
   const name = resolveText(product.name, "en");
   const image = cldUrl(product.imageUrl, CLD.productDetail);
+  const outOfStock = product.availability === "out_of_stock";
 
   const productJsonLd = {
     "@context": "https://schema.org",
@@ -71,7 +79,38 @@ export default async function ProductPage({
     },
     image: image ? [image] : undefined,
     url: `${SITE.url}/products/${product.slug}`,
+    offers: {
+      "@type": "Offer",
+      availability: outOfStock
+        ? "https://schema.org/OutOfStock"
+        : "https://schema.org/InStock",
+      url: `${SITE.url}/products/${product.slug}`,
+    },
   };
+
+  /**
+   * FAQPage structured data.
+   *
+   * Emitted server-side into an ISR-cached page, so it cannot follow the
+   * client-side language toggle. Gujarati is the primary language — the same
+   * choice generateMetadata already makes — with English as the fallback.
+   */
+  const faqJsonLd =
+    product.faqs.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          inLanguage: ["gu", "en"],
+          mainEntity: product.faqs.map((faq) => ({
+            "@type": "Question",
+            name: resolveText(faq.question, "gu"),
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: resolveText(faq.answer, "gu"),
+            },
+          })),
+        }
+      : null;
 
   return (
     <article className="mx-auto max-w-4xl px-4 py-12">
@@ -79,6 +118,12 @@ export default async function ProductPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
       />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
 
       <nav className="mb-6 text-sm" aria-label="Breadcrumb">
         <Link
@@ -127,6 +172,10 @@ export default async function ProductPage({
               <T text={product.format} />
             </p>
           )}
+          <AvailabilityBadge
+            availability={product.availability}
+            note={product.availabilityNote}
+          />
         </div>
       </header>
 
@@ -189,20 +238,83 @@ export default async function ProductPage({
         </p>
       </section>
 
+      <ApplicationSteps steps={product.applicationSteps} />
+
+      <Downloads items={product.assets} productName={name} />
+
+      {/* Conversion-critical: proof from real fields sits above the FAQ. */}
+      <FieldResults results={product.fieldResults} />
+
+      {product.pinnedTestimonials.length > 0 && (
+        <section className="mt-10">
+          <h2 className="font-display text-2xl font-bold text-russet">
+            <T text={UI.farmersSay} />
+          </h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {product.pinnedTestimonials.map((t) => (
+              <TestimonialCard
+                key={t.id}
+                compact
+                t={{
+                  id: t.id,
+                  farmerName: t.farmerName,
+                  place: {
+                    en: [t.village, t.district].filter(Boolean).join(", "),
+                    gu: [t.village, t.district].filter(Boolean).join(", "),
+                  },
+                  crop: t.crop,
+                  quote: t.quote,
+                  photo: t.photo,
+                  video: t.video,
+                  productName: t.productName,
+                }}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <ProductFaq faqs={product.faqs} />
+
+      <ProductStrip
+        heading={UI.useTogether}
+        note={UI.useTogetherNote}
+        items={product.pairsWellWith.map((p) => ({
+          product: p.product,
+          note: p.note,
+        }))}
+      />
+
       <div className="mt-10 rounded-3xl bg-olive p-8 text-center text-cornsilk-light">
         <p className="font-display text-xl font-bold">
           <T text={product.name} /> — <T text={product.categoryLabel} />
         </p>
         <p className="mx-auto mt-2 max-w-md text-sm text-cornsilk/90">
-          <T text={MISC.productCta} />
+          <T
+            text={
+              outOfStock && product.availabilityNote.en
+                ? product.availabilityNote
+                : MISC.productCta
+            }
+          />
         </p>
         <div className="mt-5">
+          {/* Out of stock: asking to be told when it returns beats a dead CTA. */}
           <WhatsAppButton
-            message={product.whatsappMessage}
-            label={UI.askOnWhatsApp}
+            message={
+              outOfStock
+                ? `Hello IKSARVA, please let me know when ${name} is back in stock.`
+                : product.whatsappMessage
+            }
+            label={outOfStock ? UI.notifyOnWhatsApp : UI.askOnWhatsApp}
           />
         </div>
       </div>
+
+      <ProductStrip
+        heading={UI.relatedProducts}
+        items={product.relatedProducts.map((p) => ({ product: p }))}
+      />
     </article>
   );
 }

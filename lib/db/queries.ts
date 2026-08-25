@@ -15,17 +15,71 @@ import type { Bi } from "@/lib/content";
  * `dealerPrice` are commercially sensitive and are never selected here.
  */
 
-/** Fields safe to send to the browser. Note: no packSizes / dealerPrice. */
+/**
+ * Fields safe to send to the browser. Note: no packSizes / dealerPrice.
+ * This is an explicit allowlist — a new public field must be added here or
+ * it silently renders blank.
+ */
 const PUBLIC_PRODUCT_FIELDS =
   "name slug category categoryLabel tagline description benefits format " +
   "complianceNote whatsappMessage dosage suitableCrops cropsNote images " +
-  "artFallback featured displayOrder";
+  "artFallback featured displayOrder assets applicationSteps fieldResults " +
+  "faqs relatedProducts pairsWellWith pinnedTestimonials availability " +
+  "availabilityNote";
+
+/** Slim projection for the cards shown in "related" / "use together" strips. */
+const PRODUCT_CARD_FIELDS =
+  "name slug categoryLabel tagline images artFallback featured";
 
 export interface PublicImage {
   url: string;
   alt: Bi;
   isPrimary: boolean;
 }
+
+export interface PublicProductAsset {
+  type: "brochure" | "label" | "leaflet" | "other";
+  title: Bi;
+  fileUrl: string;
+  sizeBytes: number;
+}
+
+export interface PublicApplicationStep {
+  imageUrl: string;
+  caption: Bi;
+}
+
+export interface PublicFieldResult {
+  beforeImage: string;
+  afterImage: string;
+  crop: string;
+  district: string;
+  description: Bi;
+  farmerName: string;
+}
+
+export interface PublicFaq {
+  question: Bi;
+  answer: Bi;
+}
+
+/** Minimal product shape for the related / pairing strips. */
+export interface PublicProductRef {
+  slug: string;
+  name: Bi;
+  categoryLabel: Bi;
+  tagline: Bi;
+  imageUrl: string | null;
+  artFallback: "sachet" | "roots" | "network";
+  featured: boolean;
+}
+
+export interface PublicPairing {
+  product: PublicProductRef;
+  note: Bi;
+}
+
+export type Availability = "in_stock" | "out_of_stock" | "seasonal";
 
 export interface PublicProduct {
   id: string;
@@ -53,6 +107,17 @@ export interface PublicProduct {
   primaryImage: string | null;
   artFallback: "sachet" | "roots" | "network";
   featured: boolean;
+
+  assets: PublicProductAsset[];
+  applicationSteps: PublicApplicationStep[];
+  fieldResults: PublicFieldResult[];
+  faqs: PublicFaq[];
+  /** Populated only by getPublishedProductBySlug — empty on list reads. */
+  relatedProducts: PublicProductRef[];
+  pairsWellWith: PublicPairing[];
+  pinnedTestimonials: PublicTestimonial[];
+  availability: Availability;
+  availabilityNote: Bi;
 }
 
 function bi(value: unknown): Bi {
@@ -61,6 +126,33 @@ function bi(value: unknown): Bi {
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+/** Primary image URL of a raw product document, or null. */
+function primaryImageUrl(doc: any): string | null {
+  const images = doc?.images ?? [];
+  return (
+    images.find((i: any) => i.isPrimary)?.url ?? images[0]?.url ?? null
+  );
+}
+
+/**
+ * Map a populated product reference to a card shape.
+ * Returns null when the ref was not populated (plain ObjectId) or points at
+ * a product that has since been deleted.
+ */
+function toProductRef(doc: any): PublicProductRef | null {
+  if (!doc || typeof doc !== "object" || !doc.slug) return null;
+  return {
+    slug: doc.slug,
+    name: bi(doc.name),
+    categoryLabel: bi(doc.categoryLabel),
+    tagline: bi(doc.tagline),
+    imageUrl: primaryImageUrl(doc),
+    artFallback: doc.artFallback ?? "sachet",
+    featured: Boolean(doc.featured),
+  };
+}
+
 function toPublicProduct(doc: any): PublicProduct {
   const images: PublicImage[] = (doc.images ?? []).map((img: any) => ({
     url: img.url,
@@ -93,6 +185,50 @@ function toPublicProduct(doc: any): PublicProduct {
     primaryImage: primary?.url ?? null,
     artFallback: doc.artFallback ?? "sachet",
     featured: Boolean(doc.featured),
+
+    // Documents saved before these fields existed read back as undefined.
+    assets: (doc.assets ?? [])
+      .filter((a: any) => a?.fileUrl)
+      .map((a: any) => ({
+        type: a.type ?? "other",
+        title: bi(a.title),
+        fileUrl: a.fileUrl,
+        sizeBytes: a.sizeBytes ?? 0,
+      })),
+    applicationSteps: (doc.applicationSteps ?? [])
+      .filter((s: any) => s?.image?.url)
+      .slice()
+      .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
+      .map((s: any) => ({ imageUrl: s.image.url, caption: bi(s.caption) })),
+    fieldResults: (doc.fieldResults ?? [])
+      .filter((r: any) => r?.beforeImage?.url && r?.afterImage?.url)
+      .map((r: any) => ({
+        beforeImage: r.beforeImage.url,
+        afterImage: r.afterImage.url,
+        crop: r.crop ?? "",
+        district: r.district ?? "",
+        description: bi(r.description),
+        farmerName: r.farmerName ?? "",
+      })),
+    faqs: (doc.faqs ?? [])
+      .slice()
+      .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
+      .map((f: any) => ({ question: bi(f.question), answer: bi(f.answer) })),
+    // Only present when the caller populated them (product detail page).
+    relatedProducts: (doc.relatedProducts ?? [])
+      .map(toProductRef)
+      .filter(Boolean) as PublicProductRef[],
+    pairsWellWith: (doc.pairsWellWith ?? [])
+      .map((p: any) => {
+        const product = toProductRef(p?.product);
+        return product ? { product, note: bi(p.note) } : null;
+      })
+      .filter(Boolean) as PublicPairing[],
+    pinnedTestimonials: (doc.pinnedTestimonials ?? [])
+      .filter((t: any) => t && typeof t === "object" && t.farmerName)
+      .map(toPublicTestimonial),
+    availability: doc.availability ?? "in_stock",
+    availabilityNote: bi(doc.availabilityNote),
   };
 }
 
@@ -106,6 +242,11 @@ export async function getPublishedProducts(): Promise<PublicProduct[]> {
   return docs.map(toPublicProduct);
 }
 
+/**
+ * Full product for the detail page, with related products, pairings and
+ * pinned testimonials populated. Populations are narrowly projected and
+ * naturally bounded (a handful of refs per product).
+ */
 export async function getPublishedProductBySlug(
   slug: string,
 ): Promise<PublicProduct | null> {
@@ -113,6 +254,21 @@ export async function getPublishedProductBySlug(
   await connectToDatabase();
   const doc = await Product.findOne({ slug, status: "published" })
     .select(PUBLIC_PRODUCT_FIELDS)
+    .populate({
+      path: "relatedProducts",
+      select: PRODUCT_CARD_FIELDS,
+      match: { status: "published" },
+    })
+    .populate({
+      path: "pairsWellWith.product",
+      select: PRODUCT_CARD_FIELDS,
+      match: { status: "published" },
+    })
+    .populate({
+      path: "pinnedTestimonials",
+      match: { status: "published" },
+      populate: { path: "productUsed", select: "name" },
+    })
     .lean();
   return doc ? toPublicProduct(doc) : null;
 }
@@ -141,15 +297,8 @@ export interface PublicTestimonial {
   featured: boolean;
 }
 
-export async function getPublishedTestimonials(): Promise<PublicTestimonial[]> {
-  if (!isDatabaseConfigured()) return [];
-  await connectToDatabase();
-  const docs = await Testimonial.find({ status: "published" })
-    .sort({ featured: -1, displayOrder: 1, createdAt: -1 })
-    .populate({ path: "productUsed", select: "name" })
-    .lean();
-
-  return docs.map((doc: any) => ({
+export function toPublicTestimonial(doc: any): PublicTestimonial {
+  return {
     id: String(doc._id),
     farmerName: bi(doc.farmerName),
     village: doc.village ?? "",
@@ -168,7 +317,18 @@ export async function getPublishedTestimonials(): Promise<PublicTestimonial[]> {
     productName: doc.productUsed?.name ? bi(doc.productUsed.name) : null,
     rating: doc.rating ?? null,
     featured: Boolean(doc.featured),
-  }));
+  };
+}
+
+export async function getPublishedTestimonials(): Promise<PublicTestimonial[]> {
+  if (!isDatabaseConfigured()) return [];
+  await connectToDatabase();
+  const docs = await Testimonial.find({ status: "published" })
+    .sort({ featured: -1, displayOrder: 1, createdAt: -1 })
+    .populate({ path: "productUsed", select: "name" })
+    .lean();
+
+  return docs.map(toPublicTestimonial);
 }
 
 /* -------------------------------------------------------------------------- */
