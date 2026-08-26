@@ -122,29 +122,45 @@ The site is installable — "Add to home screen" on a phone, or the install
 icon in the desktop address bar — and previously-visited pages keep working
 without a connection. Useful for a dealer or a field rep with patchy signal.
 
-### Replacing the app icons
+### Adding your own app icons
 
-Drop your own PNGs into `public/icons/` with these exact names. The manifest
-(`app/manifest.ts`) and the root layout reference them by path, so nothing
-else needs changing:
+`lib/app-icons.ts` resolves `public/icons/` at build time and lists only the
+files that are actually there, so an icon export can be dropped in whole
+without renaming anything. Copy the folders in exactly as your generator
+produced them:
 
-| File | Size | Used for |
-|---|---|---|
-| `icon-192.png` | 192×192 | Android launcher |
-| `icon-512.png` | 512×512 | Splash screen, install prompt |
-| `icon-maskable-192.png` | 192×192 | Manifest `purpose: maskable` |
-| `icon-maskable-512.png` | 512×512 | Manifest `purpose: maskable` |
-| `apple-touch-icon.png` | 180×180 | iOS home screen |
-| `favicon-32.png` | 32×32 | Browser tab fallback |
+```
+public/icons/android/launchericon-{48,72,96,144,192,512}x{...}.png
+public/icons/ios/{16,32,180,...}.png
+public/icons/windows/...          # kept, but unused by the web manifest
+```
 
-The **maskable** pair is the one people usually get wrong: Android crops it
-to whatever shape the launcher uses — circle, squircle, rounded square — so
-everything meaningful has to sit inside the middle 80%. The outer ring can be
-cut off. The other icons are shown as-is and can fill the tile.
+Then run this once:
 
-`npm run icons` generates any file that is missing from `public/logo.svg`. It
-never overwrites a file you put there yourself; add `-- --force` if you want
-it to.
+```bash
+npm run icons
+```
+
+Everything the manifest needs is picked up automatically **except the
+maskable pair**, which almost no exporter produces — the script generates
+those from your 512.
+
+#### Why maskable matters
+
+Android crops `purpose: maskable` icons to whatever shape the launcher uses:
+circle, squircle, rounded square. Anything outside the middle 80% can be cut
+off. Listing a full-bleed icon as maskable gets its edges shaved, which is
+why the script composes these separately, at 60% on a brand-coloured tile,
+instead of reusing the exported art.
+
+#### Fallbacks
+
+`icon-192.png`, `icon-512.png`, `apple-touch-icon.png` and `favicon-32.png`
+are generated from `public/logo.svg` so the site is installable with no
+export at all. A real exported icon always takes priority over them.
+
+`npm run icons` never overwrites a file that is already there — add
+`-- --force` if you want it to.
 
 ### Optional: install-dialog screenshots
 
@@ -157,10 +173,10 @@ in the install dialog instead of just a name and an icon:
 | `mobile-products.png` | 1080×1920 | Android install prompt |
 | `desktop-home.png` | 1920×1080 | Desktop Chrome install prompt |
 
-All of these are optional — `app/manifest.ts` checks which files exist and
-lists only those, because a manifest that points at a missing screenshot is
-invalid. Every portrait screenshot must share one aspect ratio, and every
-landscape one another; Chrome rejects a mixed set.
+All optional — `app/manifest.ts` checks which files exist and lists only
+those, because a manifest that points at a missing screenshot is invalid.
+Every portrait screenshot must share one aspect ratio, and every landscape
+one another; Chrome rejects a mixed set.
 
 ### The service worker
 

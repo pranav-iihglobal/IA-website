@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { ServiceWorker } from "@/components/ServiceWorker";
 import { LanguageProvider } from "@/components/LanguageProvider";
+import { appleTouchIcon, faviconPngs } from "@/lib/app-icons";
 import { SITE } from "@/lib/content";
 
 // Brand display face for Latin/English text. Laviossa has no Gujarati
@@ -94,12 +95,15 @@ export const metadata: Metadata = {
     // the meringue hero band show through instead of a black strip.
     statusBarStyle: "default",
   },
+  // Resolved from whatever is actually in public/icons — see lib/app-icons.ts.
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      ...faviconPngs().map((icon) => ({ ...icon, type: "image/png" })),
     ],
-    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+    apple: appleTouchIcon()
+      ? [{ url: appleTouchIcon() as string, sizes: "180x180" }]
+      : undefined,
   },
   formatDetection: {
     // The phone number is already a tel: link; iOS auto-linking on top of

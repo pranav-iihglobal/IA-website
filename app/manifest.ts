@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import type { MetadataRoute } from "next";
+import { anyIcons, maskableIcons } from "@/lib/app-icons";
 import { SITE } from "@/lib/content";
 
 /**
@@ -58,6 +59,18 @@ function availableScreenshots() {
  */
 export default function manifest(): MetadataRoute.Manifest {
   const screenshots = availableScreenshots();
+  const icons = [...anyIcons(), ...maskableIcons()];
+  // Reuse whichever 192 actually exists, rather than naming a file that may
+  // not be in this particular icon export.
+  const shortcutIcon = icons.find((icon) => icon.sizes === "192x192");
+  const withIcon = (name: string, short: string, url: string) => ({
+    name,
+    short_name: short,
+    url,
+    ...(shortcutIcon
+      ? { icons: [{ src: shortcutIcon.src, sizes: shortcutIcon.sizes }] }
+      : {}),
+  });
   return {
     id: "/",
     name: `${SITE.shortName} — ${SITE.tagline}`,
@@ -78,54 +91,12 @@ export default function manifest(): MetadataRoute.Manifest {
     // --color-olive, the header colour, which the browser tints its chrome to.
     theme_color: "#5e7153",
     categories: ["business", "shopping", "education"],
-    icons: [
-      {
-        src: "/icons/icon-192.png",
-        sizes: "192x192",
-        type: "image/png",
-        purpose: "any",
-      },
-      {
-        src: "/icons/icon-512.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "any",
-      },
-      // Android crops maskable icons to the launcher's shape, so these keep
-      // the shield inside the safe zone.
-      {
-        src: "/icons/icon-maskable-192.png",
-        sizes: "192x192",
-        type: "image/png",
-        purpose: "maskable",
-      },
-      {
-        src: "/icons/icon-maskable-512.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "maskable",
-      },
-    ],
+    icons,
     ...(screenshots.length > 0 ? { screenshots } : {}),
     shortcuts: [
-      {
-        name: "પ્રોડક્ટ્સ",
-        short_name: "પ્રોડક્ટ્સ",
-        url: "/products",
-        icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
-      },
-      {
-        name: "ખેડૂતોના અનુભવ",
-        short_name: "અનુભવ",
-        url: "/testimonials",
-        icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
-      },
-      {
-        name: "જાણકારી",
-        short_name: "જાણકારી",
-        url: "/learn",
-        icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
-      },
+      withIcon("પ્રોડક્ટ્સ", "પ્રોડક્ટ્સ", "/products"),
+      withIcon("ખેડૂતોના અનુભવ", "અનુભવ", "/testimonials"),
+      withIcon("જાણકારી", "જાણકારી", "/learn"),
     ],
   };
 }
