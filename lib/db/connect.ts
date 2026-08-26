@@ -58,6 +58,21 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
     cached.conn = await cached.promise;
   } catch (error) {
     cached.promise = null;
+    // The raw driver message ("Could not connect to any servers…") does not
+    // say what to actually do about it, and on Vercel the cause is almost
+    // always the Atlas IP allowlist.
+    if (
+      error instanceof Error &&
+      /whitelist|ENOTFOUND|ETIMEDOUT|ServerSelection/i.test(
+        `${error.name} ${error.message}`,
+      )
+    ) {
+      throw new Error(
+        `Could not reach MongoDB. On Vercel this is usually the Atlas IP allowlist: ` +
+          `Atlas → Network Access → add 0.0.0.0/0 (Vercel's function IPs are not fixed). ` +
+          `Original error: ${error.message}`,
+      );
+    }
     throw error;
   }
 

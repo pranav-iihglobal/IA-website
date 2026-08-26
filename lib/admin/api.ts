@@ -12,7 +12,22 @@ import { auth } from "@/auth";
  * never silently expose a mutation endpoint.
  */
 export async function requireAdmin(): Promise<NextResponse | null> {
-  const session = await auth();
+  let session;
+  try {
+    session = await auth();
+  } catch (error) {
+    // Every route calls this BEFORE its try/catch, so an exception here would
+    // surface as a bare 500 with nothing to debug. A broken auth config is a
+    // server problem, not an unauthenticated request — say so.
+    console.error("[admin api] session check failed", error);
+    return NextResponse.json(
+      {
+        error:
+          "Sign-in is not configured correctly on the server. Check GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and AUTH_SECRET.",
+      },
+      { status: 500 },
+    );
+  }
   if (session?.user?.email) return null;
   return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 }
