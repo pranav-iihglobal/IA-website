@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { useEffect, useState, type ReactNode } from "react";
 
 function Icon({ path }: { path: string }) {
@@ -55,11 +56,21 @@ const LINKS: {
   },
 ];
 
-export function AdminNav({ email }: { email?: string }) {
+export interface AdminUser {
+  name?: string;
+  email?: string;
+  /** Google profile picture. */
+  image?: string;
+}
+
+export function AdminNav({ user }: { user: AdminUser }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
   const [open, setOpen] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+
+  const label = user.name || user.email || "Signed in";
+  const initial = (user.name || user.email || "A").trim().charAt(0);
 
   // The drawer covers the screen; letting the page scroll behind it means a
   // tap on the backdrop lands somewhere unexpected.
@@ -82,11 +93,9 @@ export function AdminNav({ email }: { email?: string }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
-  async function signOut() {
+  function handleSignOut() {
     setSigningOut(true);
-    await fetch("/api/admin/logout", { method: "POST" });
-    router.push("/admin/login");
-    router.refresh();
+    signOut({ redirectTo: "/admin/login" });
   }
 
   const nav = (
@@ -196,18 +205,39 @@ export function AdminNav({ email }: { email?: string }) {
           </Link>
 
           <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-olive-dark/45 px-3 py-2.5">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-laurel text-sm font-bold uppercase text-olive-dark">
-              {(email ?? "A").slice(0, 1)}
-            </span>
+            {user.image && !avatarFailed ? (
+              <Image
+                src={user.image}
+                alt=""
+                width={32}
+                height={32}
+                unoptimized
+                referrerPolicy="no-referrer"
+                onError={() => setAvatarFailed(true)}
+                className="h-8 w-8 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-laurel text-sm font-bold uppercase text-olive-dark">
+                {initial}
+              </span>
+            )}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-cornsilk-light" title={email}>
-                {email ?? "Signed in"}
+              <p
+                className="truncate text-xs font-semibold text-cornsilk-light"
+                title={user.email}
+              >
+                {label}
               </p>
+              {user.name && user.email && (
+                <p className="truncate text-[10px] text-cornsilk/60" title={user.email}>
+                  {user.email}
+                </p>
+              )}
               <button
                 type="button"
-                onClick={signOut}
+                onClick={handleSignOut}
                 disabled={signingOut}
-                className="text-[11px] font-semibold text-alloy-light transition-colors hover:text-cornsilk-light disabled:opacity-60"
+                className="mt-0.5 text-[11px] font-semibold text-alloy-light transition-colors hover:text-cornsilk-light disabled:opacity-60"
               >
                 {signingOut ? "Signing out…" : "Sign out"}
               </button>

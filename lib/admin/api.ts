@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getAdminSession, isAdminAuthenticated } from "@/lib/auth/session";
+import { auth } from "@/auth";
 
 /**
  * Shared helpers for admin API route handlers.
@@ -12,20 +12,23 @@ import { getAdminSession, isAdminAuthenticated } from "@/lib/auth/session";
  * never silently expose a mutation endpoint.
  */
 export async function requireAdmin(): Promise<NextResponse | null> {
-  if (await isAdminAuthenticated()) return null;
+  const session = await auth();
+  if (session?.user?.email) return null;
   return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 }
 
 /**
- * Who is saving this, for the "last edited by" line in the admin.
+ * Which director is saving this, for the "last edited by" line in the admin.
  *
- * Read from the session cookie, never from the request body — otherwise a
- * client could claim to be anyone.
+ * Read from the verified Google session, never from the request body —
+ * otherwise a client could claim to be anyone.
  */
 export async function currentEditor(): Promise<string> {
   try {
-    const session = await getAdminSession();
-    return session.email ?? "";
+    const session = await auth();
+    // Email is the stable identity; the display name can change on the
+    // Google account at any time.
+    return session?.user?.email ?? session?.user?.name ?? "";
   } catch {
     return "";
   }

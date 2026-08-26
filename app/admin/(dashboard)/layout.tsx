@@ -1,6 +1,6 @@
 import { AdminNav } from "@/components/admin/AdminNav";
 import { ToastProvider } from "@/components/admin/Toast";
-import { getAdminSession } from "@/lib/auth/session";
+import { auth } from "@/auth";
 
 /**
  * Authenticated admin area. Access is enforced by middleware.ts; this layout
@@ -9,13 +9,14 @@ import { getAdminSession } from "@/lib/auth/session";
 export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  let email: string | undefined;
-  try {
-    const session = await getAdminSession();
-    email = session.email;
-  } catch {
-    email = undefined;
-  }
+  // middleware.ts has already rejected unauthenticated requests; this read is
+  // only to show who is signed in.
+  const session = await auth();
+  const user = {
+    name: session?.user?.name ?? undefined,
+    email: session?.user?.email ?? undefined,
+    image: session?.user?.image ?? undefined,
+  };
 
   return (
     <ToastProvider>
@@ -26,7 +27,7 @@ export default async function DashboardLayout({
         scroll — the whole page scrolls sideways instead.
       */}
       <div className="flex min-w-0 flex-1">
-        <AdminNav email={email} />
+        <AdminNav user={user} />
         {/* pt clears the fixed mobile top bar rendered by AdminNav. */}
         <main className="min-w-0 flex-1 px-5 pb-10 pt-[74px] sm:px-8 lg:py-9">
           <div className="mx-auto w-full max-w-5xl">{children}</div>

@@ -9,7 +9,6 @@
     "lint": "next lint",
     "seed": "tsx scripts/seed.ts",
     "check-seed": "tsx scripts/check-seed.ts",
-    "hash-password": "tsx scripts/hash-password.ts",
     "check-connection": "tsx scripts/check-connection.ts"
   },
   "dependencies": {
@@ -20,14 +19,13 @@
     "@tiptap/react": "^3.30.3",
     "@tiptap/starter-kit": "^3.30.3",
     "@types/three": "^0.185.4",
-    "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.1",
     "gray-matter": "^4.0.3",
-    "iron-session": "^8.0.4",
     "isomorphic-dompurify": "^3.22.0",
     "marked": "^18.0.9",
     "mongoose": "^9.9.3",
     "next": "^15.4.6",
+    "next-auth": "^5.0.0-beta.32",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "simple-icons": "^16.28.0",

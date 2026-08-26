@@ -1,5 +1,5 @@
 /**
- * Connectivity and configuration smoke test — verifies the admin credentials,
+ * Connectivity and configuration smoke test — verifies Google sign-in config,
  * MongoDB Atlas and Cloudinary without writing any data.
  *
  *   npm run check-connection
@@ -8,7 +8,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import { loadEnv } from "./load-env";
 import { connectToDatabase } from "../lib/db/connect";
-import { normalizePasswordHash } from "../lib/auth/password";
+import { getAllowedEmails } from "../lib/auth/allowlist";
 
 let problems = 0;
 
@@ -23,42 +23,54 @@ function pass(label: string, message: string) {
 }
 
 /**
- * Catches the most common setup mistake: bcrypt hashes are full of "$" and
- * Next.js expands $VAR inside .env files, so an unescaped hash silently
- * arrives truncated and every login fails with "Incorrect email or password".
+ * Google sign-in configuration.
+ *
+ * Never prints the client secret — only whether it is present and roughly the
+ * right shape.
  */
-function checkAdmin() {
-  if (!process.env.ADMIN_EMAIL) {
-    fail("Admin", "ADMIN_EMAIL not set");
+function checkAuth() {
+  const clientId = process.env.GOOGLE_CLIENT_ID ?? "";
+  if (!clientId) {
+    fail("Google", "GOOGLE_CLIENT_ID not set");
+  } else if (!clientId.endsWith(".apps.googleusercontent.com")) {
+    fail(
+      "Google",
+      "GOOGLE_CLIENT_ID does not look like a Google client id",
+      "it should end in .apps.googleusercontent.com",
+    );
   } else {
-    pass("Admin", `email ${process.env.ADMIN_EMAIL}`);
+    pass("Google", `client ${clientId.split("-")[0]}…`);
   }
 
-  const raw = process.env.ADMIN_PASSWORD_HASH;
-  if (!raw) {
-    fail("Password", "ADMIN_PASSWORD_HASH not set", "npm run hash-password -- 'your-password'");
+  if (!process.env.GOOGLE_CLIENT_SECRET) {
+    fail(
+      "Google",
+      "GOOGLE_CLIENT_SECRET not set",
+      "Google Cloud → APIs & Services → Credentials → iksarva-admin-web",
+    );
   } else {
-    const hash = normalizePasswordHash(raw);
-    const looksValid = /^\$2[aby]?\$\d{2}\$.{53}$/.test(hash);
-    if (looksValid) {
-      pass("Password", "hash looks valid");
-    } else {
-      fail(
-        "Password",
-        `hash is ${hash.length} characters, expected 60 — it was mangled by .env variable expansion`,
-        'escape every "$" as "\\$" in your .env file (npm run hash-password prints it ready to paste)',
-      );
-    }
+    pass("Google", "client secret set");
   }
 
-  const secret = process.env.SESSION_SECRET ?? "";
+  const secret = process.env.AUTH_SECRET ?? "";
   if (secret.length >= 32) {
-    pass("Session", `secret set (${secret.length} chars)`);
+    pass("Session", `AUTH_SECRET set (${secret.length} chars)`);
   } else {
     fail(
       "Session",
-      secret ? `secret is only ${secret.length} chars, need 32+` : "SESSION_SECRET not set",
+      secret ? `AUTH_SECRET is only ${secret.length} chars, need 32+` : "AUTH_SECRET not set",
       "openssl rand -base64 32",
+    );
+  }
+
+  // Optional second gate — see lib/auth/allowlist.ts.
+  const allowed = getAllowedEmails();
+  if (allowed) {
+    pass("Allowlist", `only ${allowed.join(", ")}`);
+  } else {
+    pass(
+      "Allowlist",
+      "not set — access is whoever is a test user on the Google consent screen",
     );
   }
 }
@@ -138,7 +150,7 @@ async function main() {
     console.log(`  Loaded: ${files.join(", ")}\n`);
   }
 
-  checkAdmin();
+  checkAuth();
   await checkMongo();
   await checkCloudinary();
 

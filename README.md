@@ -9,7 +9,7 @@ Built with Next.js 15 (App Router), TypeScript, TailwindCSS v4, MongoDB Atlas (M
 ```bash
 npm install
 cp .env.example .env.local     # then fill in the values (see Setup below)
-npm run check-connection       # verifies MongoDB + Cloudinary credentials
+npm run check-connection       # verifies Google sign-in, MongoDB + Cloudinary
 npm run seed                   # one-off: imports existing content into MongoDB
 npm run dev                    # http://localhost:3000  ·  admin at /admin
 ```
@@ -19,8 +19,7 @@ npm run dev                    # http://localhost:3000  ·  admin at /admin
 | `npm run dev` / `build` / `start` | Next.js dev server / production build / serve build |
 | `npm run seed` | Imports the bundled products, testimonials and articles into MongoDB (idempotent — upserts by slug) |
 | `npm run check-seed` | Validates what the seed would write against the zod schemas — no database needed |
-| `npm run check-connection` | Pings MongoDB and Cloudinary with your env credentials |
-| `npm run hash-password -- 'pw'` | Generates the bcrypt hash for `ADMIN_PASSWORD_HASH` |
+| `npm run check-connection` | Checks the Google sign-in config and pings MongoDB and Cloudinary |
 
 ## ✏️ Site content (one file)
 
@@ -34,7 +33,31 @@ npm run dev                    # http://localhost:3000  ·  admin at /admin
 
 ## Admin panel
 
-Sign in at **/admin** with `ADMIN_EMAIL` and the password whose bcrypt hash is in `ADMIN_PASSWORD_HASH`. There is one admin account — no registration, no roles. Sessions are encrypted cookies (iron-session) that last 7 days; `middleware.ts` guards every `/admin/*` page and `/api/admin/*` route, and `/admin` is excluded from search engines.
+Sign in at **/admin** with **Google**. There is no password anywhere in this app, no user collection and no registration — see [Authentication](#authentication) below. `middleware.ts` guards every `/admin/*` page and `/api/admin/*` route, and `/admin` is excluded from search engines.
+
+### Authentication
+
+Google sign-in only. Nothing about auth touches MongoDB, so it costs the free-tier cluster nothing.
+
+**How a sign-in works.** `/admin/login` offers one button. Google authenticates the director and redirects back to `/api/auth/callback/google`. The app then issues its own session — a JWT in a cookie, signed with `AUTH_SECRET`, valid for 14 days. Google is only consulted at sign-in; every request afterwards is authenticated by that cookie, which is why `AUTH_SECRET` matters as much as the Google credentials do.
+
+**Who is allowed in.** Two gates, the second optional:
+
+1. **Google's test-user list** — the OAuth consent screen is kept in **Testing** status, so only accounts listed there can complete sign-in at all. Everyone else is stopped by Google, on Google's own error page, before the request reaches this app.
+2. **`ADMIN_ALLOWED_EMAILS`** *(optional, unset by default)* — a comma-separated list. Unset, access is whatever Google allows. Set, only those addresses get in.
+
+**Adding a director:**
+
+1. Google Cloud → **APIs & Services → OAuth consent screen → Test users → Add users** → their Google address.
+2. If `ADMIN_ALLOWED_EMAILS` is set, append the address there too (Vercel → Settings → Environment Variables) and redeploy.
+
+**Removing one:** delete them from the test-user list, and from `ADMIN_ALLOWED_EMAILS` if it is set. Their existing session cookie stays valid until it expires (up to 14 days) — rotate `AUTH_SECRET` to invalidate every session immediately.
+
+> ⚠️ **Do not publish the OAuth app.** The consent screen must stay in **Testing**. Publishing removes the test-user restriction, and unless `ADMIN_ALLOWED_EMAILS` is set, any Google account could then sign in. If it is ever published, set `ADMIN_ALLOWED_EMAILS` first.
+
+The production redirect URI `https://iksarva.com/api/auth/callback/google` must exist on the OAuth client, or sign-in fails on the live site with `redirect_uri_mismatch`.
+
+**Audit trail:** every product, testimonial and post records `updatedBy` — the signed-in director's Google email — on create and update. Admin list rows show it as "last edited · date · who".
 
 Three modules, each with search, status filter, pagination and delete-with-confirm:
 
@@ -77,15 +100,17 @@ Every public page falls back to the content bundled in the repo (`lib/content.ts
 
 Dashboard → **Product Environment Credentials** → copy the cloud name, API key and API secret into `CLOUDINARY_*`. Set `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` to the same cloud name.
 
-### 3. Admin password
+### 3. Google sign-in
 
-```bash
-npm run hash-password -- 'your-strong-password'
-```
+The OAuth client already exists: Google Cloud project **IKSARVA Admin** → OAuth client **iksarva-admin-web**.
 
-It prints two forms. **`.env.local` needs the escaped one** (Next.js expands `$VAR` inside .env files, and bcrypt hashes are full of `$`); **Vercel's dashboard needs the raw one**. The app accepts either.
+1. **Credentials** → open the client → copy the **Client ID** and **Client secret** into `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
+2. Confirm its **Authorised redirect URIs** contain both, exactly (no trailing slash):
+   - `http://localhost:3000/api/auth/callback/google`
+   - `https://iksarva.com/api/auth/callback/google`
+3. Generate `AUTH_SECRET` with `openssl rand -base64 32`.
 
-Generate `SESSION_SECRET` with `openssl rand -base64 32`.
+Local development must run on **port 3000** — the registered redirect URI is `localhost:3000`, and Google rejects the callback from any other port.
 
 ### 4. Vercel
 
@@ -143,7 +168,7 @@ lib/
   posts-source.ts         Same for blog (falls back to content/learn/*.md)
   cloudinary.ts images.ts sanitize.ts auth/ admin/
 content/learn/*.md        Original articles — kept as a fallback after seeding
-scripts/                  seed, check-seed, check-connection, hash-password
+scripts/                  seed, check-seed, check-connection
 middleware.ts             Guards /admin and /api/admin
 ```
 
