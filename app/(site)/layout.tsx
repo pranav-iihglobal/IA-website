@@ -1,6 +1,8 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CursorFX } from "@/components/CursorFX";
+import { NavProgress } from "@/components/NavProgress";
+import { RouteTransition } from "@/components/RouteTransition";
 import { SITE, SOCIALS } from "@/lib/content";
 
 const organizationJsonLd = {
@@ -37,8 +39,12 @@ export default function SiteLayout({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
       <CursorFX />
+      <NavProgress />
       <Header />
-      <main className="flex-1">{children}</main>
+      {/* Header and footer stay put; only the page content transitions. */}
+      <main className="flex-1">
+        <RouteTransition>{children}</RouteTransition>
+      </main>
       <Footer />
     </>
   );

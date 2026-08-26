@@ -41,6 +41,18 @@
   --color-russet-dark: #5f2f14;
 
   /*
+   * Danger — destructive actions only.
+   *
+   * The palette had no red: Alloy Orange is the CTA colour, so using it for
+   * Delete made the destructive action look like the primary one. This is a
+   * warm brick that reads unmistakably as "stop" while still belonging
+   * beside russet and camel. Never use it for anything reversible.
+   */
+  --color-danger-light: #c2483c;
+  --color-danger: #a8322a;
+  --color-danger-dark: #8a2620;
+
+  /*
    * Brand typography, in two pairs.
    *
    * DISPLAY (headings, product names, the logo lockup) — Laviossa for Latin,
@@ -255,6 +267,64 @@ body {
 }
 .animate-marquee:hover {
   animation-play-state: paused;
+}
+
+/*
+ * Page transition.
+ *
+ * A short fade with a small lift. Deliberately quick — 260ms — because this
+ * plays on every navigation, and anything slower starts to feel like the
+ * site is the thing making you wait.
+ */
+@keyframes route-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.route-fade {
+  animation: route-fade-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .route-fade {
+    animation: none;
+  }
+}
+
+/*
+ * Loading placeholder for the public site.
+ *
+ * Same shimmer as the admin panel's .admin-skeleton, tuned to the cream
+ * surfaces out here. Kept unlayered so it works in server components that
+ * never import the admin stylesheet block.
+ */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-camel) 16%, transparent);
+  border-radius: 8px;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.6),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
 }
 
 /* --- CTA shine sweep + press feedback --- */
@@ -550,6 +620,56 @@ select.admin-input {
 .admin-btn-primary:not(:disabled):hover {
   background: linear-gradient(180deg, var(--color-alloy), var(--color-alloy-dark));
   box-shadow: 0 6px 16px -4px rgba(166, 83, 30, 0.5);
+}
+
+/*
+ * Destructive actions.
+ *
+ * The rule across the panel: a destructive control is never the loudest
+ * thing on screen, but it is unmistakably red, and it is never the default
+ * focus. It sits quiet (outlined) until pointed at, then commits to a solid
+ * red so there is no doubt about what the click does.
+ *
+ * `.admin-btn-danger` is the quiet form used in lists and cards.
+ * `.admin-btn-danger-solid` is the confirm button in the dialog, where the
+ * user has already said "delete" once and this is the point of no return.
+ */
+.admin-btn-danger {
+  border: 1px solid color-mix(in srgb, var(--color-danger) 40%, transparent);
+  color: var(--color-danger);
+  background: transparent;
+}
+.admin-btn-danger:not(:disabled):hover,
+.admin-btn-danger:not(:disabled):focus-visible {
+  border-color: var(--color-danger);
+  background: var(--color-danger);
+  color: var(--color-cornsilk-light);
+}
+.admin-btn-danger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 25%, transparent);
+}
+
+.admin-btn-danger-solid {
+  background: linear-gradient(
+    180deg,
+    var(--color-danger-light),
+    var(--color-danger)
+  );
+  color: var(--color-cornsilk-light);
+  box-shadow: 0 1px 2px rgba(95, 47, 20, 0.18);
+}
+.admin-btn-danger-solid:not(:disabled):hover {
+  background: linear-gradient(
+    180deg,
+    var(--color-danger),
+    var(--color-danger-dark)
+  );
+  box-shadow: 0 6px 16px -4px rgba(168, 50, 42, 0.45);
+}
+.admin-btn-danger-solid:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 30%, transparent);
 }
 
 /* --- Sidebar ------------------------------------------------------------- */

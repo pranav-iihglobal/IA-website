@@ -1,5 +1,7 @@
 import { AdminNav } from "@/components/admin/AdminNav";
 import { ToastProvider } from "@/components/admin/Toast";
+import { NavProgress } from "@/components/NavProgress";
+import { RouteTransition } from "@/components/RouteTransition";
 import { auth } from "@/auth";
 
 /**
@@ -20,6 +22,7 @@ export default async function DashboardLayout({
 
   return (
     <ToastProvider>
+      <NavProgress />
       {/*
         min-w-0: a flex item defaults to min-width:auto, so without this the
         row inflates to its content's min-content width and inner
@@ -31,7 +34,9 @@ export default async function DashboardLayout({
         {/* pt clears the fixed mobile top bar rendered by AdminNav. */}
         <main className="min-w-0 flex-1 px-5 pb-10 pt-[74px] sm:px-8 lg:py-9">
           {/* Same 1600px ceiling as the public site — see .container-page. */}
-          <div className="mx-auto w-full max-w-[100rem]">{children}</div>
+          <div className="mx-auto w-full max-w-[100rem]">
+            <RouteTransition>{children}</RouteTransition>
+          </div>
         </main>
       </div>
     </ToastProvider>

@@ -219,10 +219,10 @@ export function TestimonialList() {
       )}
 
       {rows.length > 0 && (
-        <div className="admin-card mt-6 overflow-hidden">
+        <div className="mt-6">
           {/* Cards below lg, table from lg up. A five-column table cannot be
               read on a phone; a card fits every field the table shows. */}
-          <ul className="lg:hidden">
+          <ul className="grid gap-3 sm:grid-cols-2 lg:hidden">
             {rows.map((row) => (
               <RecordCard
                 key={row.id}
@@ -258,7 +258,8 @@ export function TestimonialList() {
             ))}
           </ul>
 
-          <div className="hidden overflow-x-auto lg:block">
+          <div className="admin-card hidden overflow-hidden lg:block">
+            <div className="overflow-x-auto">
             <table className="w-full min-w-[680px] text-left text-sm">
               <thead className="admin-section-head text-[11px] uppercase tracking-[0.12em] text-olive">
                 <tr>
@@ -324,7 +325,8 @@ export function TestimonialList() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
           </div>
         </div>
       )}

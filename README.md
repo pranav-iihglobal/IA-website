@@ -116,6 +116,71 @@ Local development must run on **port 3000** — the registered redirect URI is `
 
 Add every variable from `.env.example` under **Settings → Environment Variables** (Production + Preview), then redeploy. Never commit `.env.local`.
 
+## Installable app (PWA)
+
+The site is installable — "Add to home screen" on a phone, or the install
+icon in the desktop address bar — and previously-visited pages keep working
+without a connection. Useful for a dealer or a field rep with patchy signal.
+
+### Replacing the app icons
+
+Drop your own PNGs into `public/icons/` with these exact names. The manifest
+(`app/manifest.ts`) and the root layout reference them by path, so nothing
+else needs changing:
+
+| File | Size | Used for |
+|---|---|---|
+| `icon-192.png` | 192×192 | Android launcher |
+| `icon-512.png` | 512×512 | Splash screen, install prompt |
+| `icon-maskable-192.png` | 192×192 | Manifest `purpose: maskable` |
+| `icon-maskable-512.png` | 512×512 | Manifest `purpose: maskable` |
+| `apple-touch-icon.png` | 180×180 | iOS home screen |
+| `favicon-32.png` | 32×32 | Browser tab fallback |
+
+The **maskable** pair is the one people usually get wrong: Android crops it
+to whatever shape the launcher uses — circle, squircle, rounded square — so
+everything meaningful has to sit inside the middle 80%. The outer ring can be
+cut off. The other icons are shown as-is and can fill the tile.
+
+`npm run icons` generates any file that is missing from `public/logo.svg`. It
+never overwrites a file you put there yourself; add `-- --force` if you want
+it to.
+
+### Optional: install-dialog screenshots
+
+Drop these into `public/screenshots/` and Chrome shows a preview of the app
+in the install dialog instead of just a name and an icon:
+
+| File | Size | Shown on |
+|---|---|---|
+| `mobile-home.png` | 1080×1920 | Android install prompt |
+| `mobile-products.png` | 1080×1920 | Android install prompt |
+| `desktop-home.png` | 1920×1080 | Desktop Chrome install prompt |
+
+All of these are optional — `app/manifest.ts` checks which files exist and
+lists only those, because a manifest that points at a missing screenshot is
+invalid. Every portrait screenshot must share one aspect ratio, and every
+landscape one another; Chrome rejects a mixed set.
+
+### The service worker
+
+`public/sw.js`, registered by `components/ServiceWorker.tsx` in production
+only (a worker caching localhost is a reliable way to wonder why your changes
+aren't showing up). The rules:
+
+- **`/admin` and `/api` are never cached.** Caching an authenticated page
+  would be a security bug, and a cached API response would show a director
+  stale data they are about to edit.
+- **Page navigations are network-first**, falling back to the cache and then
+  to `/offline`. A good connection always wins; a bad one gets the last
+  version you saw.
+- **`/_next/static` is cache-first** — those URLs are content-hashed, so a
+  cached copy can never be wrong.
+- **Images and fonts are stale-while-revalidate.**
+
+Bump `CACHE_VERSION` at the top of `public/sw.js` to evict everything on the
+next deploy.
+
 ## Deploying to Vercel
 
 1. **Push this repo to GitHub** (or GitLab/Bitbucket).

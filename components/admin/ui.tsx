@@ -316,8 +316,8 @@ export function Button({
     primary: "admin-btn-primary",
     secondary:
       "border border-camel bg-white/70 text-russet-dark hover:border-olive hover:bg-meringue-light",
-    danger:
-      "border border-russet-light/60 text-russet hover:bg-russet-light/10 hover:border-russet",
+    // Was russet — the same brown as every heading, which read as ordinary.
+    danger: "admin-btn-danger",
     ghost: "text-russet-dark/70 hover:bg-meringue hover:text-russet",
   }[variant];
   return (
@@ -611,11 +611,23 @@ export function RecordCard({
   label: string;
 }) {
   return (
-    <li className="border-t border-camel-light/25 p-4 first:border-t-0">
+    <li className="admin-card-item group relative rounded-2xl border border-camel-light/60 bg-cornsilk-light p-4 shadow-[0_1px_2px_rgba(95,47,20,0.05)] transition-shadow focus-within:shadow-[0_4px_14px_-6px_rgba(95,47,20,0.28)]">
       <div className="flex items-start gap-3">
         {thumb}
         <div className="min-w-0 flex-1">
-          <p className="font-semibold leading-snug text-russet">{title}</p>
+          {/*
+            Stretched link: the whole card opens the editor, so a thumb-sized
+            tap anywhere works. The delete button below lifts above it with
+            `relative z-10` so it stays its own target.
+          */}
+          <h3 className="font-semibold leading-snug text-russet">
+            <Link
+              href={editHref}
+              className="after:absolute after:inset-0 after:rounded-2xl group-hover:text-alloy-dark"
+            >
+              {title}
+            </Link>
+          </h3>
           {subtitle && (
             <p className="mt-0.5 truncate text-xs text-russet-dark/55">
               {subtitle}
@@ -627,24 +639,30 @@ export function RecordCard({
       {badges && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5">{badges}</div>
       )}
-      {meta && <p className="mt-2 text-[11px] text-russet-dark/50">{meta}</p>}
 
-      <div className="mt-3 flex items-center gap-2">
-        <Link
-          href={editHref}
-          className="admin-tap inline-flex flex-1 items-center justify-center rounded-full border border-camel px-4 py-2 text-sm font-semibold text-olive-dark transition-colors hover:border-olive hover:bg-laurel-light/35"
-        >
-          Edit
-        </Link>
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-camel-light/40 pt-3">
+        {meta ? (
+          <p className="min-w-0 truncate text-[11px] text-russet-dark/50">
+            {meta}
+          </p>
+        ) : (
+          <span />
+        )}
+
+        {/*
+          Delete is the only button here — Edit is the card itself. It sits
+          above the stretched link, and it is the one red thing on the card.
+        */}
         <button
           type="button"
           onClick={onDelete}
           aria-label={`Delete ${label}`}
-          className="admin-tap-square inline-flex items-center justify-center rounded-full border border-camel px-4 py-2 text-sm font-semibold text-russet-dark/55 transition-colors hover:border-alloy hover:bg-alloy/10 hover:text-alloy-dark"
+          className="admin-btn admin-btn-danger admin-tap relative z-10 shrink-0 px-4 text-xs"
         >
           <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
             <path d="M8 2h4a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-.4l-.7 9.1A2 2 0 0 1 12.9 17H7.1a2 2 0 0 1-2-1.9L4.4 6H4a1 1 0 0 1 0-2h3V3a1 1 0 0 1 1-1Zm1 2h2V4H9Zm-2.6 2 .7 8.9a.5.5 0 0 0 .5.4h5.8a.5.5 0 0 0 .5-.4l.7-8.9H6.4Z" />
           </svg>
+          Delete
         </button>
       </div>
     </li>
@@ -719,7 +737,9 @@ export function RowActions({
         onClick={onDelete}
         aria-label={`Delete ${label}`}
         title="Delete"
-        className="admin-tap-square inline-flex items-center justify-center rounded-full p-2 text-russet-dark/45 transition-colors hover:bg-alloy/12 hover:text-alloy-dark"
+        // Red, not the alloy CTA colour: the destructive action must never
+        // look like the primary one.
+        className="admin-tap-square inline-flex items-center justify-center rounded-full p-2 text-russet-dark/45 transition-colors hover:bg-danger/12 hover:text-danger focus-visible:bg-danger/12 focus-visible:text-danger"
       >
         <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
           <path d="M8 2h4a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-.4l-.7 9.1A2 2 0 0 1 12.9 17H7.1a2 2 0 0 1-2-1.9L4.4 6H4a1 1 0 0 1 0-2h3V3a1 1 0 0 1 1-1Zm1 2h2V4H9Zm-2.6 2 .7 8.9a.5.5 0 0 0 .5.4h5.8a.5.5 0 0 0 .5-.4l.7-8.9H6.4Z" />
@@ -765,21 +785,150 @@ export function Pagination({
 /** Shimmering placeholder rows while a list loads. */
 export function TableSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="admin-card mt-6 overflow-hidden">
-      {Array.from({ length: rows }).map((_, i) => (
-        <div
-          key={i}
-          className="flex items-center gap-4 border-b border-camel-light/25 px-5 py-4 last:border-0"
-        >
-          <div className="admin-skeleton h-12 w-12 shrink-0 rounded-xl" />
-          <div className="flex-1 space-y-2">
-            <div className="admin-skeleton h-3.5 w-1/3" />
-            <div className="admin-skeleton h-3 w-1/5" />
+    /*
+      Two shapes, matching what actually renders at each width — a skeleton
+      that does not match its content is worse than none, because the layout
+      visibly jumps the moment the data lands.
+    */
+    <div className="mt-6" aria-hidden="true">
+      {/* Cards, below lg */}
+      <ul className="grid gap-3 sm:grid-cols-2 lg:hidden">
+        {Array.from({ length: rows }).map((_, i) => (
+          <li
+            key={i}
+            className="rounded-2xl border border-camel-light/60 bg-cornsilk-light p-4"
+          >
+            <div className="flex items-start gap-3">
+              <div className="admin-skeleton h-12 w-12 shrink-0 rounded-xl" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="admin-skeleton h-4 w-3/4 rounded" />
+                <div className="admin-skeleton h-3 w-2/5 rounded" />
+              </div>
+            </div>
+            <div className="mt-3 flex gap-1.5">
+              <div className="admin-skeleton h-6 w-24 rounded-full" />
+              <div className="admin-skeleton h-6 w-20 rounded-full" />
+            </div>
+            <div className="mt-3 flex items-center justify-between border-t border-camel-light/40 pt-3">
+              <div className="admin-skeleton h-3 w-28 rounded" />
+              <div className="admin-skeleton h-11 w-24 rounded-full" />
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {/* Table, from lg up */}
+      <div className="admin-card hidden overflow-hidden lg:block">
+        <div className="admin-section-head h-11 border-b border-camel-light/25" />
+        {Array.from({ length: rows }).map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-4 border-b border-camel-light/25 px-5 py-4 last:border-0"
+          >
+            <div className="admin-skeleton h-12 w-12 shrink-0 rounded-xl" />
+            <div className="flex-1 space-y-2">
+              <div className="admin-skeleton h-3.5 w-1/3 rounded" />
+              <div className="admin-skeleton h-3 w-1/5 rounded" />
+            </div>
+            <div className="admin-skeleton h-4 w-24 rounded" />
+            <div className="admin-skeleton h-6 w-20 rounded-full" />
+            <div className="admin-skeleton h-6 w-24 rounded-full" />
+            <div className="admin-skeleton h-11 w-24 rounded-full" />
           </div>
-          <div className="admin-skeleton h-6 w-20 rounded-full" />
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
+  );
+}
+
+/** Placeholder for a page header — title, subtitle and a primary action. */
+export function PageHeaderSkeleton({ action = true }: { action?: boolean }) {
+  return (
+    <div
+      className="flex flex-wrap items-end justify-between gap-4"
+      aria-hidden="true"
+    >
+      <div className="space-y-2">
+        <div className="admin-skeleton h-8 w-52 rounded" />
+        <div className="admin-skeleton h-4 w-72 rounded" />
+      </div>
+      {action && <div className="admin-skeleton h-11 w-40 rounded-full" />}
+    </div>
+  );
+}
+
+/** Placeholder for a whole list page: header, toolbar, rows. */
+export function ListPageSkeleton({ rows = 4 }: { rows?: number }) {
+  return (
+    <>
+      <PageHeaderSkeleton />
+      <div className="mt-8 flex flex-wrap items-center gap-3" aria-hidden="true">
+        <div className="admin-skeleton h-11 w-full rounded-xl sm:w-80" />
+        <div className="admin-skeleton h-12 w-56 rounded-full" />
+      </div>
+      <TableSkeleton rows={rows} />
+      <span className="sr-only" role="status">
+        Loading…
+      </span>
+    </>
+  );
+}
+
+/** Placeholder for a step-by-step form: rail, section card, action bar. */
+export function FormPageSkeleton() {
+  return (
+    <>
+      <div className="admin-skeleton mb-5 h-11 w-32 rounded-full" aria-hidden="true" />
+      <div className="admin-skeleton h-9 w-64 rounded" aria-hidden="true" />
+      <div className="admin-skeleton mt-2 h-4 w-80 rounded" aria-hidden="true" />
+
+      <div
+        className="mt-8 xl:grid xl:grid-cols-[16rem_minmax(0,1fr)] xl:gap-8"
+        aria-hidden="true"
+      >
+        <div className="admin-card hidden h-96 p-4 xl:block">
+          <div className="admin-skeleton h-3 w-24 rounded" />
+          <div className="admin-skeleton mt-3 h-1.5 w-full rounded-full" />
+          <div className="mt-5 space-y-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <div className="admin-skeleton h-7 w-7 shrink-0 rounded-full" />
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="admin-skeleton h-3.5 w-2/3 rounded" />
+                  <div className="admin-skeleton h-2.5 w-full rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="min-w-0">
+          <div className="admin-skeleton mb-3 h-3 w-24 rounded xl:hidden" />
+          <div className="admin-card overflow-hidden">
+            <div className="admin-section-head space-y-2 px-6 py-5">
+              <div className="admin-skeleton h-6 w-40 rounded" />
+              <div className="admin-skeleton h-3.5 w-64 rounded" />
+            </div>
+            <div className="space-y-5 p-6">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="admin-skeleton h-3.5 w-32 rounded" />
+                  <div className="admin-skeleton h-11 w-full rounded-xl" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="admin-card mt-6 flex items-center gap-3 px-4 py-3.5">
+            <div className="admin-skeleton h-11 w-24 rounded-full" />
+            <div className="admin-skeleton h-11 w-36 rounded-full" />
+            <div className="admin-skeleton ml-auto h-11 w-32 rounded-full" />
+          </div>
+        </div>
+      </div>
+      <span className="sr-only" role="status">
+        Loading…
+      </span>
+    </>
   );
 }
 

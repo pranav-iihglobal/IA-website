@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Spinner } from "./ui";
 
 /**
  * Confirmation dialog for destructive actions.
@@ -82,7 +83,9 @@ export function ConfirmDialog({
         className="admin-dialog w-full max-w-md rounded-2xl border border-camel-light bg-cornsilk-light p-6"
       >
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-alloy/12 text-alloy-dark">
+          {/* Red, not the alloy CTA colour — this dialog only ever asks about
+              something destructive. */}
+          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger/12 text-danger">
             <svg viewBox="0 0 20 20" className="h-5 w-5" fill="currentColor" aria-hidden="true">
               <path
                 fillRule="evenodd"
@@ -118,8 +121,9 @@ export function ConfirmDialog({
             type="button"
             onClick={onConfirm}
             disabled={busy}
-            className="admin-btn bg-russet text-cornsilk-light hover:bg-russet-dark"
+            className="admin-btn admin-btn-danger-solid"
           >
+            {busy && <Spinner />}
             {busy ? "Deleting…" : confirmLabel}
           </button>
         </div>

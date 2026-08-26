@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Anek_Gujarati, Montserrat, Noto_Sans_Gujarati } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
+import { ServiceWorker } from "@/components/ServiceWorker";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { SITE } from "@/lib/content";
 
@@ -83,6 +84,40 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  // Installable web app — see app/manifest.ts and public/sw.js.
+  manifest: "/manifest.webmanifest",
+  applicationName: SITE.shortName,
+  appleWebApp: {
+    capable: true,
+    title: SITE.shortName,
+    // The status bar sits over the page in standalone mode; translucent lets
+    // the meringue hero band show through instead of a black strip.
+    statusBarStyle: "default",
+  },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  formatDetection: {
+    // The phone number is already a tel: link; iOS auto-linking on top of
+    // that restyles it and breaks the design.
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  // --color-olive, matching the header, so the browser chrome and the
+  // standalone status bar are the same green as the site.
+  themeColor: "#5e7153",
+  colorScheme: "light",
+  width: "device-width",
+  initialScale: 1,
+  // Not 1 — capping zoom stops anyone who needs to magnify the text, and the
+  // layout is already responsive down to 320px.
+  maximumScale: 5,
 };
 
 /**
@@ -102,6 +137,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-screen flex-col">
         <LanguageProvider>{children}</LanguageProvider>
+        <ServiceWorker />
       </body>
     </html>
   );
