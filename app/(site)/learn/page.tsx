@@ -37,23 +37,31 @@ export default async function LearnPage() {
           const cover = cldUrl(a.coverImage?.url, CLD.blogCover);
           return (
             <Reveal key={a.slug} delay={i * 110}>
-              <article className="overflow-hidden rounded-2xl border border-cornsilk-dark bg-cornsilk transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+              {/*
+                One link, not three. The card used to wrap the cover, the
+                title and "Read article" in separate anchors to the same page —
+                three tab stops, and on a phone the title was the only one big
+                enough to aim at. The title link stretches over the whole card
+                instead, so the entire card is the target.
+              */}
+              <article className="group relative overflow-hidden rounded-2xl border border-cornsilk-dark bg-cornsilk transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
                 {cover && (
-                  <Link href={`/learn/${a.slug}`}>
-                    <Image
-                      src={cover}
-                      alt={a.coverImage?.alt.en ?? ""}
-                      width={1600}
-                      height={900}
-                      unoptimized
-                      className="h-56 w-full object-cover"
-                      sizes="(max-width: 896px) 100vw, 896px"
-                    />
-                  </Link>
+                  <Image
+                    src={cover}
+                    alt={a.coverImage?.alt.en ?? ""}
+                    width={1600}
+                    height={900}
+                    unoptimized
+                    className="h-56 w-full object-cover"
+                    sizes="(max-width: 896px) 100vw, 896px"
+                  />
                 )}
                 <div className="p-6">
                   <h2 className="font-display text-2xl font-bold text-russet">
-                    <Link href={`/learn/${a.slug}`} className="hover:text-alloy-dark">
+                    <Link
+                      href={`/learn/${a.slug}`}
+                      className="after:absolute after:inset-0 group-hover:text-alloy-dark"
+                    >
                       <T text={a.title} />
                     </Link>
                   </h2>
@@ -63,12 +71,9 @@ export default async function LearnPage() {
                   <p className="mt-3 text-sm leading-relaxed text-russet-dark/80">
                     <T text={a.excerpt} />
                   </p>
-                  <Link
-                    href={`/learn/${a.slug}`}
-                    className="mt-4 inline-block text-sm font-semibold text-alloy-dark hover:underline inline-flex min-h-11 items-center"
-                  >
+                  <span className="mt-4 inline-flex items-center text-sm font-semibold text-alloy-dark group-hover:underline">
                     <T text={UI.readArticle} /> →
-                  </Link>
+                  </span>
                 </div>
               </article>
             </Reveal>

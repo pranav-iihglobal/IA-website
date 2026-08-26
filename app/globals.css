@@ -668,6 +668,37 @@ select.admin-input {
   opacity: 1;
 }
 
+/*
+  Tap targets — 44px minimum, at every width.
+
+  Gating this on `(hover: none)` or `(pointer: coarse)` would keep desktop
+  controls a few pixels smaller, but neither query can be emulated in a
+  headless browser, so that branch could never actually be tested. A flat
+  44px is verifiable everywhere, matches what most admin UIs ship, and costs
+  desktop about four pixels.
+
+  `.admin-tap` opts in anything that is not a button or an input — filter
+  pills, wizard step pills, breadcrumbs, nav links.
+*/
+.admin-btn,
+.admin-input,
+.admin-tap {
+  min-height: 2.75rem;
+}
+/* Icon-only controls need the width too, not just the height. */
+.admin-tap-square {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+
+/* Quiet-until-hover would leave a row's only controls permanently half-faded
+   where hovering is not possible. */
+@media (hover: none) {
+  .admin-row-actions {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .admin-card,
   .admin-btn,

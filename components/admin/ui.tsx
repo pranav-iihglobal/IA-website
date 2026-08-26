@@ -258,7 +258,7 @@ export function BiField({
           const error = isEn ? errors?.en : errors?.gu;
           return (
             <div key={code}>
-              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-olive">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-olive">
                 {isEn ? "English" : "ગુજરાતી"}
                 {!isEn && (
                   <span className="ml-1 normal-case tracking-normal text-russet-dark/45">
@@ -565,7 +565,7 @@ export function FilterTabs({
             type="button"
             aria-pressed={active}
             onClick={() => onChange(option.value)}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+            className={`admin-tap inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
               active
                 ? "bg-white text-russet shadow-sm"
                 : "text-russet-dark/60 hover:text-russet"
@@ -576,6 +576,100 @@ export function FilterTabs({
         );
       })}
     </div>
+  );
+}
+
+/**
+ * One record as a card, for the list pages below lg.
+ *
+ * A five-column table cannot be read on a phone — it either scrolls sideways
+ * or drops columns. A card has room for every field the table shows, stacked
+ * in reading order, so nothing is hidden and nothing scrolls.
+ */
+export function RecordCard({
+  thumb,
+  title,
+  subtitle,
+  badges,
+  meta,
+  editHref,
+  onDelete,
+  label,
+}: {
+  /** Square-ish image or initial, already sized by the caller. */
+  thumb: ReactNode;
+  title: ReactNode;
+  /** Slug, place — the quiet second line. */
+  subtitle?: ReactNode;
+  /** Status pill and friends. Wraps. */
+  badges?: ReactNode;
+  /** Last-edited line, or anything else worth a footnote. */
+  meta?: string;
+  editHref: string;
+  onDelete: () => void;
+  /** Record name, for the delete button's accessible label. */
+  label: string;
+}) {
+  return (
+    <li className="border-t border-camel-light/25 p-4 first:border-t-0">
+      <div className="flex items-start gap-3">
+        {thumb}
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold leading-snug text-russet">{title}</p>
+          {subtitle && (
+            <p className="mt-0.5 truncate text-xs text-russet-dark/55">
+              {subtitle}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {badges && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">{badges}</div>
+      )}
+      {meta && <p className="mt-2 text-[11px] text-russet-dark/50">{meta}</p>}
+
+      <div className="mt-3 flex items-center gap-2">
+        <Link
+          href={editHref}
+          className="admin-tap inline-flex flex-1 items-center justify-center rounded-full border border-camel px-4 py-2 text-sm font-semibold text-olive-dark transition-colors hover:border-olive hover:bg-laurel-light/35"
+        >
+          Edit
+        </Link>
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label={`Delete ${label}`}
+          className="admin-tap-square inline-flex items-center justify-center rounded-full border border-camel px-4 py-2 text-sm font-semibold text-russet-dark/55 transition-colors hover:border-alloy hover:bg-alloy/10 hover:text-alloy-dark"
+        >
+          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+            <path d="M8 2h4a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-.4l-.7 9.1A2 2 0 0 1 12.9 17H7.1a2 2 0 0 1-2-1.9L4.4 6H4a1 1 0 0 1 0-2h3V3a1 1 0 0 1 1-1Zm1 2h2V4H9Zm-2.6 2 .7 8.9a.5.5 0 0 0 .5.4h5.8a.5.5 0 0 0 .5-.4l.7-8.9H6.4Z" />
+          </svg>
+        </button>
+      </div>
+    </li>
+  );
+}
+
+/**
+ * Breadcrumb back to a list, above an edit form.
+ *
+ * Every new/edit page had its own copy of this markup down to the chevron
+ * path, all of them 28px tall.
+ */
+export function BackLink({ href, label }: { href: string; label: string }) {
+  return (
+    <nav className="mb-5">
+      <Link
+        href={href}
+        className="admin-tap -ml-2.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-semibold text-olive-dark transition-colors hover:bg-meringue hover:text-russet"
+      >
+        <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+          <path d="M12.7 4.3a1 1 0 0 1 0 1.4L8.4 10l4.3 4.3a1 1 0 0 1-1.4 1.4l-5-5a1 1 0 0 1 0-1.4l5-5a1 1 0 0 1 1.4 0Z" />
+        </svg>
+        {label}
+      </Link>
+    </nav>
   );
 }
 
@@ -616,7 +710,7 @@ export function RowActions({
     <div className="admin-row-actions flex items-center justify-end gap-1.5">
       <Link
         href={editHref}
-        className="rounded-full border border-camel px-3.5 py-1.5 text-xs font-semibold text-olive-dark transition-colors hover:border-olive hover:bg-laurel-light/35"
+        className="admin-tap inline-flex items-center rounded-full border border-camel px-3.5 py-1.5 text-xs font-semibold text-olive-dark transition-colors hover:border-olive hover:bg-laurel-light/35"
       >
         Edit
       </Link>
@@ -625,7 +719,7 @@ export function RowActions({
         onClick={onDelete}
         aria-label={`Delete ${label}`}
         title="Delete"
-        className="rounded-full p-2 text-russet-dark/45 transition-colors hover:bg-alloy/12 hover:text-alloy-dark"
+        className="admin-tap-square inline-flex items-center justify-center rounded-full p-2 text-russet-dark/45 transition-colors hover:bg-alloy/12 hover:text-alloy-dark"
       >
         <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
           <path d="M8 2h4a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-.4l-.7 9.1A2 2 0 0 1 12.9 17H7.1a2 2 0 0 1-2-1.9L4.4 6H4a1 1 0 0 1 0-2h3V3a1 1 0 0 1 1-1Zm1 2h2V4H9Zm-2.6 2 .7 8.9a.5.5 0 0 0 .5.4h5.8a.5.5 0 0 0 .5-.4l.7-8.9H6.4Z" />

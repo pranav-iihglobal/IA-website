@@ -335,7 +335,7 @@ export function FormWizard({
                     aria-current={active ? "step" : undefined}
                     onClick={() => goTo(index)}
                     title={s.description ?? s.title}
-                    className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${
+                    className={`admin-tap flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${
                       active
                         ? "bg-olive text-cornsilk-light"
                         : failures > 0

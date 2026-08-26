@@ -48,7 +48,7 @@ function Select({
   if (options.length === 0) return null;
 
   return (
-    <label className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-none">
+    <label className="flex min-w-0 flex-col gap-1 sm:flex-none">
       <span className="text-xs font-semibold uppercase tracking-wide text-olive">
         {t(label)}
       </span>
@@ -218,7 +218,12 @@ export function TestimonialsBrowser({
 
   return (
     <div>
-      <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-cornsilk-dark bg-cornsilk p-4">
+      {/*
+        Stacked on a phone, a row from sm up. Three dropdowns sharing one
+        390px row left each of them about 100px wide — too narrow to read a
+        district name in, let alone tap confidently.
+      */}
+      <div className="grid gap-3 rounded-2xl border border-cornsilk-dark bg-cornsilk p-4 sm:flex sm:flex-wrap sm:items-end">
         <Select
           label={TESTIMONIALS_PAGE.filterDistrict}
           value={filters.district}
@@ -241,7 +246,7 @@ export function TestimonialsBrowser({
           onChange={(v) => setFilter("product", v)}
         />
 
-        <div className="ml-auto flex items-center gap-3 pb-1">
+        <div className="flex items-center justify-between gap-3 sm:ml-auto sm:justify-end sm:pb-1">
           <span className="text-sm font-medium text-olive-dark">
             {visible.length}{" "}
             {t(

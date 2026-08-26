@@ -103,7 +103,9 @@ function Notice({
   return (
     <div className={`max-w-2xl rounded-2xl border p-6 ${styles}`}>
       <h2 className="font-display text-xl font-bold text-russet">{title}</h2>
-      <div className="mt-2 space-y-2 text-sm leading-relaxed text-russet-dark/85">
+      {/* break-words: a database error carries a bare URL, which was long
+          enough to push the whole dashboard sideways on a 320px screen. */}
+      <div className="mt-2 space-y-2 break-words text-sm leading-relaxed text-russet-dark/85">
         {children}
       </div>
     </div>

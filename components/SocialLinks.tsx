@@ -30,7 +30,7 @@ export function SocialLinks({ tone = "dark" }: { tone?: "dark" | "light" }) {
             rel="noopener noreferrer"
             aria-label={`IKSARVA on ${s.name}`}
             title={s.name}
-            className={`flex h-10 w-10 items-center justify-center rounded-full border transition-all duration-200 hover:-translate-y-0.5 ${styles}`}
+            className={`flex h-11 w-11 items-center justify-center rounded-full border transition-all duration-200 hover:-translate-y-0.5 ${styles}`}
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
               <path d={ICON_PATHS[s.icon]} />

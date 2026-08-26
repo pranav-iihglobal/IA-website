@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isValidObjectId } from "mongoose";
 import { connectToDatabase } from "@/lib/db/connect";
@@ -10,6 +9,7 @@ import {
   type PostFormValues,
 } from "@/components/admin/PostForm";
 import { getTestimonialOptions } from "@/lib/admin/products-options";
+import { BackLink } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -63,17 +63,7 @@ export default async function EditPostPage({
 
   return (
     <>
-      <nav className="mb-5">
-        <Link
-          href="/admin/blog"
-          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-semibold text-olive-dark transition-colors hover:bg-meringue hover:text-russet"
-        >
-          <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
-            <path d="M12.7 4.3a1 1 0 0 1 0 1.4L8.4 10l4.3 4.3a1 1 0 0 1-1.4 1.4l-5-5a1 1 0 0 1 0-1.4l5-5a1 1 0 0 1 1.4 0Z" />
-          </svg>
-          Blog
-        </Link>
-      </nav>
+      <BackLink href="/admin/blog" label="Blog" />
       <h1 className="font-display text-3xl font-bold text-russet">
         Edit {(doc as LeanDoc).title?.en}
       </h1>

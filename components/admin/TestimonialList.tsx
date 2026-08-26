@@ -13,6 +13,7 @@ import {
   ErrorBanner,
   FilterTabs,
   Pagination,
+  RecordCard,
   RowActions,
   SearchInput,
   StatusPill,
@@ -47,6 +48,45 @@ function lastEdited(row: Row): string {
   const when = formatShortDate(row.updatedAt);
   if (!when) return "";
   return row.updatedBy ? `${when} · ${row.updatedBy}` : when;
+}
+
+/** Farmer photo, or their initial when there is none. */
+function Avatar({ row }: { row: Row }) {
+  return (
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-laurel-light/40 ring-1 ring-camel-light/50">
+      {row.photo ? (
+        <Image
+          src={cldUrl(row.photo, CLD.thumb) ?? row.photo}
+          alt=""
+          width={40}
+          height={40}
+          unoptimized
+          className="h-10 w-10 object-cover"
+        />
+      ) : (
+        <span className="text-sm font-bold text-olive-dark">
+          {row.farmerName.en.slice(0, 1)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function VerifiedTick({ row }: { row: Row }) {
+  return (
+    <span
+      title={VERIFIED_LABEL[row.verifiedVia] ?? "Verified"}
+      className="shrink-0 text-olive"
+    >
+      <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+        <path
+          fillRule="evenodd"
+          d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.7-9.3a1 1 0 0 0-1.4-1.4L9 10.6 7.7 9.3a1 1 0 0 0-1.4 1.4l2 2a1 1 0 0 0 1.4 0l4-4Z"
+          clipRule="evenodd"
+        />
+      </svg>
+    </span>
+  );
 }
 
 /** Small badge showing whether the story carries a video or is text only. */
@@ -180,7 +220,45 @@ export function TestimonialList() {
 
       {rows.length > 0 && (
         <div className="admin-card mt-6 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Cards below lg, table from lg up. A five-column table cannot be
+              read on a phone; a card fits every field the table shows. */}
+          <ul className="lg:hidden">
+            {rows.map((row) => (
+              <RecordCard
+                key={row.id}
+                thumb={<Avatar row={row} />}
+                title={
+                  <span className="flex items-center gap-1.5">
+                    <span>{row.farmerName.en}</span>
+                    {row.verified && <VerifiedTick row={row} />}
+                  </span>
+                }
+                subtitle={[row.village, row.district].filter(Boolean).join(", ")}
+                badges={
+                  <>
+                    <StatusPill status={row.status} />
+                    <MediaBadge platform={row.videoPlatform} />
+                    {row.crop?.en && (
+                      <span className="rounded-full bg-meringue px-2.5 py-1 text-xs font-semibold text-russet-dark/70">
+                        {row.crop.en}
+                      </span>
+                    )}
+                    {row.source === "whatsapp_submission" && (
+                      <span className="rounded-full bg-laurel-light/60 px-2.5 py-1 text-xs font-semibold text-olive-dark">
+                        From WhatsApp
+                      </span>
+                    )}
+                  </>
+                }
+                meta={lastEdited(row) ? `Last edited ${lastEdited(row)}` : undefined}
+                editHref={`/admin/testimonials/${row.id}`}
+                onDelete={() => setPending(row)}
+                label={row.farmerName.en}
+              />
+            ))}
+          </ul>
+
+          <div className="hidden overflow-x-auto lg:block">
             <table className="w-full min-w-[680px] text-left text-sm">
               <thead className="admin-section-head text-[11px] uppercase tracking-[0.12em] text-olive">
                 <tr>
@@ -199,41 +277,11 @@ export function TestimonialList() {
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-laurel-light/40 ring-1 ring-camel-light/50">
-                          {row.photo ? (
-                            <Image
-                              src={cldUrl(row.photo, CLD.thumb) ?? row.photo}
-                              alt=""
-                              width={40}
-                              height={40}
-                              unoptimized
-                              className="h-10 w-10 object-cover"
-                            />
-                          ) : (
-                            <span className="text-sm font-bold text-olive-dark">
-                              {row.farmerName.en.slice(0, 1)}
-                            </span>
-                          )}
-                        </div>
+                        <Avatar row={row} />
                         <div className="min-w-0">
                           <p className="flex items-center gap-1.5 font-semibold text-russet">
                             <span className="truncate">{row.farmerName.en}</span>
-                            {row.verified && (
-                              <span
-                                title={
-                                  VERIFIED_LABEL[row.verifiedVia] ?? "Verified"
-                                }
-                                className="shrink-0 text-olive"
-                              >
-                                <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.7-9.3a1 1 0 0 0-1.4-1.4L9 10.6 7.7 9.3a1 1 0 0 0-1.4 1.4l2 2a1 1 0 0 0 1.4 0l4-4Z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                              </span>
-                            )}
+                            {row.verified && <VerifiedTick row={row} />}
                             {row.source === "whatsapp_submission" && (
                               <span
                                 title="Sent by the farmer on WhatsApp"

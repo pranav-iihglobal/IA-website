@@ -110,7 +110,7 @@ export function AdminNav({ user }: { user: AdminUser }) {
               href={link.href}
               onClick={() => setOpen(false)}
               aria-current={active ? "page" : undefined}
-              className={`admin-nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold ${
+              className={`admin-nav-link admin-tap flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold ${
                 active
                   ? "admin-nav-link-active bg-olive-dark/70 text-cornsilk-light"
                   : "text-cornsilk/75 hover:bg-olive-dark/45 hover:text-cornsilk-light"
@@ -147,7 +147,7 @@ export function AdminNav({ user }: { user: AdminUser }) {
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-label={open ? "Close menu" : "Open menu"}
-          className="rounded-lg p-1.5 text-cornsilk-light hover:bg-olive-dark"
+          className="-mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-cornsilk-light hover:bg-olive-dark"
         >
           <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
             {open ? (
@@ -195,7 +195,7 @@ export function AdminNav({ user }: { user: AdminUser }) {
           <Link
             href="/"
             target="_blank"
-            className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-laurel-light transition-colors hover:bg-olive-dark/50 hover:text-cornsilk-light"
+            className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs font-semibold text-laurel-light transition-colors hover:bg-olive-dark/50 hover:text-cornsilk-light"
           >
             <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
               <path d="M11 3a1 1 0 1 0 0 2h1.6l-5.3 5.3a1 1 0 1 0 1.4 1.4L14 6.4V8a1 1 0 1 0 2 0V4a1 1 0 0 0-1-1h-4Z" />
@@ -204,7 +204,8 @@ export function AdminNav({ user }: { user: AdminUser }) {
             View site
           </Link>
 
-          <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-olive-dark/45 px-3 py-2.5">
+          <div className="mt-3 rounded-xl bg-olive-dark/45 p-2.5">
+            <div className="flex items-center gap-2.5">
             {user.image && !avatarFailed ? (
               <Image
                 src={user.image}
@@ -229,19 +230,24 @@ export function AdminNav({ user }: { user: AdminUser }) {
                 {label}
               </p>
               {user.name && user.email && (
-                <p className="truncate text-[10px] text-cornsilk/60" title={user.email}>
+                <p className="truncate text-xs text-cornsilk/65" title={user.email}>
                   {user.email}
                 </p>
               )}
-              <button
-                type="button"
-                onClick={handleSignOut}
-                disabled={signingOut}
-                className="mt-0.5 text-[11px] font-semibold text-alloy-light transition-colors hover:text-cornsilk-light disabled:opacity-60"
-              >
-                {signingOut ? "Signing out…" : "Sign out"}
-              </button>
             </div>
+            </div>
+
+            {/* Its own full-width row: this used to be a 48x17 sliver of text
+                tucked under the email, which is not a target you can hit with
+                a thumb. */}
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={signingOut}
+              className="mt-2 flex min-h-11 w-full items-center justify-center rounded-lg bg-olive-dark/60 text-xs font-semibold text-alloy-light transition-colors hover:bg-olive-dark hover:text-cornsilk-light disabled:opacity-60"
+            >
+              {signingOut ? "Signing out…" : "Sign out"}
+            </button>
           </div>
         </div>
       </aside>

@@ -12,6 +12,7 @@ import {
   ErrorBanner,
   FilterTabs,
   Pagination,
+  RecordCard,
   RowActions,
   SearchInput,
   StatusPill,
@@ -28,6 +29,35 @@ interface Row {
   publishAt: string | null;
   cover: string | null;
   readingTime: number;
+}
+
+/** Cover thumbnail, or a page glyph when the post has none. */
+function Cover({ cover }: { cover: string | null }) {
+  return (
+    <div className="flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-meringue-light ring-1 ring-camel-light/50">
+      {cover ? (
+        <Image
+          src={cldUrl(cover, CLD.thumb) ?? cover}
+          alt=""
+          width={64}
+          height={48}
+          unoptimized
+          className="h-12 w-16 object-cover"
+        />
+      ) : (
+        <span className="text-base text-camel">📄</span>
+      )}
+    </div>
+  );
+}
+
+/** Publish date with the year, e.g. "1 Aug 2026". */
+function formatLongDate(value: string): string {
+  return new Date(value).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export function PostList() {
@@ -149,7 +179,38 @@ export function PostList() {
 
       {rows.length > 0 && (
         <div className="admin-card mt-6 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Cards below lg, table from lg up. A five-column table cannot be
+              read on a phone; a card fits every field the table shows. */}
+          <ul className="lg:hidden">
+            {rows.map((row) => (
+              <RecordCard
+                key={row.id}
+                thumb={<Cover cover={row.cover} />}
+                title={row.title.en}
+                subtitle={`/${row.slug} · ${row.readingTime} min read`}
+                badges={
+                  <>
+                    <StatusPill status={row.status} />
+                    {row.category && (
+                      <span className="rounded-full bg-meringue px-2.5 py-1 text-xs font-semibold capitalize text-russet-dark/70">
+                        {row.category.replace("-", " ")}
+                      </span>
+                    )}
+                    {row.publishAt && (
+                      <span className="rounded-full bg-meringue px-2.5 py-1 text-xs font-semibold text-russet-dark/70">
+                        {formatLongDate(row.publishAt)}
+                      </span>
+                    )}
+                  </>
+                }
+                editHref={`/admin/blog/${row.id}`}
+                onDelete={() => setPending(row)}
+                label={row.title.en}
+              />
+            ))}
+          </ul>
+
+          <div className="hidden overflow-x-auto lg:block">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="admin-section-head text-[11px] uppercase tracking-[0.12em] text-olive">
                 <tr>
@@ -168,20 +229,7 @@ export function PostList() {
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-meringue-light ring-1 ring-camel-light/50">
-                          {row.cover ? (
-                            <Image
-                              src={cldUrl(row.cover, CLD.thumb) ?? row.cover}
-                              alt=""
-                              width={64}
-                              height={48}
-                              unoptimized
-                              className="h-12 w-16 object-cover"
-                            />
-                          ) : (
-                            <span className="text-base text-camel">📄</span>
-                          )}
-                        </div>
+                        <Cover cover={row.cover} />
                         <div className="min-w-0">
                           <p className="truncate font-semibold text-russet">
                             {row.title.en}
@@ -196,13 +244,7 @@ export function PostList() {
                       {row.category?.replace("-", " ")}
                     </td>
                     <td className="px-5 py-3.5 text-xs text-russet-dark/65">
-                      {row.publishAt
-                        ? new Date(row.publishAt).toLocaleDateString("en-IN", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })
-                        : "—"}
+                      {row.publishAt ? formatLongDate(row.publishAt) : "—"}
                     </td>
                     <td className="px-5 py-3.5">
                       <StatusPill status={row.status} />

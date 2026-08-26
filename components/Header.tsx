@@ -16,7 +16,9 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-olive-dark bg-olive/95 backdrop-blur">
-      <div className="container-page flex items-center justify-between gap-4 py-3">
+      {/* gap-2 below sm: at 320px the language pill and the menu button were
+          almost touching the logo. */}
+      <div className="container-page flex items-center justify-between gap-2 py-3 sm:gap-4">
         <Link
           href="/"
           className="flex items-center gap-2"
@@ -41,12 +43,17 @@ export function Header() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-6 md:flex" aria-label="Main">
+        {/* gap-4 + px-2 rather than gap-6: same rhythm, but each link is its
+            own 44px-tall target with a bit of width — "હોમ" is 21px of text. */}
+        <nav className="hidden items-center gap-4 md:flex" aria-label="Main">
           {NAV.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`text-sm font-medium transition-colors hover:text-alloy-light ${
+              // min-h-11: a tablet is a touch device too, and these were 20px
+              // tall targets. The header is already taller than 44px, so this
+              // costs nothing visually.
+              className={`flex min-h-11 items-center rounded-md px-2 text-sm font-medium transition-colors hover:text-alloy-light ${
                 pathname === item.href
                   ? "text-alloy-light"
                   : "text-cornsilk/90"
@@ -61,7 +68,7 @@ export function Header() {
           <button
             type="button"
             onClick={toggleLang}
-            className="flex min-h-11 items-center rounded-full border border-camel bg-meringue-light px-4 text-sm font-medium text-russet transition-colors hover:bg-meringue"
+            className="flex min-h-11 items-center rounded-full border border-camel bg-meringue-light px-3 text-sm font-medium text-russet transition-colors hover:bg-meringue sm:px-4"
             aria-label={
               lang === "en" ? "Switch to Gujarati" : "Switch to English"
             }
@@ -71,7 +78,7 @@ export function Header() {
 
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-md text-cornsilk-light md:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-cornsilk-light md:hidden"
             onClick={() => setOpen(!open)}
             aria-expanded={open}
             aria-controls="mobile-nav"

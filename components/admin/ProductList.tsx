@@ -13,6 +13,7 @@ import {
   ErrorBanner,
   FilterTabs,
   Pagination,
+  RecordCard,
   RowActions,
   SearchInput,
   StatusPill,
@@ -47,6 +48,26 @@ function AvailabilityBadge({ value }: { value: string }) {
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
       {style.label}
     </span>
+  );
+}
+
+/** Pack shot, or a sprout when there is no image yet. */
+function Thumb({ image }: { image: string | null }) {
+  return (
+    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-meringue-light ring-1 ring-camel-light/50">
+      {image ? (
+        <Image
+          src={cldUrl(image, CLD.thumb) ?? image}
+          alt=""
+          width={48}
+          height={48}
+          unoptimized
+          className="h-12 w-12 object-cover"
+        />
+      ) : (
+        <span className="text-lg text-camel">🌱</span>
+      )}
+    </div>
   );
 }
 
@@ -175,7 +196,40 @@ export function ProductList() {
 
       {rows.length > 0 && (
         <div className="admin-card mt-6 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Cards below lg, table from lg up. A five-column table cannot be
+              read on a phone; a card fits every field the table shows. */}
+          <ul className="lg:hidden">
+            {rows.map((row) => (
+              <RecordCard
+                key={row.id}
+                thumb={<Thumb image={row.image} />}
+                title={row.name.en}
+                subtitle={`/${row.slug}`}
+                badges={
+                  <>
+                    <StatusPill status={row.status} />
+                    <AvailabilityBadge value={row.availability} />
+                    {row.categoryLabel?.en && (
+                      <span className="rounded-full bg-meringue px-2.5 py-1 text-xs font-semibold text-russet-dark/70">
+                        {row.categoryLabel.en}
+                      </span>
+                    )}
+                    {row.featured && (
+                      <span className="rounded-full bg-alloy/15 px-2.5 py-1 text-xs font-semibold text-alloy-dark">
+                        Featured
+                      </span>
+                    )}
+                  </>
+                }
+                meta={lastEdited(row) ? `Last edited ${lastEdited(row)}` : undefined}
+                editHref={`/admin/products/${row.id}`}
+                onDelete={() => setPending(row)}
+                label={row.name.en}
+              />
+            ))}
+          </ul>
+
+          <div className="hidden overflow-x-auto lg:block">
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead className="admin-section-head text-[11px] uppercase tracking-[0.12em] text-olive">
                 <tr>
@@ -194,20 +248,7 @@ export function ProductList() {
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-meringue-light ring-1 ring-camel-light/50">
-                          {row.image ? (
-                            <Image
-                              src={cldUrl(row.image, CLD.thumb) ?? row.image}
-                              alt=""
-                              width={48}
-                              height={48}
-                              unoptimized
-                              className="h-12 w-12 object-cover"
-                            />
-                          ) : (
-                            <span className="text-lg text-camel">🌱</span>
-                          )}
-                        </div>
+                        <Thumb image={row.image} />
                         <div className="min-w-0">
                           <p className="flex items-center gap-2 font-semibold text-russet">
                             <span className="truncate">{row.name.en}</span>

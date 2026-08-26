@@ -30,7 +30,9 @@ export default async function ProductsPage() {
       <p className="mt-2 max-w-2xl text-olive-dark">
         <T text={HOME.productsSub} />
       </p>
-      <div className="mt-10 grid gap-6 grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
+      {/* 280px, not 300px: .container-page is 288px wide on a 320px screen,
+          and a 300px track overhangs its own right gutter there. */}
+      <div className="mt-10 grid gap-6 grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
         {products.map((p, i) => (
           <Reveal key={p.slug} delay={i * 130}>
             <ProductCard

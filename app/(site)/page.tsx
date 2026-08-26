@@ -144,7 +144,9 @@ export default async function HomePage() {
         </div>
         </Reveal>
 
-        <div className="mt-8 grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(300px,520px))]">
+        {/* 280px, not 300px: .container-page is 288px wide on a 320px screen,
+            and a 300px track overhangs its own right gutter there. */}
+        <div className="mt-8 grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(280px,520px))]">
           {others.map((p, i) => (
             <Reveal key={p.slug} delay={i * 130}>
               <ProductCard
