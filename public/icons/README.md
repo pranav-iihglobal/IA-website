@@ -6,35 +6,28 @@ without renaming anything.
 
 ## Dropping in an export
 
-Copy the folders from your icon generator in as they come:
+Copy the folders in as your generator produced them:
 
 ```
 public/icons/android/launchericon-{48,72,96,144,192,512}x{...}.png
-public/icons/ios/{16,32,180,192,512,1024,...}.png
-public/icons/windows/...        # not used by the web manifest
+public/icons/ios/{16,32,180,512,1024,...}.png
 ```
 
-Then run `npm run icons` once. Everything the manifest needs is picked
-up automatically except the maskable pair, which almost no exporter
-produces — the script generates those from your 512.
+Then run `npm run icons`. It generates the maskable pair from your
+largest icon and removes any fallback the export has made redundant.
 
 ## Maskable icons
 
 Android crops `purpose: maskable` icons to the launcher's own shape —
-circle, squircle, rounded square. Anything outside the middle 80% can be
-cut off, so these are generated at 60% on a brand-coloured tile rather
-than reusing the full-bleed art.
+circle, squircle, rounded square — so anything outside the middle 80%
+can be cut off. Exported icons are also usually transparent, and a
+transparent maskable icon gets filled with whatever the launcher picks.
+Both reasons these are composed separately, at 60% on an opaque brand
+tile, rather than reusing the exported art directly.
 
-| File | Size |
-| --- | --- |
-| `maskable-192.png` | 192x192 |
-| `maskable-512.png` | 512x512 |
+## What is generated
 
-## Fallbacks
-
-`icon-192.png`, `icon-512.png`, `apple-touch-icon.png` and
-`favicon-32.png` are generated so the site is installable with no
-export at all. Real exported icons take priority over them.
-
-Nothing here is ever overwritten by `npm run icons`; use
-`npm run icons -- --force` if you want it to.
+`.generated.json` records which files this script wrote and from which
+source. A file listed there is regenerated when a better source appears;
+a file not listed is treated as your own artwork and never touched.
+Delete the entry (or the file) to hand ownership back to the script.

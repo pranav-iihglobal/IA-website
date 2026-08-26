@@ -1,31 +1,34 @@
 /**
- * Fills in the app icons that are missing.
+ * Fills in the app icons that an export is missing.
  *
- * Most icon exports (PWABuilder, RealFaviconGenerator, a designer's zip) give
- * you a full ladder of ordinary icons and no **maskable** ones — and maskable
- * is the pair that actually matters on Android, because the launcher crops
- * every icon to its own shape. A full-bleed icon listed as maskable comes out
- * with its edges shaved off.
+ * Most icon generators (PWABuilder, RealFaviconGenerator, a designer's zip)
+ * hand you a full ladder of ordinary icons and no **maskable** ones — and
+ * maskable is the pair that actually matters on Android, because the launcher
+ * crops every icon to its own shape. Worse, exported icons usually have a
+ * transparent background, and a transparent maskable icon gets filled with
+ * whatever the launcher feels like. So those are composited onto an opaque
+ * brand tile at 60%, well inside the safe zone.
  *
- * So this script:
- *   1. finds the best square source it can (your own 512 if you dropped one
- *      in, otherwise public/logo.svg),
- *   2. writes any missing `any` icon from it,
- *   3. writes the maskable pair by shrinking that source to 60% on a brand
- *      background, which keeps everything inside the safe zone.
+ * Provenance, not timestamps, decides what gets rewritten. The script records
+ * every file it wrote in `.generated.json` along with the source it used:
  *
- * It never overwrites a file that is already there — hand-made artwork always
- * wins. Pass --force to regenerate everything anyway.
+ *   - a file it generated is regenerated when a better source appears
+ *     (dropping in `android/launchericon-512x512.png` supersedes logo.svg),
+ *   - a file it did not generate is never touched, because that is your own
+ *     artwork,
+ *   - a file it generated that a real export has since made redundant is
+ *     deleted, so the repo does not carry two versions of the same icon.
  *
  *   npm run icons
- *   npm run icons -- --force
+ *   npm run icons -- --force     regenerate everything it owns
  */
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 
 const PUBLIC_DIR = path.join(process.cwd(), "public");
 const ICONS_DIR = path.join(PUBLIC_DIR, "icons");
+const LEDGER = path.join(ICONS_DIR, ".generated.json");
 
 /** --color-olive, the brand green the header and sidebar already use. */
 const BACKGROUND = "#5e7153";
@@ -48,32 +51,44 @@ async function exists(file: string) {
   }
 }
 
+type Ledger = Record<string, { source: string }>;
+
+async function readLedger(): Promise<Ledger> {
+  try {
+    return JSON.parse(await readFile(LEDGER, "utf8")) as Ledger;
+  } catch {
+    return {};
+  }
+}
+
 /**
  * The best square artwork available, largest first.
  *
- * A real icon beats the logo SVG: the logo is a tall shield that has to be
- * letterboxed onto a square, whereas an exported icon is already composed.
+ * A real exported icon beats the logo SVG: the logo is a tall shield that has
+ * to be letterboxed onto a square, whereas an exported icon is already
+ * composed for one.
  */
+const SOURCE_CANDIDATES = [
+  "icons/android/launchericon-512x512.png",
+  "icons/ios/1024.png",
+  "icons/ios/512.png",
+  "icons/icon-512.png",
+  "logo.svg",
+];
+
 async function findSource(): Promise<{ buffer: Buffer; label: string }> {
-  const candidates = [
-    "icons/android/launchericon-512x512.png",
-    "icons/icon-512.png",
-    "icons/ios/1024.png",
-    "icons/ios/512.png",
-  ];
-  for (const relative of candidates) {
+  for (const relative of SOURCE_CANDIDATES) {
     const file = path.join(PUBLIC_DIR, relative);
     if (await exists(file)) {
       return { buffer: await readFile(file), label: relative };
     }
   }
-  return {
-    buffer: await readFile(path.join(PUBLIC_DIR, "logo.svg")),
-    label: "logo.svg (no exported icon found)",
-  };
+  throw new Error(
+    "No icon source found. Expected at least public/logo.svg to exist.",
+  );
 }
 
-/** Centre `source` on a square brand-coloured tile. */
+/** Centre `source` on an opaque square brand tile. */
 async function tile(source: Buffer, size: number, inset: number) {
   const glyph = await sharp(source, { density: 600 })
     .resize({
@@ -93,33 +108,102 @@ async function tile(source: Buffer, size: number, inset: number) {
     .toBuffer();
 }
 
-async function write(name: string, make: () => Promise<Buffer>) {
-  const file = path.join(ICONS_DIR, name);
-  if (!FORCE && (await exists(file))) {
-    console.log(`  ${name.padEnd(26)} kept`);
-    return false;
-  }
-  await writeFile(file, await make());
-  console.log(`  ${name.padEnd(26)} written`);
-  return true;
-}
-
 async function main() {
   await mkdir(ICONS_DIR, { recursive: true });
   const { buffer: source, label } = await findSource();
+  const previous = await readLedger();
+  const ledger: Ledger = {};
+
   console.log(`Source: ${label}\n`);
 
-  // The maskable pair — the whole reason this script exists.
+  async function write(name: string, make: () => Promise<Buffer>) {
+    const file = path.join(ICONS_DIR, name);
+    const wasGenerated = name in previous;
+    const isPresent = await exists(file);
+
+    // Someone else's file. Leave it alone and forget we ever made one.
+    if (isPresent && !wasGenerated && !FORCE) {
+      console.log(`  ${name.padEnd(24)} kept — yours, not generated`);
+      return;
+    }
+
+    const sourceChanged = previous[name]?.source !== label;
+    if (isPresent && wasGenerated && !sourceChanged && !FORCE) {
+      console.log(`  ${name.padEnd(24)} unchanged`);
+      ledger[name] = { source: label };
+      return;
+    }
+
+    await writeFile(file, await make());
+    ledger[name] = { source: label };
+    console.log(
+      `  ${name.padEnd(24)} ${isPresent ? "regenerated" : "written"} from ${label}`,
+    );
+  }
+
+  /**
+   * Is a real exported icon already covering what this fallback is for?
+   *
+   * Asked independently of whether the fallback exists — otherwise a run
+   * after the file has been deleted would happily write it back, and the
+   * script would flip-flop on every invocation.
+   */
+  async function supersededBy(candidates: string[]) {
+    for (const candidate of candidates) {
+      if (await exists(path.join(PUBLIC_DIR, candidate))) return candidate;
+    }
+    return null;
+  }
+
+  /**
+   * Drop a fallback a real export has made redundant. Keeping it would mean
+   * two versions of the same icon in the repo, drifting apart the moment the
+   * export is updated. Only ever deletes something this script wrote.
+   */
+  async function drop(name: string, reason: string) {
+    const file = path.join(ICONS_DIR, name);
+    if (!(await exists(file))) return;
+    if (!(name in previous)) {
+      console.log(`  ${name.padEnd(24)} kept — yours, though ${reason} exists`);
+      ledger[name] = previous[name] ?? { source: "unknown" };
+      return;
+    }
+    await rm(file);
+    console.log(`  ${name.padEnd(24)} removed — ${reason} supersedes it`);
+  }
+
+  // The maskable pair. The whole reason this script exists, and always ours:
+  // no exporter produces them.
   await write("maskable-192.png", () => tile(source, 192, MASKABLE_INSET));
   await write("maskable-512.png", () => tile(source, 512, MASKABLE_INSET));
 
-  // Fallbacks, only used when there is no exported icon at that size.
-  // lib/app-icons.ts prefers icons/android/* and icons/ios/* over these.
-  for (const size of [192, 512]) {
-    await write(`icon-${size}.png`, () => tile(source, size, 0.82));
+  // Fallbacks, so the site is installable with no export at all. Once a real
+  // export provides the same thing, lib/app-icons.ts prefers it and these go.
+  const fallbacks: [string, string[], () => Promise<Buffer>][] = [
+    [
+      "icon-192.png",
+      ["icons/android/launchericon-192x192.png"],
+      () => tile(source, 192, 0.82),
+    ],
+    [
+      "icon-512.png",
+      ["icons/android/launchericon-512x512.png"],
+      () => tile(source, 512, 0.82),
+    ],
+    ["apple-touch-icon.png", ["icons/ios/180.png"], () => tile(source, 180, 0.7)],
+    ["favicon-32.png", ["icons/ios/32.png"], () => tile(source, 32, 0.82)],
+  ];
+
+  for (const [name, candidates, make] of fallbacks) {
+    const covered = await supersededBy(candidates);
+    if (covered) {
+      await drop(name, covered);
+      continue;
+    }
+    await write(name, make);
   }
-  await write("apple-touch-icon.png", () => tile(source, 180, 0.7));
-  await write("favicon-32.png", () => tile(source, 32, 0.82));
+
+  await writeFile(LEDGER, `${JSON.stringify(ledger, null, 2)}\n`);
 
   await writeFile(
     path.join(ICONS_DIR, "README.md"),
@@ -132,38 +216,31 @@ async function main() {
       "",
       "## Dropping in an export",
       "",
-      "Copy the folders from your icon generator in as they come:",
+      "Copy the folders in as your generator produced them:",
       "",
       "```",
       "public/icons/android/launchericon-{48,72,96,144,192,512}x{...}.png",
-      "public/icons/ios/{16,32,180,192,512,1024,...}.png",
-      "public/icons/windows/...        # not used by the web manifest",
+      "public/icons/ios/{16,32,180,512,1024,...}.png",
       "```",
       "",
-      "Then run `npm run icons` once. Everything the manifest needs is picked",
-      "up automatically except the maskable pair, which almost no exporter",
-      "produces — the script generates those from your 512.",
+      "Then run `npm run icons`. It generates the maskable pair from your",
+      "largest icon and removes any fallback the export has made redundant.",
       "",
       "## Maskable icons",
       "",
       "Android crops `purpose: maskable` icons to the launcher's own shape —",
-      "circle, squircle, rounded square. Anything outside the middle 80% can be",
-      "cut off, so these are generated at 60% on a brand-coloured tile rather",
-      "than reusing the full-bleed art.",
+      "circle, squircle, rounded square — so anything outside the middle 80%",
+      "can be cut off. Exported icons are also usually transparent, and a",
+      "transparent maskable icon gets filled with whatever the launcher picks.",
+      "Both reasons these are composed separately, at 60% on an opaque brand",
+      "tile, rather than reusing the exported art directly.",
       "",
-      "| File | Size |",
-      "| --- | --- |",
-      "| `maskable-192.png` | 192x192 |",
-      "| `maskable-512.png` | 512x512 |",
+      "## What is generated",
       "",
-      "## Fallbacks",
-      "",
-      "`icon-192.png`, `icon-512.png`, `apple-touch-icon.png` and",
-      "`favicon-32.png` are generated so the site is installable with no",
-      "export at all. Real exported icons take priority over them.",
-      "",
-      "Nothing here is ever overwritten by `npm run icons`; use",
-      "`npm run icons -- --force` if you want it to.",
+      "`.generated.json` records which files this script wrote and from which",
+      "source. A file listed there is regenerated when a better source appears;",
+      "a file not listed is treated as your own artwork and never touched.",
+      "Delete the entry (or the file) to hand ownership back to the script.",
       "",
     ].join("\n"),
   );

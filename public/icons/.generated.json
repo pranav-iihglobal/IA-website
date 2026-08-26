@@ -1,0 +1,8 @@
+{
+  "maskable-192.png": {
+    "source": "icons/android/launchericon-512x512.png"
+  },
+  "maskable-512.png": {
+    "source": "icons/android/launchericon-512x512.png"
+  }
+}
