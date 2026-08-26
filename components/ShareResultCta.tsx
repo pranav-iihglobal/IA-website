@@ -47,7 +47,7 @@ export function ShareResultCta({
 
   return (
     <section className="bg-olive text-cornsilk-light">
-      <div className="mx-auto max-w-4xl px-4 py-12 text-center">
+      <div className="container-page py-12 text-center">
         <h2 className="font-display text-3xl font-bold">
           {t(TESTIMONIALS_PAGE.shareHeading)}
         </h2>

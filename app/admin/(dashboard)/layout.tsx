@@ -30,7 +30,7 @@ export default async function DashboardLayout({
         <AdminNav user={user} />
         {/* pt clears the fixed mobile top bar rendered by AdminNav. */}
         <main className="min-w-0 flex-1 px-5 pb-10 pt-[74px] sm:px-8 lg:py-9">
-          <div className="mx-auto w-full max-w-5xl">{children}</div>
+          <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
       </div>
     </ToastProvider>

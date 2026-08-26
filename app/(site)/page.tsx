@@ -32,7 +32,7 @@ export default async function HomePage() {
       {/* Hero */}
       <section className="relative overflow-hidden bg-meringue-light">
         <FloatingLeaves />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 md:grid-cols-2 md:py-20">
+        <div className="container-page relative grid items-center gap-10 py-14 md:grid-cols-2 md:py-20">
           <div>
             <Reveal>
               {/* The pill shows the tagline in the OTHER language, pairing with the headline */}
@@ -76,7 +76,7 @@ export default async function HomePage() {
       <CropsMarquee />
 
       {/* Flagship: FloraMax */}
-      <section className="mx-auto max-w-6xl px-4 py-14">
+      <section className="container-page py-14">
         <Reveal>
           <h2 className="font-display text-3xl font-bold text-russet sm:text-4xl">
             <T text={HOME.productsHeading} />
@@ -144,7 +144,7 @@ export default async function HomePage() {
         </div>
         </Reveal>
 
-        <div className="mt-8 grid gap-6 sm:grid-cols-2">
+        <div className="mt-8 grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(300px,520px))]">
           {others.map((p, i) => (
             <Reveal key={p.slug} delay={i * 130}>
               <ProductCard
@@ -165,7 +165,7 @@ export default async function HomePage() {
 
       {/* Region / trust strip */}
       <section className="bg-cornsilk">
-        <div className="mx-auto max-w-6xl px-4 py-14">
+        <div className="container-page py-14">
           <h2 className="font-display text-3xl font-bold text-russet">
             <T text={HOME.regionHeading} />
           </h2>
@@ -194,7 +194,7 @@ export default async function HomePage() {
 
       {/* Mission */}
       <section className="bg-olive-dark text-cornsilk">
-        <div className="mx-auto max-w-6xl px-4 py-14 text-center">
+        <div className="container-page py-14 text-center">
           <Reveal>
             <h2 className="font-display text-3xl font-bold text-cornsilk-light sm:text-4xl">
               <T text={HOME.missionHeading} />
@@ -209,7 +209,7 @@ export default async function HomePage() {
       {/* Dealer strip */}
       <section className="relative overflow-hidden bg-meringue">
         <FloatingLeaves />
-        <div className="relative mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-12 sm:flex-row sm:items-center sm:justify-between">
+        <div className="container-page relative flex flex-col items-start gap-6 py-12 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-display text-2xl font-bold text-russet sm:text-3xl">
               <T text={HOME.dealerStripHeading} />

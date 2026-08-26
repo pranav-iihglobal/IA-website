@@ -18,7 +18,7 @@ export default function AboutPage() {
   return (
     <>
       <section className="bg-meringue-light">
-        <div className="mx-auto max-w-4xl px-4 py-14">
+        <div className="container-page py-14">
           <h1 className="font-display text-4xl font-bold text-russet sm:text-5xl">
             <T text={ABOUT.heading} />
           </h1>
@@ -31,7 +31,7 @@ export default function AboutPage() {
         <WaveDivider />
       </div>
 
-      <section className="mx-auto max-w-4xl px-4 py-10">
+      <section className="container-page py-10">
         <h2 className="font-display text-3xl font-bold text-russet">
           <T text={ABOUT.missionHeading} />
         </h2>
@@ -44,7 +44,7 @@ export default function AboutPage() {
       </section>
 
       <section className="bg-cornsilk">
-        <div className="mx-auto max-w-4xl px-4 py-12">
+        <div className="container-page py-12">
           <h2 className="font-display text-3xl font-bold text-russet">
             <T text={ABOUT.philosophyHeading} />
           </h2>
@@ -54,7 +54,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-4xl px-4 py-12">
+      <section className="container-page py-12">
         <h2 className="font-display text-3xl font-bold text-russet">
           <T text={ABOUT.teamHeading} />
         </h2>
@@ -81,7 +81,7 @@ export default function AboutPage() {
       </section>
 
       <section className="bg-olive-dark text-cornsilk">
-        <div className="mx-auto max-w-4xl px-4 py-12">
+        <div className="container-page py-12">
           <h2 className="font-display text-3xl font-bold text-cornsilk-light">
             <T text={ABOUT.regionHeading} />
           </h2>

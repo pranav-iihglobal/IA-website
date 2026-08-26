@@ -31,7 +31,7 @@ export default async function TestimonialsPage() {
     <>
       <section className="relative overflow-hidden bg-meringue-light">
         <FloatingLeaves />
-        <div className="relative mx-auto max-w-6xl px-4 py-14">
+        <div className="relative container-page py-14">
           <h1 className="font-display text-4xl font-bold text-russet sm:text-5xl">
             <T text={TESTIMONIALS_PAGE.heading} />
           </h1>
@@ -41,7 +41,7 @@ export default async function TestimonialsPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-12">
+      <section className="container-page py-12">
         {/* Filtering runs in the browser so this page keeps its ISR cache. */}
         <Suspense>
           <TestimonialsBrowser

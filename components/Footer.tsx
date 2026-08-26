@@ -7,7 +7,7 @@ import { SocialLinks } from "./SocialLinks";
 export function Footer() {
   return (
     <footer className="bg-russet-dark text-cornsilk">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="container-page grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-3">
         <div>
           <div className="flex items-center gap-3">
             <Image
@@ -37,12 +37,14 @@ export function Footer() {
           <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-camel-light">
             Site
           </p>
-          <ul className="space-y-2">
+          {/* -my-1.5 py-1.5: the padding gives a 44px-tall tap target on a
+              phone without visibly loosening the list on desktop. */}
+          <ul className="-my-1.5 space-y-1">
             {NAV.map((item) => (
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className="text-sm text-cornsilk/90 transition-colors hover:text-cornsilk-light"
+                  className="flex min-h-11 items-center text-sm text-cornsilk/90 transition-colors hover:text-cornsilk-light"
                 >
                   <T text={item.label} />
                 </Link>
@@ -55,24 +57,32 @@ export function Footer() {
           <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-camel-light">
             Contact
           </p>
-          <ul className="space-y-2 text-sm text-cornsilk/90">
-            <li>{SITE.phoneDisplay}</li>
+          <ul className="-my-1.5 space-y-1 text-sm text-cornsilk/90">
+            <li>
+              {/* Tappable on a phone — this is the number we most want dialled. */}
+              <a
+                href={`tel:${SITE.phoneDisplay.replace(/\s/g, "")}`}
+                className="inline-flex min-h-11 items-center transition-colors hover:text-cornsilk-light"
+              >
+                {SITE.phoneDisplay}
+              </a>
+            </li>
             <li>
               <a
                 href={`mailto:${SITE.email}`}
-                className="transition-colors hover:text-cornsilk-light"
+                className="inline-flex min-h-11 items-center break-all transition-colors hover:text-cornsilk-light"
               >
                 {SITE.email}
               </a>
             </li>
-            <li>
+            <li className="flex min-h-11 items-center">
               {SITE.address.city}, {SITE.address.region}, India
             </li>
           </ul>
         </div>
       </div>
       <div className="border-t border-russet/60">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-4">
+        <div className="container-page flex flex-wrap items-center justify-between gap-2 py-4">
           <p className="text-xs text-cornsilk/60">
             © {new Date().getFullYear()} {SITE.name}. All rights reserved.
           </p>
@@ -82,7 +92,7 @@ export function Footer() {
           <Link
             href="/admin"
             rel="nofollow"
-            className="text-xs text-cornsilk/40 transition-colors hover:text-cornsilk/80"
+            className="inline-flex min-h-11 items-center text-xs text-cornsilk/40 transition-colors hover:text-cornsilk/80"
           >
             <T text={UI.backoffice} />
           </Link>

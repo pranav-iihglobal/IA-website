@@ -80,7 +80,7 @@ export default async function ArticlePage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
       <nav className="mb-6 text-sm" aria-label="Breadcrumb">
-        <Link href="/learn" className="font-medium text-alloy-dark hover:underline">
+        <Link href="/learn" className="-ml-2 inline-flex min-h-11 items-center rounded-lg px-2 font-medium text-alloy-dark hover:underline">
           ← <T text={UI.backToLearn} />
         </Link>
       </nav>

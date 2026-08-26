@@ -24,7 +24,7 @@ export default async function LearnPage() {
   const articles = await getDisplayPosts();
 
   return (
-    <section className="mx-auto max-w-4xl px-4 py-14">
+    <section className="container-page py-14">
       <h1 className="font-display text-4xl font-bold text-russet">
         <T text={LEARN.heading} />
       </h1>
@@ -65,7 +65,7 @@ export default async function LearnPage() {
                   </p>
                   <Link
                     href={`/learn/${a.slug}`}
-                    className="mt-4 inline-block text-sm font-semibold text-alloy-dark hover:underline"
+                    className="mt-4 inline-block text-sm font-semibold text-alloy-dark hover:underline inline-flex min-h-11 items-center"
                   >
                     <T text={UI.readArticle} /> →
                   </Link>

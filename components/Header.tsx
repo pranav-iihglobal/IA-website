@@ -16,7 +16,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-olive-dark bg-olive/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+      <div className="container-page flex items-center justify-between gap-4 py-3">
         <Link
           href="/"
           className="flex items-center gap-2"
@@ -35,7 +35,7 @@ export function Header() {
             <span className="font-display text-lg font-bold text-cornsilk-light">
               IKSARVA
             </span>
-            <span className="text-[10px] uppercase tracking-widest text-laurel-light">
+            <span className="text-[11px] uppercase tracking-widest text-laurel-light">
               Agritech
             </span>
           </span>
@@ -61,7 +61,7 @@ export function Header() {
           <button
             type="button"
             onClick={toggleLang}
-            className="rounded-full border border-camel bg-meringue-light px-3 py-1.5 text-sm font-medium text-russet transition-colors hover:bg-meringue"
+            className="flex min-h-11 items-center rounded-full border border-camel bg-meringue-light px-4 text-sm font-medium text-russet transition-colors hover:bg-meringue"
             aria-label={
               lang === "en" ? "Switch to Gujarati" : "Switch to English"
             }
@@ -109,7 +109,7 @@ export function Header() {
           className="border-t border-olive-dark bg-olive md:hidden"
           aria-label="Mobile"
         >
-          <ul className="mx-auto max-w-6xl px-4 py-2">
+          <ul className="container-page py-2">
             {NAV.map((item) => (
               <li key={item.href}>
                 <Link

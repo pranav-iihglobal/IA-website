@@ -19,7 +19,7 @@ export default function ContactPage() {
   return (
     <>
       <section className="bg-meringue-light">
-        <div className="mx-auto max-w-4xl px-4 py-14">
+        <div className="container-page py-14">
           <h1 className="font-display text-4xl font-bold text-russet sm:text-5xl">
             <T text={CONTACT.heading} />
           </h1>
@@ -38,14 +38,17 @@ export default function ContactPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-4xl px-4 py-12">
+      <section className="container-page py-12">
         <div className="grid gap-6 sm:grid-cols-3">
           <div className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-6">
             <h2 className="font-display text-lg font-bold text-russet">
               <T text={CONTACT.phoneLabel} />
             </h2>
             <p className="mt-2 text-sm">
-              <a href={`tel:${SITE.phoneDisplay.replace(/\s/g, "")}`} className="hover:underline">
+              <a
+                href={`tel:${SITE.phoneDisplay.replace(/\s/g, "")}`}
+                className="inline-flex min-h-11 items-center hover:underline"
+              >
                 {SITE.phoneDisplay}
               </a>
             </p>
@@ -55,7 +58,10 @@ export default function ContactPage() {
               <T text={CONTACT.emailLabel} />
             </h2>
             <p className="mt-2 break-words text-sm">
-              <a href={`mailto:${SITE.email}`} className="hover:underline">
+              <a
+                href={`mailto:${SITE.email}`}
+                className="inline-flex min-h-11 items-center break-all hover:underline"
+              >
                 {SITE.email}
               </a>
             </p>

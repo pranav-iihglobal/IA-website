@@ -56,10 +56,57 @@
    * next/font (variables set on <html> in app/layout.tsx), with system
    * fallbacks so text renders instantly on a slow connection.
    */
+  /*
+   * Extra breakpoint above Tailwind's 2xl (1536px), so wide desktops can be
+   * given more columns rather than more empty margin.
+   */
+  --breakpoint-3xl: 120rem; /* 1920px */
+
   --font-display: var(--font-laviossa), var(--font-anek), Georgia,
     "Times New Roman", serif;
   --font-body: var(--font-montserrat), var(--font-noto-gujarati), system-ui,
     -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ==========================================================================
+   Page containers
+   ========================================================================== */
+
+/*
+ * The site's horizontal rhythm lives here rather than in a max-w-* class
+ * repeated across twenty files.
+ *
+ * .container-page  — the shell for card grids and section bands. Capped at
+ *   1600px: wide enough to fit four product cards on a 1920 monitor, but not
+ *   edge-to-edge, which reads as unfinished on a large screen.
+ *
+ * .container-prose — anything meant to be READ. Capped near 70 characters,
+ *   because a paragraph stretched across 1600px is genuinely harder to read
+ *   than the same paragraph at half the width. Widening the shell must never
+ *   widen the text column with it.
+ */
+.container-page {
+  width: 100%;
+  margin-inline: auto;
+  max-width: 100rem; /* 1600px */
+  padding-inline: 1rem;
+}
+
+.container-prose {
+  width: 100%;
+  max-width: 46rem; /* ~70ch */
+}
+
+@media (min-width: 640px) {
+  .container-page {
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container-page {
+    padding-inline: 2.5rem;
+  }
 }
 
 html {

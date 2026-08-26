@@ -61,7 +61,7 @@ export function ProductCard({
             width={800}
             height={600}
             unoptimized={isCloudinaryUrl(product.imageUrl)}
-            className="h-64 w-full object-cover object-[center_22%] transition-transform duration-500 ease-out group-hover:scale-105"
+            className="h-64 w-full object-cover object-[center_22%] transition-transform duration-500 ease-out group-hover:scale-105 lg:h-72"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         ) : (

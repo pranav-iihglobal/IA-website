@@ -23,14 +23,14 @@ export default async function ProductsPage() {
   const products = await getDisplayProducts();
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-14">
+    <section className="container-page py-14">
       <h1 className="font-display text-4xl font-bold text-russet">
         <T text={HOME.productsHeading} />
       </h1>
       <p className="mt-2 max-w-2xl text-olive-dark">
         <T text={HOME.productsSub} />
       </p>
-      <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-10 grid gap-6 grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
         {products.map((p, i) => (
           <Reveal key={p.slug} delay={i * 130}>
             <ProductCard

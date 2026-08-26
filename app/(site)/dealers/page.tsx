@@ -18,7 +18,7 @@ export default function DealersPage() {
   return (
     <>
       <section className="bg-meringue-light">
-        <div className="mx-auto max-w-4xl px-4 py-14">
+        <div className="container-page py-14">
           <h1 className="font-display text-4xl font-bold text-russet sm:text-5xl">
             <T text={DEALERS.heading} />
           </h1>
@@ -28,7 +28,7 @@ export default function DealersPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-4xl px-4 py-12">
+      <section className="container-page py-12">
         <div className="grid gap-6 sm:grid-cols-2">
           {DEALERS.points.map((p, i) => (
             <div
@@ -47,7 +47,7 @@ export default function DealersPage() {
       </section>
 
       <section className="bg-olive text-cornsilk-light">
-        <div className="mx-auto max-w-4xl px-4 py-14 text-center">
+        <div className="container-page py-14 text-center">
           <h2 className="font-display text-3xl font-bold">
             <T text={DEALERS.ctaHeading} />
           </h2>

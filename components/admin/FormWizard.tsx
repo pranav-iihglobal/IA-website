@@ -195,7 +195,7 @@ export function FormWizard({
 
       <div
         className={
-          aside ? "grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]" : undefined
+          aside ? "grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_380px]" : undefined
         }
       >
         <div className="min-w-0">

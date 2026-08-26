@@ -114,7 +114,7 @@ export default async function ProductPage({
       : null;
 
   return (
-    <article className="mx-auto max-w-4xl px-4 py-12">
+    <article className="container-page py-12">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
@@ -129,7 +129,7 @@ export default async function ProductPage({
       <nav className="mb-6 text-sm" aria-label="Breadcrumb">
         <Link
           href="/products"
-          className="font-medium text-alloy-dark hover:underline"
+          className="-ml-2 inline-flex min-h-11 items-center rounded-lg px-2 font-medium text-alloy-dark hover:underline"
         >
           ← <T text={UI.backToProducts} />
         </Link>
@@ -180,12 +180,12 @@ export default async function ProductPage({
         </div>
       </header>
 
-      <p className="mt-8 text-base leading-relaxed sm:text-lg">
+      <p className="container-prose mt-8 text-base leading-relaxed sm:text-lg">
         <T text={product.description} />
       </p>
 
       {product.complianceNote.en && (
-        <p className="mt-6 rounded-xl border border-laurel bg-laurel-light/40 px-5 py-4 text-sm font-medium leading-relaxed text-olive-dark">
+        <p className="container-prose mt-6 rounded-xl border border-laurel bg-laurel-light/40 px-5 py-4 text-sm font-medium leading-relaxed text-olive-dark">
           ✓ <T text={product.complianceNote} />
         </p>
       )}
@@ -195,7 +195,7 @@ export default async function ProductPage({
           <h2 className="font-display text-2xl font-bold text-russet">
             <T text={UI.benefits} />
           </h2>
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {product.benefits.map((b, i) => (
               <li
                 key={i}

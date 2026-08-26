@@ -56,7 +56,7 @@ function Select({
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none rounded-full border border-camel bg-cornsilk-light py-2 pl-4 pr-9 text-sm font-medium text-russet outline-none transition-colors hover:border-olive focus:border-olive focus:ring-2 focus:ring-olive/25 sm:w-48"
+          className="min-h-11 w-full appearance-none rounded-full border border-camel bg-cornsilk-light py-2 pl-4 pr-9 text-sm font-medium text-russet outline-none transition-colors hover:border-olive focus:border-olive focus:ring-2 focus:ring-olive/25 sm:w-48"
         >
           <option value="">{allLabel}</option>
           {options.map((o) => (
@@ -254,7 +254,7 @@ export function TestimonialsBrowser({
             <button
               type="button"
               onClick={clearAll}
-              className="rounded-full border border-camel px-4 py-1.5 text-sm font-semibold text-russet transition-colors hover:border-olive hover:bg-meringue"
+              className="inline-flex min-h-11 items-center rounded-full border border-camel px-4 text-sm font-semibold text-russet transition-colors hover:border-olive hover:bg-meringue"
             >
               {t(TESTIMONIALS_PAGE.clearFilters)}
             </button>
@@ -286,7 +286,7 @@ export function TestimonialsBrowser({
                 {districtHeading(group.district, lang)}
               </h2>
             )}
-            <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-4 grid gap-6 grid-cols-[repeat(auto-fit,minmax(280px,460px))]">
               {group.items.map((item, i) => (
                 <Reveal key={item.id} delay={(i % 3) * 130}>
                   <TestimonialCard t={item} />
