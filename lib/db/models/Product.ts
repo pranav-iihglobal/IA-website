@@ -1,4 +1,5 @@
 import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { emptyBi, optionalBi, requiredBi } from "./bi";
 
 /**
  * Product document.
@@ -15,21 +16,12 @@ import { Schema, model, models, type InferSchemaType, type Model } from "mongoos
  * never select it. See lib/db/queries.ts (PUBLIC_PRODUCT_FIELDS).
  */
 
-/** Bilingual value. `gu` optional — empty falls back to English at render. */
-const biSchema = new Schema(
-  {
-    en: { type: String, required: true, trim: true },
-    gu: { type: String, default: "", trim: true },
-  },
-  { _id: false },
-);
-
 const imageSchema = new Schema(
   {
     url: { type: String, required: true },
     /** Cloudinary public_id; absent for images served from /public. */
     publicId: { type: String, default: "" },
-    alt: { type: biSchema, default: () => ({ en: "", gu: "" }) },
+    alt: { type: optionalBi, default: emptyBi },
     isPrimary: { type: Boolean, default: false },
   },
   { _id: false },
@@ -55,7 +47,7 @@ const assetSchema = new Schema(
       enum: ["brochure", "label", "leaflet", "other"],
       default: "other",
     },
-    title: { type: biSchema, required: true },
+    title: { type: requiredBi, required: true },
     fileUrl: { type: String, required: true },
     publicId: { type: String, default: "" },
     /**
@@ -75,7 +67,7 @@ const applicationStepSchema = new Schema(
       url: { type: String, default: "" },
       publicId: { type: String, default: "" },
     },
-    caption: { type: biSchema, required: true },
+    caption: { type: requiredBi, required: true },
     order: { type: Number, default: 0 },
   },
   { _id: false },
@@ -94,7 +86,7 @@ const fieldResultSchema = new Schema(
     },
     crop: { type: String, trim: true, default: "" },
     district: { type: String, trim: true, default: "" },
-    description: { type: biSchema, required: true },
+    description: { type: requiredBi, required: true },
     farmerName: { type: String, trim: true, default: "" },
   },
   { _id: false },
@@ -102,8 +94,8 @@ const fieldResultSchema = new Schema(
 
 const faqSchema = new Schema(
   {
-    question: { type: biSchema, required: true },
-    answer: { type: biSchema, required: true },
+    question: { type: requiredBi, required: true },
+    answer: { type: requiredBi, required: true },
     order: { type: Number, default: 0 },
   },
   { _id: false },
@@ -113,14 +105,14 @@ const faqSchema = new Schema(
 const pairingSchema = new Schema(
   {
     product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
-    note: { type: biSchema, default: () => ({ en: "", gu: "" }) },
+    note: { type: optionalBi, default: emptyBi },
   },
   { _id: false },
 );
 
 const productSchema = new Schema(
   {
-    name: { type: biSchema, required: true },
+    name: { type: requiredBi, required: true },
     slug: {
       type: String,
       required: true,
@@ -135,27 +127,27 @@ const productSchema = new Schema(
       default: "other",
     },
     /** Printed on cards/detail pages, e.g. "ફૂલ માટેનું બાયોસ્ટિમ્યુલન્ટ". */
-    categoryLabel: { type: biSchema, required: true },
-    tagline: { type: biSchema, required: true },
-    description: { type: biSchema, required: true },
+    categoryLabel: { type: requiredBi, required: true },
+    tagline: { type: requiredBi, required: true },
+    description: { type: requiredBi, required: true },
 
-    benefits: { type: [biSchema], default: [] },
+    benefits: { type: [requiredBi], default: [] },
     /** Display string for pack format, e.g. "25 ગ્રામ પાવડરની કોથળી". */
-    format: { type: biSchema, default: () => ({ en: "", gu: "" }) },
-    complianceNote: { type: biSchema, default: () => ({ en: "", gu: "" }) },
+    format: { type: optionalBi, default: emptyBi },
+    complianceNote: { type: optionalBi, default: emptyBi },
     whatsappMessage: { type: String, default: "" },
 
     dosage: {
       amountPerAcre: { type: Number, min: 0 },
       unit: { type: String, default: "g", trim: true },
-      applicationMethod: { type: biSchema, default: () => ({ en: "", gu: "" }) },
-      cropStage: { type: biSchema, default: () => ({ en: "", gu: "" }) },
+      applicationMethod: { type: optionalBi, default: emptyBi },
+      cropStage: { type: optionalBi, default: emptyBi },
       /** Free-text dosage line shown on the detail page. */
-      summary: { type: biSchema, default: () => ({ en: "", gu: "" }) },
+      summary: { type: optionalBi, default: emptyBi },
     },
     suitableCrops: { type: [String], default: [] },
     /** Bilingual crops sentence rendered on the detail page. */
-    cropsNote: { type: biSchema, default: () => ({ en: "", gu: "" }) },
+    cropsNote: { type: optionalBi, default: emptyBi },
 
     // ---- billing-ready structured data ----
     sku: { type: String, trim: true, default: "" },
@@ -201,7 +193,7 @@ const productSchema = new Schema(
       enum: ["in_stock", "out_of_stock", "seasonal"],
       default: "in_stock",
     },
-    availabilityNote: { type: biSchema, default: () => ({ en: "", gu: "" }) },
+    availabilityNote: { type: optionalBi, default: emptyBi },
 
     // ---- media & state ----
     images: { type: [imageSchema], default: [] },

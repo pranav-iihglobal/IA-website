@@ -1,4 +1,5 @@
 import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { emptyBi, optionalBi, requiredBi } from "./bi";
 
 /**
  * Farmer testimonial. Either a text quote, a video (Facebook / Instagram /
@@ -6,23 +7,15 @@ import { Schema, model, models, type InferSchemaType, type Model } from "mongoos
  * binary, to stay well inside the Atlas M0 512 MB budget.
  */
 
-const biSchema = new Schema(
-  {
-    en: { type: String, required: true, trim: true },
-    gu: { type: String, default: "", trim: true },
-  },
-  { _id: false },
-);
-
 const testimonialSchema = new Schema(
   {
-    farmerName: { type: biSchema, required: true },
+    farmerName: { type: requiredBi, required: true },
     village: { type: String, trim: true, default: "" },
     taluka: { type: String, trim: true, default: "" },
     district: { type: String, trim: true, default: "" },
-    crop: { type: biSchema, default: () => ({ en: "", gu: "" }) },
+    crop: { type: optionalBi, default: emptyBi },
 
-    quote: { type: biSchema, default: () => ({ en: "", gu: "" }) },
+    quote: { type: optionalBi, default: emptyBi },
 
     photo: {
       url: { type: String, default: "" },

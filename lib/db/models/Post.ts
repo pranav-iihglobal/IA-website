@@ -1,4 +1,5 @@
 import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { emptyBi, optionalBi, requiredBi } from "./bi";
 
 /**
  * Knowledge/Learn blog post.
@@ -9,17 +10,9 @@ import { Schema, model, models, type InferSchemaType, type Model } from "mongoos
  * publishedPostFilter() in lib/db/queries.ts.
  */
 
-const biSchema = new Schema(
-  {
-    en: { type: String, default: "", trim: true },
-    gu: { type: String, default: "", trim: true },
-  },
-  { _id: false },
-);
-
 const postSchema = new Schema(
   {
-    title: { type: biSchema, required: true },
+    title: { type: requiredBi, required: true },
     slug: {
       type: String,
       required: true,
@@ -28,14 +21,14 @@ const postSchema = new Schema(
       trim: true,
       index: true,
     },
-    excerpt: { type: biSchema, default: () => ({ en: "", gu: "" }) },
+    excerpt: { type: optionalBi, default: emptyBi },
     /** Sanitized HTML per language. */
-    content: { type: biSchema, default: () => ({ en: "", gu: "" }) },
+    content: { type: optionalBi, default: emptyBi },
 
     coverImage: {
       url: { type: String, default: "" },
       publicId: { type: String, default: "" },
-      alt: { type: biSchema, default: () => ({ en: "", gu: "" }) },
+      alt: { type: optionalBi, default: emptyBi },
     },
 
     tags: { type: [String], default: [] },
@@ -55,8 +48,8 @@ const postSchema = new Schema(
     publishAt: { type: Date, default: null },
     author: { type: String, default: "IKSARVA Team", trim: true },
 
-    metaTitle: { type: biSchema, default: () => ({ en: "", gu: "" }) },
-    metaDescription: { type: biSchema, default: () => ({ en: "", gu: "" }) },
+    metaTitle: { type: optionalBi, default: emptyBi },
+    metaDescription: { type: optionalBi, default: emptyBi },
 
     /** At most 2 — enforced in lib/schemas.ts so the admin sees the error. */
     pinnedTestimonials: {

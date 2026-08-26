@@ -10,7 +10,8 @@
     "seed": "tsx scripts/seed.ts",
     "check-seed": "tsx scripts/check-seed.ts",
     "check-connection": "tsx scripts/check-connection.ts",
-    "icons": "tsx scripts/generate-icons.ts"
+    "icons": "tsx scripts/generate-icons.ts",
+    "check-models": "tsx scripts/check-models.ts"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",
