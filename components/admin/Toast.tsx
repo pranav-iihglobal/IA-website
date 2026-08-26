@@ -85,8 +85,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
+      {/*
+        Inset from both edges on a phone: `w-full` plus a right offset is
+        wider than a 390px screen and pushes the whole page sideways.
+      */}
       <div
-        className="pointer-events-none fixed bottom-6 right-6 z-50 flex w-full max-w-sm flex-col gap-2"
+        className="pointer-events-none fixed inset-x-4 bottom-6 z-50 flex flex-col gap-2 sm:left-auto sm:right-6 sm:w-full sm:max-w-sm"
         role="status"
         aria-live="polite"
       >

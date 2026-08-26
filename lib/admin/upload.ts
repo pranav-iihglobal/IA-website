@@ -59,12 +59,3 @@ export async function uploadToCloudinary(
     resourceType,
   };
 }
-
-/** Human file size for admin labels. */
-export function formatBytes(bytes: number): string {
-  if (!bytes) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${Math.round(kb)} KB`;
-  return `${(kb / 1024).toFixed(1)} MB`;
-}

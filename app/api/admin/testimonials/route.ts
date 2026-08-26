@@ -101,7 +101,10 @@ export async function POST(request: NextRequest) {
     }
 
     await connectToDatabase();
-    const created = await Testimonial.create(data);
+    const created = await Testimonial.create({
+      ...data,
+      updatedBy: await currentEditor(),
+    });
     revalidateTestimonials();
 
     return NextResponse.json({ id: String(created._id) }, { status: 201 });

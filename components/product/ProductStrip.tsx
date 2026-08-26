@@ -39,8 +39,8 @@ export function ProductStrip({
       )}
 
       <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((item) => (
-          <div key={item.product.slug} className="flex flex-col">
+        {items.map((item, index) => (
+          <div key={`${item.product.slug}-${index}`} className="flex flex-col">
             <ProductCard product={item.product} />
             {item.note?.en && (
               <p className="mt-3 rounded-xl bg-meringue-light px-4 py-3 text-sm leading-relaxed text-russet-dark">

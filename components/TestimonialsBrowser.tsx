@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Bi } from "@/lib/content";
 import { TESTIMONIALS_PAGE, districtHeading, resolveText } from "@/lib/content";
 import { useLanguage } from "./LanguageProvider";
@@ -130,8 +130,19 @@ export function TestimonialsBrowser({
     setFilters({ district: "", crop: "", product: "" });
   }, []);
 
-  // One place writes the URL: whatever the filters end up as, after render.
+  /**
+   * One place writes the URL: whatever the filters end up as, after render.
+   *
+   * Skipped on the first run — at that point `filters` is still the empty
+   * initial state, and writing it would strip the query string off a
+   * deep-linked URL before the restore effect above has applied it.
+   */
+  const urlSynced = useRef(false);
   useEffect(() => {
+    if (!urlSynced.current) {
+      urlSynced.current = true;
+      return;
+    }
     syncUrl(filters);
   }, [filters, syncUrl]);
 

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { CLD, cldUrl } from "@/lib/images";
+import { formatShortDate } from "@/lib/format";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { useToast } from "./Toast";
 import {
@@ -42,11 +43,8 @@ const VERIFIED_LABEL: Record<string, string> = {
 
 /** "Last edited" line: date plus who saved it, when known. */
 function lastEdited(row: Row): string {
-  if (!row.updatedAt) return "";
-  const when = new Date(row.updatedAt).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-  });
+  const when = formatShortDate(row.updatedAt);
+  if (!when) return "";
   return row.updatedBy ? `${when} · ${row.updatedBy}` : when;
 }
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 function Icon({ path }: { path: string }) {
   return (
@@ -60,6 +60,27 @@ export function AdminNav({ email }: { email?: string }) {
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
   const [open, setOpen] = useState(false);
+
+  // The drawer covers the screen; letting the page scroll behind it means a
+  // tap on the backdrop lands somewhere unexpected.
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
+
+  // Close the drawer on Escape, like every other overlay in the panel.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
 
   async function signOut() {
     setSigningOut(true);

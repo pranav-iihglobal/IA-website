@@ -2,18 +2,21 @@
 
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Bi } from "@/lib/content";
 import { slugify } from "@/lib/schemas";
 import { ImageUploader, type AdminImage } from "./ImageUploader";
+import { useFormDraft, useSaveShortcut } from "@/lib/admin/form-hooks";
 import { EntityPicker, type PickerOption } from "./EntityPicker";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { DraftBanner } from "./DraftBanner";
+import { FormWizard, type WizardStep } from "./FormWizard";
+import { SlugField } from "./SlugField";
 import { useToast } from "./Toast";
 import {
   BiField,
   ErrorBanner,
   FieldError,
-  FormActions,
   Section,
   SelectField,
   TextField,
@@ -80,6 +83,8 @@ export function PostForm({
   const [values, setValues] = useState(initial);
   const [lang, setLang] = useState<"en" | "gu">("en");
   const [confirmLeave, setConfirmLeave] = useState(false);
+  // save() is defined before the draft hook; the ref bridges the two.
+  const clearDraft = useRef<() => void>(() => {});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -145,6 +150,7 @@ export function PostForm({
         return;
       }
       setDirty(false);
+      clearDraft.current();
       toast(
         postId ? `“${values.title.en}” saved` : `“${values.title.en}” created`,
       );
@@ -165,199 +171,286 @@ export function PostForm({
     router.push("/admin/blog");
   }
 
+
+  useSaveShortcut(() => {
+    if (!saving) save();
+  });
+
+  // New posts only — see useFormDraft.
+  const draft = useFormDraft<PostFormValues>({
+    key: "post",
+    values,
+    enabled: !postId,
+    dirty,
+  });
+  clearDraft.current = draft.clear;
+
+  const hasContent = Boolean(
+    values.content.en?.trim() || values.content.gu?.trim(),
+  );
+
+  const steps: WizardStep[] = [
+    {
+      id: "article",
+      title: "Article",
+      description: "Title, URL and list preview",
+      errorKeys: ["title", "slug", "excerpt"],
+      complete: Boolean(values.title.en.trim() && values.slug.trim()),
+      content: (
+        <Section title="Article" description="Title, URL and the list preview.">
+          <BiField
+            label="Title"
+            value={values.title}
+            onChange={(v) => update("title", v)}
+            errors={{ en: errors["title.en"] }}
+            required
+          />
+          <SlugField
+            value={values.slug}
+            onChange={(v) => {
+              setSlugTouched(true);
+              update("slug", v);
+            }}
+            type="post"
+            excludeId={postId}
+            basePath="/learn"
+            error={errors.slug}
+          />
+          <BiField
+            label="Excerpt (shown in the list and search results)"
+            value={values.excerpt}
+            onChange={(v) => update("excerpt", v)}
+            multiline
+            rows={2}
+          />
+        </Section>
+      ),
+    },
+    {
+      id: "cover",
+      title: "Cover image",
+      description: "Shown on the list and when shared",
+      errorKeys: ["coverImage"],
+      complete: Boolean(values.coverImage.url),
+      content: (
+        <Section title="Cover image">
+          <ImageUploader
+            images={coverAsImages}
+            folder="blog"
+            max={1}
+            onChange={(imgs) =>
+              update(
+                "coverImage",
+                imgs[0]
+                  ? {
+                      url: imgs[0].url,
+                      publicId: imgs[0].publicId,
+                      alt: imgs[0].alt,
+                    }
+                  : { url: "", publicId: "", alt: { ...EMPTY_BI } },
+              )
+            }
+          />
+        </Section>
+      ),
+    },
+    {
+      id: "content",
+      title: "Content",
+      description: "The article itself",
+      errorKeys: ["content"],
+      complete: hasContent,
+      content: (
+        <Section
+          title="Content"
+          description="Write each language separately. If Gujarati is left empty, English is shown to everyone."
+        >
+          <div
+            role="group"
+            aria-label="Content language"
+            className="inline-flex rounded-full bg-meringue-light p-1 ring-1 ring-camel-light/70"
+          >
+            {(["en", "gu"] as const).map((code) => {
+              const active = lang === code;
+              const filled = Boolean(values.content[code]?.trim());
+              return (
+                <button
+                  key={code}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setLang(code)}
+                  className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+                    active
+                      ? "bg-white text-russet shadow-sm"
+                      : "text-russet-dark/60 hover:text-russet"
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${filled ? "bg-olive" : "bg-camel"}`}
+                    title={filled ? "Has content" : "Empty"}
+                  />
+                  {code === "en" ? "English" : "ગુજરાતી"}
+                </button>
+              );
+            })}
+          </div>
+          <RichTextEditor
+            key={lang}
+            value={values.content[lang] ?? ""}
+            onChange={(html) =>
+              update("content", { ...values.content, [lang]: html })
+            }
+          />
+          <FieldError message={errors["content.en"]} />
+        </Section>
+      ),
+    },
+    {
+      id: "proof",
+      title: "Farmer proof",
+      description: "Pinned testimonials",
+      errorKeys: ["pinnedTestimonials"],
+      complete: values.pinnedTestimonials.length > 0,
+      count: values.pinnedTestimonials.length,
+      content: (
+        <Section
+          title="Farmer proof"
+          description="Pinned stories render as compact quote cards at the end of the post."
+        >
+          <EntityPicker
+            label="Pinned testimonials"
+            options={testimonials}
+            selected={values.pinnedTestimonials}
+            onChange={(ids) => update("pinnedTestimonials", ids)}
+            max={2}
+            placeholder="Search published testimonials…"
+            emptyLabel="No testimonials pinned to this post."
+            error={errors.pinnedTestimonials}
+          />
+        </Section>
+      ),
+    },
+    {
+      id: "publishing",
+      title: "Publishing",
+      description: "Category, tags and schedule",
+      errorKeys: ["category", "tags", "status", "publishAt", "author"],
+      complete: values.status !== "draft",
+      content: (
+        <Section title="Publishing">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              label="Category"
+              value={values.category}
+              onChange={(v) => update("category", v)}
+              options={[
+                { value: "soil-health", label: "Soil health" },
+                { value: "crop-guides", label: "Crop guides" },
+                { value: "company-news", label: "Company news" },
+                { value: "other", label: "Other" },
+              ]}
+            />
+            <TextField
+              label="Tags (comma separated)"
+              value={values.tags.join(", ")}
+              onChange={(v) =>
+                update(
+                  "tags",
+                  v.split(",").map((t) => t.trim()).filter(Boolean),
+                )
+              }
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              label="Status"
+              value={values.status}
+              onChange={(v) => update("status", v as PostFormValues["status"])}
+              options={[
+                { value: "draft", label: "Draft (hidden)" },
+                { value: "published", label: "Published (live now)" },
+                { value: "scheduled", label: "Scheduled" },
+              ]}
+            />
+            <TextField
+              label="Publish at"
+              type="datetime-local"
+              value={values.publishAt ?? ""}
+              onChange={(v) => update("publishAt", v || null)}
+              hint={
+                values.status === "scheduled"
+                  ? "The article appears automatically at this time."
+                  : "Used as the article date."
+              }
+              error={errors.publishAt}
+            />
+          </div>
+          <TextField
+            label="Author"
+            value={values.author}
+            onChange={(v) => update("author", v)}
+          />
+        </Section>
+      ),
+    },
+    {
+      id: "seo",
+      title: "SEO",
+      description: "Search and share preview",
+      errorKeys: ["metaTitle", "metaDescription"],
+      // The excerpt lives on the Article step; only fields owned here count.
+      complete: Boolean(
+        values.metaTitle.en.trim() || values.metaDescription.en.trim(),
+      ),
+      content: (
+        <Section
+          title="SEO"
+          description="Optional — falls back to the title and excerpt."
+        >
+          <BiField
+            label="Meta title"
+            value={values.metaTitle}
+            onChange={(v) => update("metaTitle", v)}
+            hint="Around 60 characters shows in full on Google."
+          />
+          <BiField
+            label="Meta description"
+            value={values.metaDescription}
+            onChange={(v) => update("metaDescription", v)}
+            multiline
+            rows={2}
+            hint="Around 155 characters shows in full on Google."
+          />
+        </Section>
+      ),
+    },
+  ];
+
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
         save();
       }}
-      className="max-w-4xl space-y-6"
+      className="max-w-4xl"
     >
-      {formError && (
-        <div className="-mt-4">
-          <ErrorBanner message={formError} />
-        </div>
+      {draft.recoverable && (
+        <DraftBanner
+          savedAt={draft.recoverable.savedAt}
+          onRestore={() => {
+            if (draft.recoverable) setValues(draft.recoverable.values);
+            setDirty(true);
+            draft.clear();
+          }}
+          onDiscard={draft.clear}
+        />
       )}
 
-      <Section title="Article" description="Title, URL and the list preview.">
-        <BiField
-          label="Title"
-          value={values.title}
-          onChange={(v) => update("title", v)}
-          errors={{ en: errors["title.en"] }}
-          required
-        />
-        <TextField
-          label="URL slug"
-          value={values.slug}
-          onChange={(v) => {
-            setSlugTouched(true);
-            update("slug", v);
-          }}
-          hint={`Public URL: /learn/${values.slug || "…"}`}
-          error={errors.slug}
-          required
-        />
-        <BiField
-          label="Excerpt (shown in the list and search results)"
-          value={values.excerpt}
-          onChange={(v) => update("excerpt", v)}
-          multiline
-          rows={2}
-        />
-      </Section>
+      {formError && <ErrorBanner message={formError} />}
 
-      <Section title="Cover image">
-        <ImageUploader
-          images={coverAsImages}
-          folder="blog"
-          max={1}
-          onChange={(imgs) =>
-            update(
-              "coverImage",
-              imgs[0]
-                ? {
-                    url: imgs[0].url,
-                    publicId: imgs[0].publicId,
-                    alt: imgs[0].alt,
-                  }
-                : { url: "", publicId: "", alt: { ...EMPTY_BI } },
-            )
-          }
-        />
-      </Section>
-
-      <Section
-        title="Content"
-        description="Write each language separately. If Gujarati is left empty, English is shown to everyone."
-      >
-        <div
-          role="tablist"
-          aria-label="Content language"
-          className="inline-flex rounded-full bg-meringue-light p-1 ring-1 ring-camel-light/70"
-        >
-          {(["en", "gu"] as const).map((code) => {
-            const active = lang === code;
-            const filled = Boolean(values.content[code]?.trim());
-            return (
-              <button
-                key={code}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setLang(code)}
-                className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-                  active
-                    ? "bg-white text-russet shadow-sm"
-                    : "text-russet-dark/60 hover:text-russet"
-                }`}
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${filled ? "bg-olive" : "bg-camel"}`}
-                  title={filled ? "Has content" : "Empty"}
-                />
-                {code === "en" ? "English" : "ગુજરાતી"}
-              </button>
-            );
-          })}
-        </div>
-        <RichTextEditor
-          key={lang}
-          value={values.content[lang] ?? ""}
-          onChange={(html) =>
-            update("content", { ...values.content, [lang]: html })
-          }
-        />
-        <FieldError message={errors["content.en"]} />
-      </Section>
-
-      <Section title="Publishing">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <SelectField
-            label="Category"
-            value={values.category}
-            onChange={(v) => update("category", v)}
-            options={[
-              { value: "soil-health", label: "Soil health" },
-              { value: "crop-guides", label: "Crop guides" },
-              { value: "company-news", label: "Company news" },
-              { value: "other", label: "Other" },
-            ]}
-          />
-          <TextField
-            label="Tags (comma separated)"
-            value={values.tags.join(", ")}
-            onChange={(v) =>
-              update(
-                "tags",
-                v.split(",").map((t) => t.trim()).filter(Boolean),
-              )
-            }
-          />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <SelectField
-            label="Status"
-            value={values.status}
-            onChange={(v) => update("status", v as PostFormValues["status"])}
-            options={[
-              { value: "draft", label: "Draft (hidden)" },
-              { value: "published", label: "Published (live now)" },
-              { value: "scheduled", label: "Scheduled" },
-            ]}
-          />
-          <TextField
-            label="Publish at"
-            type="datetime-local"
-            value={values.publishAt ?? ""}
-            onChange={(v) => update("publishAt", v || null)}
-            hint={
-              values.status === "scheduled"
-                ? "The article appears automatically at this time."
-                : "Used as the article date."
-            }
-            error={errors.publishAt}
-          />
-        </div>
-        <TextField
-          label="Author"
-          value={values.author}
-          onChange={(v) => update("author", v)}
-        />
-      </Section>
-
-      <Section
-        title="Farmer proof"
-        description="Pinned stories render as compact quote cards at the end of the post."
-      >
-        <EntityPicker
-          label="Pinned testimonials"
-          options={testimonials}
-          selected={values.pinnedTestimonials}
-          onChange={(ids) => update("pinnedTestimonials", ids)}
-          max={2}
-          placeholder="Search published testimonials…"
-          emptyLabel="No testimonials pinned to this post."
-          error={errors.pinnedTestimonials}
-        />
-      </Section>
-
-      <Section title="SEO" description="Optional — falls back to the title and excerpt.">
-        <BiField
-          label="Meta title"
-          value={values.metaTitle}
-          onChange={(v) => update("metaTitle", v)}
-        />
-        <BiField
-          label="Meta description"
-          value={values.metaDescription}
-          onChange={(v) => update("metaDescription", v)}
-          multiline
-          rows={2}
-        />
-      </Section>
-
-      <FormActions
+      <FormWizard
+        steps={steps}
+        errors={errors}
         saving={saving}
         dirty={dirty}
         submitLabel={postId ? "Save changes" : "Create post"}

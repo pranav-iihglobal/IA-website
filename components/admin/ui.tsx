@@ -179,6 +179,7 @@ export function Toggle({
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-label={label}
         onClick={() => onChange(!checked)}
         className={`mt-0.5 flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive/40 ${
           checked ? "bg-olive" : "bg-camel-light/60"
@@ -547,8 +548,10 @@ export function FilterTabs({
   options: { value: string; label: string }[];
 }) {
   return (
+    /* Buttons with aria-pressed, not role="tab": there are no tab panels
+       here, so the tablist pattern would lie to a screen reader. */
     <div
-      role="tablist"
+      role="group"
       aria-label="Filter by status"
       className="inline-flex shrink-0 rounded-full bg-meringue-light p-1 ring-1 ring-camel-light/70"
     >
@@ -558,8 +561,7 @@ export function FilterTabs({
           <button
             key={option.value}
             type="button"
-            role="tab"
-            aria-selected={active}
+            aria-pressed={active}
             onClick={() => onChange(option.value)}
             className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
               active

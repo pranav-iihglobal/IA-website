@@ -2,11 +2,8 @@
 
 import { useRef, useState } from "react";
 import type { Bi } from "@/lib/content";
-import {
-  formatBytes,
-  uploadToCloudinary,
-  type UploadFolder,
-} from "@/lib/admin/upload";
+import { uploadToCloudinary, type UploadFolder } from "@/lib/admin/upload";
+import { formatBytes } from "@/lib/format";
 import { useToast } from "./Toast";
 import { BiField, SelectField, Spinner } from "./ui";
 
@@ -35,11 +32,16 @@ export function FileUploader({
   onChange,
   folder = "products",
   max = 6,
+  errors = {},
+  errorPrefix = "assets",
 }: {
   assets: AdminAsset[];
   onChange: (assets: AdminAsset[]) => void;
   folder?: UploadFolder;
   max?: number;
+  /** Server-side field errors, keyed "assets.0.title.en" and so on. */
+  errors?: Record<string, string>;
+  errorPrefix?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -178,6 +180,9 @@ export function FileUploader({
                   label="Title shown on the site"
                   value={asset.title}
                   onChange={(title) => update(index, { title })}
+                  errors={{
+                    en: errors[`${errorPrefix}.${index}.title.en`],
+                  }}
                   required
                 />
                 <SelectField

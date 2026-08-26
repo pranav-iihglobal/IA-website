@@ -1,5 +1,6 @@
 import type { Bi } from "@/lib/content";
 import { UI, waLink } from "@/lib/content";
+import { formatBytes } from "@/lib/format";
 import { T } from "@/components/T";
 
 /**
@@ -15,15 +16,6 @@ export interface DownloadItem {
   title: Bi;
   fileUrl: string;
   sizeBytes: number;
-}
-
-/** Human file size. Returns "" for 0 so an unknown size renders nothing. */
-function formatSize(bytes: number): string {
-  if (!bytes) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${Math.round(kb)} KB`;
-  return `${(kb / 1024).toFixed(1)} MB`;
 }
 
 const TYPE_LABEL: Record<DownloadItem["type"], Bi> = {
@@ -72,7 +64,7 @@ export function Downloads({
 
       <ul className="mt-4 grid gap-3">
         {items.map((item, i) => {
-          const size = formatSize(item.sizeBytes);
+          const size = formatBytes(item.sizeBytes);
           return (
             <li
               key={`${item.fileUrl}-${i}`}

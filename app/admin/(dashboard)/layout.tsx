@@ -19,7 +19,13 @@ export default async function DashboardLayout({
 
   return (
     <ToastProvider>
-      <div className="flex flex-1">
+      {/*
+        min-w-0: a flex item defaults to min-width:auto, so without this the
+        row inflates to its content's min-content width and inner
+        overflow-x-auto containers (the step rail, wide tables) never get to
+        scroll — the whole page scrolls sideways instead.
+      */}
+      <div className="flex min-w-0 flex-1">
         <AdminNav email={email} />
         {/* pt clears the fixed mobile top bar rendered by AdminNav. */}
         <main className="min-w-0 flex-1 px-5 pb-10 pt-[74px] sm:px-8 lg:py-9">

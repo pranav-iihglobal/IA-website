@@ -1,16 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Bi } from "@/lib/content";
 import { parseVideoEmbedId } from "@/lib/schemas";
+import { useFormDraft, useSaveShortcut } from "@/lib/admin/form-hooks";
 import { ImageUploader, type AdminImage } from "./ImageUploader";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { DraftBanner } from "./DraftBanner";
+import { FormWizard, type WizardStep } from "./FormWizard";
 import { useToast } from "./Toast";
 import {
   BiField,
   ErrorBanner,
-  FormActions,
   Section,
   SelectField,
   TextField,
@@ -74,6 +76,8 @@ export function TestimonialForm({
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  // save() is defined before the draft hook; the ref bridges the two.
+  const clearDraft = useRef<() => void>(() => {});
 
   function update<K extends keyof TestimonialFormValues>(
     key: K,
@@ -144,6 +148,7 @@ export function TestimonialForm({
         return;
       }
       setDirty(false);
+      clearDraft.current();
       toast(
         testimonialId
           ? "Testimonial saved"
@@ -166,199 +171,265 @@ export function TestimonialForm({
     router.push("/admin/testimonials");
   }
 
+  useSaveShortcut(() => {
+    if (!saving) save();
+  });
+
+  // New testimonials only — see useFormDraft.
+  const draft = useFormDraft<TestimonialFormValues>({
+    key: "testimonial",
+    values,
+    enabled: !testimonialId,
+    dirty,
+  });
+  clearDraft.current = draft.clear;
+
+  const steps: WizardStep[] = [
+    {
+      id: "farmer",
+      title: "Farmer",
+      description: "Who the story belongs to",
+      errorKeys: ["farmerName", "village", "taluka", "district", "crop"],
+      complete: Boolean(values.farmerName.en.trim()),
+      content: (
+        <Section title="Farmer" description="Who the story belongs to.">
+          <BiField
+            label="Farmer name"
+            value={values.farmerName}
+            onChange={(v) => update("farmerName", v)}
+            errors={{ en: errors["farmerName.en"] }}
+            required
+          />
+          <div className="grid gap-4 sm:grid-cols-3">
+            <TextField
+              label="Village"
+              value={values.village}
+              onChange={(v) => update("village", v)}
+            />
+            <TextField
+              label="Taluka"
+              value={values.taluka}
+              onChange={(v) => update("taluka", v)}
+            />
+            <TextField
+              label="District"
+              value={values.district}
+              onChange={(v) => update("district", v)}
+              hint="Used by the district filter on the public page."
+            />
+          </div>
+          <BiField
+            label="Crop"
+            value={values.crop}
+            onChange={(v) => update("crop", v)}
+          />
+        </Section>
+      ),
+    },
+    {
+      id: "words",
+      title: "Their words",
+      description: "Quote and video",
+      errorKeys: ["quote", "video"],
+      complete: Boolean(values.quote.en.trim() || values.video.url.trim()),
+      content: (
+        <Section title="Their words" description="Add a quote, a video, or both.">
+          <BiField
+            label="Quote"
+            value={values.quote}
+            onChange={(v) => update("quote", v)}
+            multiline
+            rows={4}
+            errors={{ en: errors["quote.en"] }}
+          />
+          <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
+            <SelectField
+              label="Video platform"
+              value={values.video.platform}
+              onChange={(v) => update("video", { ...values.video, platform: v })}
+              options={[
+                { value: "", label: "No video" },
+                { value: "youtube", label: "YouTube" },
+                { value: "instagram", label: "Instagram" },
+                { value: "facebook", label: "Facebook" },
+              ]}
+              error={errors["video.platform"]}
+            />
+            <TextField
+              label="Video link"
+              value={values.video.url}
+              onChange={(v) => update("video", { ...values.video, url: v })}
+              placeholder="https://…"
+              error={
+                errors["video.url"] ??
+                (values.video.url && !videoValid
+                  ? "That does not look like a valid link for the chosen platform."
+                  : undefined)
+              }
+              hint={
+                values.video.url && videoValid ? "✓ Link looks good." : undefined
+              }
+            />
+          </div>
+        </Section>
+      ),
+    },
+    {
+      id: "photo",
+      title: "Photo",
+      description: "Optional headshot",
+      errorKeys: ["photo"],
+      complete: Boolean(values.photo.url),
+      content: (
+        <Section title="Photo" description="Optional — shown beside the name.">
+          <ImageUploader
+            images={photoAsImages}
+            folder="testimonials"
+            max={1}
+            onChange={(imgs) =>
+              update(
+                "photo",
+                imgs[0]
+                  ? { url: imgs[0].url, publicId: imgs[0].publicId }
+                  : { url: "", publicId: "" },
+              )
+            }
+          />
+        </Section>
+      ),
+    },
+    {
+      id: "verification",
+      title: "Verification",
+      description: "How this story was checked",
+      errorKeys: ["source", "verified", "verifiedVia"],
+      // Untouched means not done — an unverified story should not read as
+      // finished just because "unverified" happens to be valid.
+      complete: values.verified && Boolean(values.verifiedVia),
+      content: (
+        <Section
+          title="Verification"
+          description="An editorial mark, set by hand. Only tick it once someone at IKSARVA has actually confirmed the story."
+        >
+          <SelectField
+            label="How this story reached us"
+            value={values.source}
+            onChange={(v) => update("source", v as TestimonialFormValues["source"])}
+            options={[
+              { value: "admin_entered", label: "Entered by admin" },
+              {
+                value: "whatsapp_submission",
+                label: "Sent by the farmer on WhatsApp",
+              },
+            ]}
+          />
+          <Toggle
+            label="Verified"
+            checked={values.verified}
+            onChange={(v) => update("verified", v)}
+            hint="Shows a ✓ badge beside the farmer's name."
+          />
+          {values.verified && (
+            <SelectField
+              label="Verified how"
+              value={values.verifiedVia}
+              onChange={(v) =>
+                update("verifiedVia", v as TestimonialFormValues["verifiedVia"])
+              }
+              options={[
+                { value: "", label: "Choose…" },
+                { value: "whatsapp", label: "On WhatsApp" },
+                { value: "field_visit", label: "By field visit" },
+                { value: "photo", label: "By photo" },
+              ]}
+              error={errors.verifiedVia}
+              hint="The badge names the method, so it has to be true."
+            />
+          )}
+        </Section>
+      ),
+    },
+    {
+      id: "publishing",
+      title: "Publishing",
+      description: "Product link, order and status",
+      errorKeys: ["productUsed", "rating", "status", "featured", "displayOrder"],
+      complete: values.status === "published",
+      content: (
+        <Section title="Publishing">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              label="Product used"
+              value={values.productUsed ?? ""}
+              onChange={(v) => update("productUsed", v || null)}
+              options={[
+                { value: "", label: "Not linked" },
+                ...products.map((p) => ({ value: p.id, label: p.name })),
+              ]}
+              hint="Also powers the product filter on the public page."
+            />
+            <TextField
+              label="Rating (1–5, optional)"
+              type="number"
+              value={values.rating ?? ""}
+              onChange={(v) => update("rating", v)}
+              error={errors.rating}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              label="Status"
+              value={values.status}
+              onChange={(v) => update("status", v as "draft" | "published")}
+              options={[
+                { value: "draft", label: "Draft (hidden)" },
+                { value: "published", label: "Published (live)" },
+              ]}
+            />
+            <TextField
+              label="Display order"
+              type="number"
+              value={values.displayOrder}
+              onChange={(v) => update("displayOrder", v)}
+              hint="Lower numbers appear first."
+            />
+          </div>
+          <Toggle
+            label="Featured"
+            checked={values.featured}
+            onChange={(v) => update("featured", v)}
+            hint="Featured testimonials are shown first."
+          />
+        </Section>
+      ),
+    },
+  ];
+
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
         save();
       }}
-      className="max-w-3xl space-y-6"
+      className="max-w-3xl"
     >
-      {formError && (
-        <div className="-mt-4">
-          <ErrorBanner message={formError} />
-        </div>
+      {draft.recoverable && (
+        <DraftBanner
+          savedAt={draft.recoverable.savedAt}
+          onRestore={() => {
+            if (draft.recoverable) setValues(draft.recoverable.values);
+            setDirty(true);
+            draft.clear();
+          }}
+          onDiscard={draft.clear}
+        />
       )}
 
-      <Section title="Farmer" description="Who the story belongs to.">
-        <BiField
-          label="Farmer name"
-          value={values.farmerName}
-          onChange={(v) => update("farmerName", v)}
-          errors={{ en: errors["farmerName.en"] }}
-          required
-        />
-        <div className="grid gap-4 sm:grid-cols-3">
-          <TextField
-            label="Village"
-            value={values.village}
-            onChange={(v) => update("village", v)}
-          />
-          <TextField
-            label="Taluka"
-            value={values.taluka}
-            onChange={(v) => update("taluka", v)}
-          />
-          <TextField
-            label="District"
-            value={values.district}
-            onChange={(v) => update("district", v)}
-          />
-        </div>
-        <BiField
-          label="Crop"
-          value={values.crop}
-          onChange={(v) => update("crop", v)}
-        />
-      </Section>
+      {formError && <ErrorBanner message={formError} />}
 
-      <Section
-        title="Their words"
-        description="Add a quote, a video, or both."
-      >
-        <BiField
-          label="Quote"
-          value={values.quote}
-          onChange={(v) => update("quote", v)}
-          multiline
-          rows={4}
-          errors={{ en: errors["quote.en"] }}
-        />
-        <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
-          <SelectField
-            label="Video platform"
-            value={values.video.platform}
-            onChange={(v) => update("video", { ...values.video, platform: v })}
-            options={[
-              { value: "", label: "No video" },
-              { value: "youtube", label: "YouTube" },
-              { value: "instagram", label: "Instagram" },
-              { value: "facebook", label: "Facebook" },
-            ]}
-            error={errors["video.platform"]}
-          />
-          <TextField
-            label="Video link"
-            value={values.video.url}
-            onChange={(v) => update("video", { ...values.video, url: v })}
-            placeholder="https://…"
-            error={
-              errors["video.url"] ??
-              (values.video.url && !videoValid
-                ? "That does not look like a valid link for the chosen platform."
-                : undefined)
-            }
-            hint={
-              values.video.url && videoValid ? "✓ Link looks good." : undefined
-            }
-          />
-        </div>
-      </Section>
-
-      <Section title="Photo" description="Optional — shown beside the name.">
-        <ImageUploader
-          images={photoAsImages}
-          folder="testimonials"
-          max={1}
-          onChange={(imgs) =>
-            update(
-              "photo",
-              imgs[0]
-                ? { url: imgs[0].url, publicId: imgs[0].publicId }
-                : { url: "", publicId: "" },
-            )
-          }
-        />
-      </Section>
-
-      <Section
-        title="Verification"
-        description="An editorial mark, set by hand. Only tick it once someone at IKSARVA has actually confirmed the story."
-      >
-        <SelectField
-          label="How this story reached us"
-          value={values.source}
-          onChange={(v) =>
-            update("source", v as TestimonialFormValues["source"])
-          }
-          options={[
-            { value: "admin_entered", label: "Entered by admin" },
-            { value: "whatsapp_submission", label: "Sent by the farmer on WhatsApp" },
-          ]}
-        />
-        <Toggle
-          label="Verified"
-          checked={values.verified}
-          onChange={(v) =>
-            update("verified", v)
-          }
-          hint="Shows a ✓ badge beside the farmer's name."
-        />
-        {values.verified && (
-          <SelectField
-            label="Verified how"
-            value={values.verifiedVia}
-            onChange={(v) =>
-              update("verifiedVia", v as TestimonialFormValues["verifiedVia"])
-            }
-            options={[
-              { value: "", label: "Choose…" },
-              { value: "whatsapp", label: "On WhatsApp" },
-              { value: "field_visit", label: "By field visit" },
-              { value: "photo", label: "By photo" },
-            ]}
-            error={errors.verifiedVia}
-            hint="The badge names the method, so it has to be true."
-          />
-        )}
-      </Section>
-
-      <Section title="Publishing">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <SelectField
-            label="Product used"
-            value={values.productUsed ?? ""}
-            onChange={(v) => update("productUsed", v || null)}
-            options={[
-              { value: "", label: "Not linked" },
-              ...products.map((p) => ({ value: p.id, label: p.name })),
-            ]}
-          />
-          <TextField
-            label="Rating (1–5, optional)"
-            type="number"
-            value={values.rating ?? ""}
-            onChange={(v) => update("rating", v)}
-            error={errors.rating}
-          />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <SelectField
-            label="Status"
-            value={values.status}
-            onChange={(v) => update("status", v as "draft" | "published")}
-            options={[
-              { value: "draft", label: "Draft (hidden)" },
-              { value: "published", label: "Published (live)" },
-            ]}
-          />
-          <TextField
-            label="Display order"
-            type="number"
-            value={values.displayOrder}
-            onChange={(v) => update("displayOrder", v)}
-            hint="Lower numbers appear first."
-          />
-        </div>
-        <Toggle
-          label="Featured"
-          checked={values.featured}
-          onChange={(v) => update("featured", v)}
-          hint="Featured testimonials are shown first."
-        />
-      </Section>
-
-      <FormActions
+      <FormWizard
+        steps={steps}
+        errors={errors}
         saving={saving}
         dirty={dirty}
         submitLabel={testimonialId ? "Save changes" : "Add testimonial"}
