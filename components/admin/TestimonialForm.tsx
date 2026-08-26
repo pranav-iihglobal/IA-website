@@ -278,8 +278,10 @@ export function TestimonialForm({
     },
     {
       id: "photo",
+      optional: true,
       title: "Photo",
-      description: "Optional headshot",
+      // The rail already appends "· optional" — don't say it twice.
+      description: "A headshot of the farmer",
       errorKeys: ["photo"],
       complete: Boolean(values.photo.url),
       content: (
@@ -302,6 +304,7 @@ export function TestimonialForm({
     },
     {
       id: "verification",
+      optional: true,
       title: "Verification",
       description: "How this story was checked",
       errorKeys: ["source", "verified", "verifiedVia"],
@@ -413,7 +416,6 @@ export function TestimonialForm({
         e.preventDefault();
         save();
       }}
-      className="max-w-3xl"
     >
       {draft.recoverable && (
         <DraftBanner

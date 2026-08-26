@@ -332,6 +332,7 @@ export function ProductForm({
     },
     {
       id: "media",
+      optional: true,
       title: "Media",
       description: "Pack shots and downloadable documents",
       errorKeys: ["images", "artFallback", "assets"],
@@ -467,6 +468,7 @@ export function ProductForm({
     },
     {
       id: "howto",
+      optional: true,
       title: "How to use",
       description: "The numbered photo strip",
       errorKeys: ["applicationSteps"],
@@ -539,6 +541,7 @@ export function ProductForm({
     },
     {
       id: "proof",
+      optional: true,
       title: "Results & FAQ",
       description: "Before/after pairs and common questions",
       errorKeys: ["fieldResults", "faqs"],
@@ -700,6 +703,7 @@ export function ProductForm({
     },
     {
       id: "related",
+      optional: true,
       title: "Related",
       description: "Cross-links and pinned stories",
       errorKeys: ["relatedProducts", "pairsWellWith", "pinnedTestimonials"],
@@ -788,6 +792,7 @@ export function ProductForm({
     },
     {
       id: "billing",
+      optional: true,
       title: "Billing",
       description: "SKU, pack sizes and compliance",
       errorKeys: ["sku", "hsnCode", "gstRatePercent", "composition", "packSizes", "regulatory"],

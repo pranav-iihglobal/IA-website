@@ -485,6 +485,17 @@ textarea.admin-input {
   resize: vertical;
   line-height: 1.6;
 }
+/*
+  Now that the wizard fills a 1600px shell, a lone single-line field would
+  stretch the full column — a 1300px-wide box for a URL slug is hard to aim
+  at and hard to read back. Fields already inside a narrower grid column are
+  under this cap and unaffected; textareas and the article body still take
+  the full width, where the extra room genuinely helps.
+*/
+input.admin-input,
+select.admin-input {
+  max-width: 44rem;
+}
 
 /* Floating-ish label: the caption lifts and tints while the field is active */
 .admin-field:focus-within .admin-label {

@@ -500,8 +500,10 @@ export function SearchInput({
   onChange: (value: string) => void;
   placeholder: string;
 }) {
+  // basis-full below sm: sharing a wrapped row with the filter tabs squeezed
+  // the field down to a couple of characters on a phone.
   return (
-    <div className="admin-field relative min-w-0 flex-1 sm:max-w-xs">
+    <div className="admin-field relative min-w-0 basis-full sm:basis-auto sm:max-w-xs sm:flex-1">
       <svg
         viewBox="0 0 20 20"
         className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-russet-dark/40"
@@ -592,7 +594,9 @@ export function ErrorBanner({ message }: { message?: string | null }) {
           clipRule="evenodd"
         />
       </svg>
-      {message}
+      {/* Error text can carry a long URL — let it break rather than push the
+          page sideways. */}
+      <span className="min-w-0 break-words">{message}</span>
     </p>
   );
 }

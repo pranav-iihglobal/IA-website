@@ -230,6 +230,7 @@ export function PostForm({
     },
     {
       id: "cover",
+      optional: true,
       title: "Cover image",
       description: "Shown on the list and when shared",
       errorKeys: ["coverImage"],
@@ -309,6 +310,7 @@ export function PostForm({
     },
     {
       id: "proof",
+      optional: true,
       title: "Farmer proof",
       description: "Pinned testimonials",
       errorKeys: ["pinnedTestimonials"],
@@ -397,6 +399,7 @@ export function PostForm({
     },
     {
       id: "seo",
+      optional: true,
       title: "SEO",
       description: "Search and share preview",
       errorKeys: ["metaTitle", "metaDescription"],
@@ -434,7 +437,6 @@ export function PostForm({
         e.preventDefault();
         save();
       }}
-      className="max-w-4xl"
     >
       {draft.recoverable && (
         <DraftBanner
