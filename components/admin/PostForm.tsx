@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Bi } from "@/lib/content";
 import { slugify } from "@/lib/schemas";
 import { ImageUploader, type AdminImage } from "./ImageUploader";
+import { adminFetch } from "@/lib/admin/fetch";
 import { useFormDraft, useSaveShortcut } from "@/lib/admin/form-hooks";
 import { EntityPicker, type PickerOption } from "./EntityPicker";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -130,7 +131,7 @@ export function PostForm({
     setErrors({});
     setFormError(null);
     try {
-      const response = await fetch(
+      const result = await adminFetch<{ id: string }>(
         postId ? `/api/admin/posts/${postId}` : "/api/admin/posts",
         {
           method: postId ? "PATCH" : "POST",
@@ -141,11 +142,12 @@ export function PostForm({
           }),
         },
       );
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setFormError(data.error ?? "Could not save");
-        if (data.fields) setErrors(data.fields);
-        toast(data.error ?? "Could not save — check the highlighted fields", "error");
+      if (!result.ok) {
+        const message = result.error ?? "Could not save";
+        setFormError(message);
+        const fields = (result.data as { fields?: Record<string, string> } | null)?.fields;
+        if (fields) setErrors(fields);
+        toast(message, "error");
         setSaving(false);
         return;
       }

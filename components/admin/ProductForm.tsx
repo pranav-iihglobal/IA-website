@@ -13,6 +13,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { DraftBanner } from "./DraftBanner";
 import { FormWizard, type WizardStep } from "./FormWizard";
 import { SlugField } from "./SlugField";
+import { adminFetch } from "@/lib/admin/fetch";
 import { useFormDraft, useSaveShortcut } from "@/lib/admin/form-hooks";
 import { useToast } from "./Toast";
 import {
@@ -215,7 +216,7 @@ export function ProductForm({
         })),
       };
 
-      const response = await fetch(
+      const result = await adminFetch<{ id: string }>(
         productId ? `/api/admin/products/${productId}` : "/api/admin/products",
         {
           method: productId ? "PATCH" : "POST",
@@ -223,12 +224,12 @@ export function ProductForm({
           body: JSON.stringify(payload),
         },
       );
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        setFormError(data.error ?? "Could not save");
-        if (data.fields) setErrors(data.fields);
-        toast(data.error ?? "Could not save — check the highlighted fields", "error");
+      if (!result.ok) {
+        const message = result.error ?? "Could not save";
+        setFormError(message);
+        const fields = (result.data as { fields?: Record<string, string> } | null)?.fields;
+        if (fields) setErrors(fields);
+        toast(message, "error");
         setSaving(false);
         return;
       }

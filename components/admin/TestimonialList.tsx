@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { CLD, cldUrl } from "@/lib/images";
+import { adminFetch } from "@/lib/admin/fetch";
 import { formatShortDate } from "@/lib/format";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { useToast } from "./Toast";
@@ -83,14 +84,18 @@ export function TestimonialList() {
       const params = new URLSearchParams({ page: String(page) });
       if (search) params.set("search", search);
       if (status) params.set("status", status);
-      const response = await fetch(`/api/admin/testimonials?${params}`);
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Could not load");
-      setRows(data.items);
-      setTotal(data.total);
-      setPages(data.pages);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load");
+      const result = await adminFetch<{
+        items: Row[];
+        total: number;
+        pages: number;
+      }>(`/api/admin/testimonials?${params}`);
+      if (!result.ok || !result.data) {
+        setError(result.error ?? "Could not load");
+        return;
+      }
+      setRows(result.data.items);
+      setTotal(result.data.total);
+      setPages(result.data.pages);
     } finally {
       setLoading(false);
     }
@@ -104,13 +109,12 @@ export function TestimonialList() {
   async function confirmDelete() {
     if (!pending) return;
     setDeleting(true);
-    const response = await fetch(`/api/admin/testimonials/${pending.id}`, {
+    const result = await adminFetch(`/api/admin/testimonials/${pending.id}`, {
       method: "DELETE",
     });
     setDeleting(false);
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      toast(data.error ?? "Could not delete the testimonial", "error");
+    if (!result.ok) {
+      toast(result.error ?? "Could not delete the testimonial", "error");
       setPending(null);
       return;
     }

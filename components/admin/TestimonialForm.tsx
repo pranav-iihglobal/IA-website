@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { Bi } from "@/lib/content";
 import { parseVideoEmbedId } from "@/lib/schemas";
+import { adminFetch } from "@/lib/admin/fetch";
 import { useFormDraft, useSaveShortcut } from "@/lib/admin/form-hooks";
 import { ImageUploader, type AdminImage } from "./ImageUploader";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -129,7 +130,7 @@ export function TestimonialForm({
         displayOrder: Number(values.displayOrder) || 0,
         productUsed: values.productUsed || null,
       };
-      const response = await fetch(
+      const result = await adminFetch<{ id: string }>(
         testimonialId
           ? `/api/admin/testimonials/${testimonialId}`
           : "/api/admin/testimonials",
@@ -139,11 +140,12 @@ export function TestimonialForm({
           body: JSON.stringify(payload),
         },
       );
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setFormError(data.error ?? "Could not save");
-        if (data.fields) setErrors(data.fields);
-        toast(data.error ?? "Could not save — check the highlighted fields", "error");
+      if (!result.ok) {
+        const message = result.error ?? "Could not save";
+        setFormError(message);
+        const fields = (result.data as { fields?: Record<string, string> } | null)?.fields;
+        if (fields) setErrors(fields);
+        toast(message, "error");
         setSaving(false);
         return;
       }
