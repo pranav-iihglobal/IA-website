@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { isAllowedEmail } from "@/lib/auth/allowlist";
 
 /**
  * Shared helpers for admin API route handlers.
  */
 
 /**
- * Defence in depth: middleware already blocks unauthenticated requests to
+ * Defence in depth: middleware already blocks unauthorised requests to
  * /api/admin/*, but every handler re-checks so a future matcher change can
  * never silently expose a mutation endpoint.
+ *
+ * Authentication and authorisation are separate questions here. Having a
+ * valid session only proves Google vouched for the address; whether that
+ * address may touch this data is the allowlist's call, and it is asked again
+ * on every request rather than trusted from sign-in time.
  */
 export async function requireAdmin(): Promise<NextResponse | null> {
   let session;
@@ -28,8 +34,17 @@ export async function requireAdmin(): Promise<NextResponse | null> {
       { status: 500 },
     );
   }
-  if (session?.user?.email) return null;
-  return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+  const email = session?.user?.email;
+  if (!email) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+  if (!isAllowedEmail(email)) {
+    // Deliberately does not echo the address back or say why.
+    console.warn("[admin api] rejected a signed-in account not on the allowlist");
+    return NextResponse.json({ error: "Not authorised" }, { status: 403 });
+  }
+  return null;
 }
 
 /**

@@ -1,15 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
+import { signOut } from "@/auth";
+import { isAllowlistConfigured } from "@/lib/auth/allowlist";
 import { SITE } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Where Auth.js sends a sign-in that did not succeed.
+ * Where a sign-in that did not succeed ends up, and where middleware sends a
+ * signed-in account that is not on the allowlist.
  *
- * Mostly that means an account this app declined. Note that a Google account
- * which is not a test user on the OAuth consent screen never gets this far —
- * Google stops it on its own error page, before the callback.
+ * Access is decided by ADMIN_ALLOWED_EMAILS, not by Google. Google's OAuth
+ * "test users" list only restricts anything while the consent screen is in
+ * Testing status, so it is not something to hang authorisation on.
  */
 
 const MESSAGES: Record<string, { heading: string; body: string }> = {
@@ -28,8 +31,20 @@ const MESSAGES: Record<string, { heading: string; body: string }> = {
 };
 
 const FALLBACK = {
-  heading: "Could not sign you in",
-  body: "Something went wrong while signing in with Google. Please try again.",
+  heading: "Access restricted",
+  body: "This admin panel is limited to IKSARVA directors. The Google account you used is not on the approved list.",
+};
+
+/**
+ * Shown when the server has no allowlist at all.
+ *
+ * Without this a locked-out director sees "you are not on the approved list"
+ * and has no way to guess that the list itself is missing. The check is safe
+ * to surface: it reveals a misconfiguration, not who is on the list.
+ */
+const NOT_CONFIGURED = {
+  heading: "Admin access is not configured",
+  body: "ADMIN_ALLOWED_EMAILS is not set on the server, so nobody can sign in. Add the director email addresses to that environment variable and redeploy.",
 };
 
 export default async function RestrictedPage({
@@ -38,7 +53,9 @@ export default async function RestrictedPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
-  const { heading, body } = MESSAGES[error ?? ""] ?? FALLBACK;
+  const { heading, body } = !isAllowlistConfigured()
+    ? NOT_CONFIGURED
+    : (MESSAGES[error ?? ""] ?? FALLBACK);
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
@@ -60,12 +77,23 @@ export default async function RestrictedPage({
         <p className="mt-2 text-sm leading-relaxed text-russet-dark/80">{body}</p>
 
         <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Link
-            href="/admin/login"
-            className="rounded-full border border-camel px-5 py-2.5 text-sm font-semibold text-russet transition-colors hover:border-olive hover:bg-meringue"
+          {/*
+            Sign out first. Landing on /admin/login while still holding the
+            rejected session just shows the same account again.
+          */}
+          <form
+            action={async () => {
+              "use server";
+              await signOut({ redirectTo: "/admin/login" });
+            }}
           >
-            Try a different account
-          </Link>
+            <button
+              type="submit"
+              className="admin-tap w-full rounded-full border border-camel px-5 py-2.5 text-sm font-semibold text-russet transition-colors hover:border-olive hover:bg-meringue sm:w-auto"
+            >
+              Try a different account
+            </button>
+          </form>
           <Link
             href="/"
             className="rounded-full bg-alloy px-5 py-2.5 text-sm font-semibold text-cornsilk-light transition-colors hover:bg-alloy-dark"

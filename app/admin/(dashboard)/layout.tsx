@@ -2,18 +2,28 @@ import { AdminNav } from "@/components/admin/AdminNav";
 import { ToastProvider } from "@/components/admin/Toast";
 import { NavProgress } from "@/components/NavProgress";
 import { RouteTransition } from "@/components/RouteTransition";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { isAllowedEmail } from "@/lib/auth/allowlist";
 
 /**
- * Authenticated admin area. Access is enforced by middleware.ts; this layout
- * only reads the session to show who is signed in.
+ * Authenticated admin area.
+ *
+ * Access is enforced in middleware.ts; the check here is a second, redundant
+ * one, and the session read that follows is only to show who is signed in.
  */
 export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // middleware.ts has already rejected unauthenticated requests; this read is
-  // only to show who is signed in.
   const session = await auth();
+
+  /*
+    Last line of defence. middleware.ts already enforces this, but a matcher
+    change or an edge-runtime failure must never be the only thing standing
+    between a stranger's Google account and the panel.
+  */
+  if (!isAllowedEmail(session?.user?.email)) redirect("/admin/restricted");
+
   const user = {
     name: session?.user?.name ?? undefined,
     email: session?.user?.email ?? undefined,

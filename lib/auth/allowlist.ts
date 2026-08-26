@@ -1,19 +1,24 @@
 /**
  * Who may sign in to the admin panel.
  *
- * The primary gate is Google itself: the OAuth consent screen is kept in
- * "Testing" status, so only accounts listed as test users in Google Cloud can
- * complete the sign-in flow at all. Everyone else is stopped by Google before
- * the request ever reaches this app.
+ * ADMIN_ALLOWED_EMAILS is the authorization boundary. It is a comma-separated
+ * list of addresses, and it is REQUIRED — with nothing configured, nobody
+ * gets in.
  *
- * ADMIN_ALLOWED_EMAILS is an OPTIONAL second gate, unset by default:
+ * This used to defer to Google's OAuth "test users" list and allow everyone
+ * when unset. That was wrong twice over:
  *
- *   unset  → any Google account that clears the test-user list gets in.
- *   set    → only the listed addresses get in, whatever Google allows.
+ *  - Test users are a consent-screen development feature, not access control.
+ *    The restriction only applies while the OAuth app is in "Testing" status;
+ *    publishing it, or making it Internal in a Workspace, silently opens
+ *    sign-in to every Google account on earth.
+ *  - An authorization check must never fail open. "Not configured" has to
+ *    mean "deny", or a missing environment variable becomes a public door.
  *
- * It exists because the test-user gate disappears the moment the OAuth app is
- * published. If that ever happens, setting this one variable re-locks the
- * panel without a code change.
+ * The list is checked on every request, not only at sign-in — see
+ * middleware.ts and lib/admin/api.ts. Sessions are JWTs valid for 14 days, so
+ * a sign-in-only check would let someone keep access for a fortnight after
+ * being removed from the list.
  */
 
 /** Lowercased, trimmed — Google reports addresses in their canonical form. */
@@ -21,23 +26,27 @@ function normalize(email: string): string {
   return email.trim().toLowerCase();
 }
 
-/** The configured allowlist, or null when the variable is unset/empty. */
-export function getAllowedEmails(): string[] | null {
+/** The configured allowlist. Empty when the variable is unset or blank. */
+export function getAllowedEmails(): string[] {
   const raw = process.env.ADMIN_ALLOWED_EMAILS;
-  if (!raw) return null;
-  const emails = raw.split(",").map(normalize).filter(Boolean);
-  return emails.length > 0 ? emails : null;
+  if (!raw) return [];
+  return raw.split(",").map(normalize).filter(Boolean);
+}
+
+/** True when an allowlist has actually been configured. */
+export function isAllowlistConfigured(): boolean {
+  return getAllowedEmails().length > 0;
 }
 
 /**
- * True when this address may sign in.
+ * True when this address may use the admin panel.
  *
- * With no allowlist configured this defers entirely to Google. A missing or
- * malformed email is always rejected — there is nothing to check it against.
+ * Fails closed: no allowlist, no access. A missing or malformed email is
+ * always rejected — there is nothing to check it against.
  */
 export function isAllowedEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   const allowed = getAllowedEmails();
-  if (!allowed) return true;
+  if (allowed.length === 0) return false;
   return allowed.includes(normalize(email));
 }

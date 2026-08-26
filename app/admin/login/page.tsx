@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { isAllowedEmail } from "@/lib/auth/allowlist";
 import { auth } from "@/auth";
 import { SITE } from "@/lib/content";
 import { GoogleSignInButton } from "@/components/admin/GoogleSignInButton";
@@ -19,7 +20,12 @@ export default async function AdminLoginPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const session = await auth();
-  if (session?.user) redirect("/admin");
+  /*
+    Only bounce an ALLOWED session onward. Sending every session to /admin
+    would trap a signed-in-but-rejected account in a loop: /admin/login →
+    /admin → /admin/restricted, with no way back to the account picker.
+  */
+  if (session?.user && isAllowedEmail(session.user.email)) redirect("/admin");
 
   const { next } = await searchParams;
   // Only ever return to somewhere inside the admin panel — an attacker-supplied

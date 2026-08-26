@@ -41,19 +41,24 @@ Google sign-in only. Nothing about auth touches MongoDB, so it costs the free-ti
 
 **How a sign-in works.** `/admin/login` offers one button. Google authenticates the director and redirects back to `/api/auth/callback/google`. The app then issues its own session — a JWT in a cookie, signed with `AUTH_SECRET`, valid for 14 days. Google is only consulted at sign-in; every request afterwards is authenticated by that cookie, which is why `AUTH_SECRET` matters as much as the Google credentials do.
 
-**Who is allowed in.** Two gates, the second optional:
+**Who is allowed in.** One gate: **`ADMIN_ALLOWED_EMAILS`**, a comma-separated list of Google addresses. It **fails closed** — unset means nobody can sign in, including you — and it is enforced in four places, so no single change can quietly open the door:
 
-1. **Google's test-user list** — the OAuth consent screen is kept in **Testing** status, so only accounts listed there can complete sign-in at all. Everyone else is stopped by Google, on Google's own error page, before the request reaches this app.
-2. **`ADMIN_ALLOWED_EMAILS`** *(optional, unset by default)* — a comma-separated list. Unset, access is whatever Google allows. Set, only those addresses get in.
+| Where | What it stops |
+|---|---|
+| `signIn` callback (`auth.ts`) | Issuing a session to an address not on the list |
+| `middleware.ts` | Any request to `/admin/*` or `/api/admin/*` from a session not on the list |
+| `requireAdmin()` (`lib/admin/api.ts`) | Any API mutation, even if the matcher changed |
+| Dashboard layout | Server-rendering an admin page |
 
-**Adding a director:**
+Because it is re-checked on every request rather than trusted from sign-in, removing someone takes effect immediately instead of when their 14-day session expires.
 
-1. Google Cloud → **APIs & Services → OAuth consent screen → Test users → Add users** → their Google address.
-2. If `ADMIN_ALLOWED_EMAILS` is set, append the address there too (Vercel → Settings → Environment Variables) and redeploy.
+> ⚠️ **Google's "test users" list is not access control.** It only restricts anything while the OAuth consent screen is in **Testing** status. Publishing the app — or making it **Internal** in a Workspace — opens sign-in to every Google account, with no warning and no visible change here. `ADMIN_ALLOWED_EMAILS` is what actually protects the panel.
 
-**Removing one:** delete them from the test-user list, and from `ADMIN_ALLOWED_EMAILS` if it is set. Their existing session cookie stays valid until it expires (up to 14 days) — rotate `AUTH_SECRET` to invalidate every session immediately.
+**Adding a director:** append their address to `ADMIN_ALLOWED_EMAILS` (Vercel → Settings → Environment Variables) and redeploy.
 
-> ⚠️ **Do not publish the OAuth app.** The consent screen must stay in **Testing**. Publishing removes the test-user restriction, and unless `ADMIN_ALLOWED_EMAILS` is set, any Google account could then sign in. If it is ever published, set `ADMIN_ALLOWED_EMAILS` first.
+**Removing one:** delete their address and redeploy. They lose access on their next request. To be certain their current session is dead, rotate `AUTH_SECRET` as well — every session is a JWT signed with it, so changing it invalidates all of them at once.
+
+Run `npm run check-auth` to verify the rules.
 
 The production redirect URI `https://iksarva.com/api/auth/callback/google` must exist on the OAuth client, or sign-in fails on the live site with `redirect_uri_mismatch`.
 
@@ -109,6 +114,24 @@ The OAuth client already exists: Google Cloud project **IKSARVA Admin** → OAut
    - `http://localhost:3000/api/auth/callback/google`
    - `https://iksarva.com/api/auth/callback/google`
 3. Generate `AUTH_SECRET` with `openssl rand -base64 32`.
+4. **Set `ADMIN_ALLOWED_EMAILS`** to the director addresses, comma separated.
+
+#### Who can sign in
+
+`ADMIN_ALLOWED_EMAILS` is the authorisation boundary, and it **fails closed** —
+unset means nobody gets in, including you. It is checked on every request, not
+just at sign-in, so removing an address revokes that person's access
+immediately rather than when their 14-day session expires.
+
+Do **not** rely on Google's OAuth "test users" list for this. Test users are a
+consent-screen development feature: the restriction applies only while the
+consent screen is in **Testing** status. Publishing the app — or making it
+**Internal** in a Workspace — silently opens sign-in to every Google account,
+with no warning and no visible change in the app.
+
+To add or remove a director, edit the variable in Vercel and redeploy. To cut
+off an existing session immediately, also rotate `AUTH_SECRET`: sessions are
+JWTs signed with it, so changing it invalidates every one of them at once.
 
 Local development must run on **port 3000** — the registered redirect URI is `localhost:3000`, and Google rejects the callback from any other port.
 
