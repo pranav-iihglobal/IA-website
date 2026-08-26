@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Anek_Gujarati } from "next/font/google";
+import { Anek_Gujarati, Montserrat, Noto_Sans_Gujarati } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { LanguageProvider } from "@/components/LanguageProvider";
@@ -17,12 +17,39 @@ const laviossa = localFont({
   display: "swap",
 });
 
-// Brand fonts — self-hosted at build time by next/font (served from our own
-// domain, no runtime requests to Google). Both cover Gujarati + Latin.
+// Gujarati counterpart to Laviossa in headings. Variable, like the body
+// faces below — one file covering 100–800 instead of five static cuts.
 const anekGujarati = Anek_Gujarati({
-  subsets: ["gujarati", "latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  // Gujarati only. Anek's Latin cut would never render: Laviossa leads the
+  // display stack and Montserrat the body stack, so Latin characters are
+  // resolved long before the browser reaches Anek.
+  subsets: ["gujarati"],
   variable: "--font-anek",
+  display: "swap",
+});
+
+// ---------------------------------------------------------------------------
+// Secondary pairing — body and UI text.
+//
+// Laviossa is a display face; setting long paragraphs in it is heavy going.
+// Montserrat carries Latin body copy and Noto Sans Gujarati carries ગુજરાતી,
+// the same per-script trick used in headings: Montserrat has no Gujarati
+// glyphs, so the browser reaches past it for those characters on its own.
+//
+// Both are loaded as VARIABLE fonts (no `weight` array) — one file covering
+// every weight, which is smaller than the four static cuts we would otherwise
+// ship. Self-hosted at build time by next/font, so no runtime request ever
+// goes to Google and nothing about a visitor reaches them.
+// ---------------------------------------------------------------------------
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-montserrat",
+  display: "swap",
+});
+
+const notoSansGujarati = Noto_Sans_Gujarati({
+  subsets: ["gujarati"],
+  variable: "--font-noto-gujarati",
   display: "swap",
 });
 
@@ -69,7 +96,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="gu" className={`${laviossa.variable} ${anekGujarati.variable}`}>
+    <html
+      lang="gu"
+      className={`${laviossa.variable} ${anekGujarati.variable} ${montserrat.variable} ${notoSansGujarati.variable}`}
+    >
       <body className="flex min-h-screen flex-col">
         <LanguageProvider>{children}</LanguageProvider>
       </body>

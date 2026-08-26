@@ -174,7 +174,7 @@ middleware.ts             Guards /admin and /api/admin
 
 ## Notes
 
-- **Fonts:** self-hosted via `next/font` — Laviossa for Latin text, Anek Gujarati for ગુજરાતી. Because Laviossa has no Gujarati glyphs, each script automatically gets the right face, even within one sentence.
+- **Fonts:** self-hosted via `next/font` (nothing is requested from Google at runtime), in two pairs. **Display** — Laviossa for Latin, Anek Gujarati for ગુજરાતી. **Body and UI** — Montserrat for Latin, Noto Sans Gujarati for ગુજરાતી. Each stack leads with a Latin-only face, so the browser reaches past it for Gujarati characters by itself and each script gets the right font even within one sentence. Fonts cost ~377 KB on the home page, of which Noto Sans Gujarati is ~155 KB; dropping `--font-noto-gujarati` from `--font-body` in `globals.css` reverts Gujarati body text to Anek and reclaims it.
 - **SEO:** `metadataBase` is `https://iksarva.com`; every page sets a canonical URL and Open Graph tags; JSON-LD Organization (site-wide), Product (product pages) and Article (learn pages) schemas are embedded.
 - **i18n:** deliberately lightweight — bilingual `{ en, gu }` fields plus a small React context. Gujarati is the default; empty Gujarati falls back to English. No i18n framework, no locale routing.
 - **Free-tier discipline:** lean indexes, `.lean()` reads, 20-per-page admin lists, no polling, and no binaries in MongoDB.

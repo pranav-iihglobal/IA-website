@@ -41,18 +41,25 @@
   --color-russet-dark: #5f2f14;
 
   /*
-   * Brand typography — one rule everywhere: English/Latin renders in
-   * Laviossa, Gujarati renders in Anek Gujarati. Laviossa leads both stacks
-   * and has no Gujarati glyphs, so the browser picks the right face per
-   * character. Both fonts are self-hosted at build time via next/font (the
-   * CSS variables are set on <html> in app/layout.tsx), with system
-   * fallbacks so text renders instantly on slow connections.
+   * Brand typography, in two pairs.
+   *
+   * DISPLAY (headings, product names, the logo lockup) — Laviossa for Latin,
+   * Anek Gujarati for ગુજરાતી. This is the brand voice.
+   *
+   * BODY (paragraphs, labels, the whole admin panel) — Montserrat for Latin,
+   * Noto Sans Gujarati for ગુજરાતી. Laviossa is a display face and sets long
+   * copy heavily; these are text faces built to be read at small sizes.
+   *
+   * Each stack leads with a Latin-only font, so the browser reaches past it
+   * for Gujarati characters by itself — per-script pairing with no JS, even
+   * inside a single sentence. All faces are self-hosted at build time by
+   * next/font (variables set on <html> in app/layout.tsx), with system
+   * fallbacks so text renders instantly on a slow connection.
    */
   --font-display: var(--font-laviossa), var(--font-anek), Georgia,
     "Times New Roman", serif;
-  --font-body: var(--font-laviossa), var(--font-anek), "Noto Sans Gujarati",
-    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    sans-serif;
+  --font-body: var(--font-montserrat), var(--font-noto-gujarati), system-ui,
+    -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 html {
