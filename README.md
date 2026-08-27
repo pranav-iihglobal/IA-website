@@ -2,7 +2,7 @@
 
 Marketing website for **IKSARVA Agritech Private Limited**, a biofertilizer company based in North Gujarat, India, plus an admin panel for managing products, testimonials and blog posts.
 
-Built with Next.js 15 (App Router), TypeScript, TailwindCSS v4, MongoDB Atlas (Mongoose) and Cloudinary. Public pages are statically generated with ISR and re-generate instantly when an admin saves.
+Built with Next.js 16 (App Router), TypeScript, TailwindCSS v4, MongoDB Atlas (Mongoose) and Cloudinary. Public pages are statically generated with ISR and re-generate instantly when an admin saves.
 
 ## Quick start
 
@@ -20,6 +20,8 @@ npm run dev                    # http://localhost:3000  ·  admin at /admin
 | `npm run seed` | Imports the bundled products, testimonials and articles into MongoDB (idempotent — upserts by slug) |
 | `npm run check-seed` | Validates what the seed would write against the zod schemas — no database needed |
 | `npm run check-connection` | Checks the Google sign-in config and pings MongoDB and Cloudinary |
+| `npm run check-auth` | Drives the admin guard with a minted session cookie — needs a running server; add a URL to check a deployed one |
+| `npm run check-models` | Validates every Mongoose model against a minimal document — no database needed |
 
 ## ✏️ Site content (one file)
 
@@ -63,6 +65,8 @@ It **fails closed**: no directors means nobody signs in. Enforced in four places
 | Dashboard layout | Node | The database, on every admin page |
 
 The proxy runs on the edge, where Mongoose cannot run, so it does the cheap half and the two Node layers behind it do the authoritative lookup on every request. That is also why the config is split across `auth.config.ts` (edge-safe) and `auth.ts` (reaches the database) — importing `auth.ts` from the proxy fails the build.
+
+The "authorised account" the proxy checks is the `admin` flag, and it has to be written **twice**: onto the JWT in the `jwt` callback, and onto the Session in the `session` callback. They are different objects — `request.auth` inside the proxy is a Session, not the token — and a flag set on one is simply absent on the other. Getting that wrong locks out every director while looking perfectly correct, so both shapes are declared in `types/next-auth.d.ts` and `npm run check-auth` drives the signed-in path end to end.
 
 > ⚠️ **Google's "test users" list is not access control.** It only restricts anything while the OAuth consent screen is in **Testing** status. Publishing the app — or making it **Internal** in a Workspace — opens sign-in to every Google account, with no warning and no visible change here. The Director collection is what actually protects the panel.
 
@@ -267,7 +271,7 @@ lib/
   posts-source.ts         Same for blog (falls back to content/learn/*.md)
   cloudinary.ts images.ts sanitize.ts auth/ admin/
 content/learn/*.md        Original articles — kept as a fallback after seeding
-scripts/                  seed, check-seed, check-connection
+scripts/                  seed, check-seed, check-connection, check-auth, directors
 proxy.ts                  Guards /admin and /api/admin
 ```
 

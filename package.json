@@ -10,6 +10,7 @@
     "seed": "tsx scripts/seed.ts",
     "check-seed": "tsx scripts/check-seed.ts",
     "check-connection": "tsx scripts/check-connection.ts",
+    "check-auth": "tsx scripts/check-auth.ts",
     "icons": "tsx scripts/generate-icons.ts",
     "check-models": "tsx scripts/check-models.ts",
     "directors": "tsx scripts/directors.ts"

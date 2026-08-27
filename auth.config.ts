@@ -65,6 +65,13 @@ export const authConfig: NextAuthConfig = {
         session.user.name = token.name ?? null;
         session.user.email = token.email ?? "";
         session.user.image = token.picture ?? null;
+        /*
+          Must be copied explicitly. `request.auth` in proxy.ts is a Session,
+          which is whatever THIS callback returns — not the JWT above. A flag
+          set on the token and never copied here is simply absent on the edge,
+          which reads as "not an admin" and locks out every director.
+        */
+        session.user.admin = token.admin === true;
       }
       return session;
     },

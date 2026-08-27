@@ -32,7 +32,6 @@ export default auth((request) => {
   }
 
   const email = request.auth?.user?.email;
-  const token = request.auth as { admin?: boolean } | null;
 
   /*
     The edge runtime cannot reach MongoDB, so this layer answers only the
@@ -45,7 +44,7 @@ export default auth((request) => {
     takes effect on their very next request; this check only spares a
     database round trip for the ordinary case of a valid session.
   */
-  const mintedForAdmin = request.auth?.user ? token?.admin === true : false;
+  const mintedForAdmin = request.auth?.user?.admin === true;
   if (email && mintedForAdmin) return NextResponse.next();
 
   if (pathname.startsWith("/api/")) {
