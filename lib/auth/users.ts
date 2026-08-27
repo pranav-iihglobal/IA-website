@@ -1,6 +1,14 @@
 import { connectToDatabase } from "@/lib/db/connect";
 import { User } from "@/lib/db/models/User";
-import { type Role, isRole } from "@/lib/auth/permissions";
+import {
+  MODULES,
+  isLevel,
+  isRole,
+  type Access,
+  type Level,
+  type ModuleKey,
+  type Role,
+} from "@/lib/auth/permissions";
 
 /**
  * Who may use the admin panel, and as what.
@@ -30,10 +38,29 @@ export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-export interface ActiveUser {
+export interface ActiveUser extends Access {
   email: string;
   name: string;
   role: Role;
+  modules: Partial<Record<ModuleKey, Level>>;
+}
+
+/**
+ * Read the per-module overrides off a document, discarding anything unknown.
+ *
+ * Mongoose already enforces the enum on write, so a bad value here means the
+ * document was edited outside the app. Dropping it falls back to the role,
+ * which is the safe direction: a typo removes an override, it never invents
+ * access that was not granted.
+ */
+function readModules(raw: unknown): Partial<Record<ModuleKey, Level>> {
+  const source = (raw ?? {}) as Record<string, unknown>;
+  const out: Partial<Record<ModuleKey, Level>> = {};
+  for (const key of MODULES) {
+    const value = source[key];
+    if (isLevel(value)) out[key] = value;
+  }
+  return out;
 }
 
 /**
@@ -54,7 +81,7 @@ export async function findActiveUser(
   try {
     await connectToDatabase();
     const doc = await User.findOne({ email: normalizeEmail(email) })
-      .select("email name role status")
+      .select("email name role status modules")
       .lean();
 
     if (!doc || doc.status !== "active") return null;
@@ -65,7 +92,12 @@ export async function findActiveUser(
       return null;
     }
 
-    return { email: doc.email, name: doc.name ?? "", role: doc.role };
+    return {
+      email: doc.email,
+      name: doc.name ?? "",
+      role: doc.role,
+      modules: readModules(doc.modules),
+    };
   } catch (error) {
     console.error("[auth] user lookup failed", error);
     return null;
@@ -120,6 +152,7 @@ export interface UserEntry {
   email: string;
   name: string;
   role: Role;
+  modules: Partial<Record<ModuleKey, Level>>;
   status: "active" | "suspended";
   addedBy: string;
   lastSignInAt: string | null;
@@ -130,7 +163,7 @@ export interface UserEntry {
 export async function listUsers(): Promise<UserEntry[]> {
   await connectToDatabase();
   const docs = await User.find({})
-    .select("email name role status addedBy lastSignInAt createdAt")
+    .select("email name role status modules addedBy lastSignInAt createdAt")
     .sort({ createdAt: 1 })
     .lean();
 
@@ -139,6 +172,7 @@ export async function listUsers(): Promise<UserEntry[]> {
     email: doc.email,
     name: doc.name ?? "",
     role: isRole(doc.role) ? doc.role : "viewer",
+    modules: readModules(doc.modules),
     status: doc.status === "suspended" ? "suspended" : "active",
     addedBy: doc.addedBy ?? "",
     lastSignInAt: doc.lastSignInAt

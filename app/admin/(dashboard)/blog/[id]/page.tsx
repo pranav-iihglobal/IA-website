@@ -10,6 +10,7 @@ import {
 } from "@/components/admin/PostForm";
 import { getTestimonialOptions } from "@/lib/admin/products-options";
 import { BackLink } from "@/components/admin/ui";
+import { requirePageAccess } from "@/lib/admin/page-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,8 @@ export default async function EditPostPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requirePageAccess("posts:read");
+
   const { id } = await params;
   if (!isValidObjectId(id)) notFound();
 

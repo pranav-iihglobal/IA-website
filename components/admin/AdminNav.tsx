@@ -5,7 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useState, type ReactNode } from "react";
-import { can, type Permission, type Role } from "@/lib/auth/permissions";
+import { can, type Access, type Permission } from "@/lib/auth/permissions";
 
 function Icon({ path }: { path: string }) {
   return (
@@ -41,6 +41,7 @@ const LINKS: {
   {
     href: "/admin/products",
     label: "Products",
+    needs: "products:read",
     icon: (
       <Icon path="M20 7.5 12 3 4 7.5m16 0L12 12M20 7.5v9L12 21m0-9L4 7.5M12 12v9m-8-4.5v-9" />
     ),
@@ -48,11 +49,13 @@ const LINKS: {
   {
     href: "/admin/testimonials",
     label: "Testimonials",
+    needs: "testimonials:read",
     icon: <Icon path="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12Z" />,
   },
   {
     href: "/admin/blog",
     label: "Blog",
+    needs: "posts:read",
     icon: (
       <Icon path="M5 4h9l5 5v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm9 0v5h5M8 13h8M8 17h5" />
     ),
@@ -71,7 +74,7 @@ export interface AdminUser {
   name?: string;
   email?: string;
   /** Read live from the database by the layout, never from the session. */
-  role?: Role;
+  access?: Access;
   /** Google profile picture. */
   image?: string;
 }
@@ -116,7 +119,7 @@ export function AdminNav({ user }: { user: AdminUser }) {
     the request regardless. Showing someone a module that will only tell them
     no is just a worse way to say the same thing.
   */
-  const visible = LINKS.filter((link) => !link.needs || can(user.role, link.needs));
+  const visible = LINKS.filter((link) => !link.needs || can(user.access, link.needs));
 
   const nav = (
     <ul className="space-y-1">

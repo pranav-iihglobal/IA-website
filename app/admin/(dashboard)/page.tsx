@@ -4,19 +4,33 @@ import { connectToDatabase, isDatabaseConfigured } from "@/lib/db/connect";
 import { Product } from "@/lib/db/models/Product";
 import { Testimonial } from "@/lib/db/models/Testimonial";
 import { Post } from "@/lib/db/models/Post";
+import { auth } from "@/auth";
+import { findActiveUser } from "@/lib/auth/users";
+import { can } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 
-async function getCounts() {
+async function getCounts(show: {
+  products: boolean;
+  testimonials: boolean;
+  posts: boolean;
+}) {
   await connectToDatabase();
+  // Zero for a hidden module: the tile is not rendered, and not counting it
+  // keeps the query off the database entirely.
+  const zeroIf = (allowed: boolean, query: Promise<number>) =>
+    allowed ? query : Promise.resolve(0);
   const [products, productDrafts, testimonials, testimonialDrafts, posts, postDrafts] =
     await Promise.all([
-      Product.countDocuments({ status: "published" }),
-      Product.countDocuments({ status: "draft" }),
-      Testimonial.countDocuments({ status: "published" }),
-      Testimonial.countDocuments({ status: "draft" }),
-      Post.countDocuments({ status: "published" }),
-      Post.countDocuments({ status: { $in: ["draft", "scheduled"] } }),
+      zeroIf(show.products, Product.countDocuments({ status: "published" })),
+      zeroIf(show.products, Product.countDocuments({ status: "draft" })),
+      zeroIf(show.testimonials, Testimonial.countDocuments({ status: "published" })),
+      zeroIf(show.testimonials, Testimonial.countDocuments({ status: "draft" })),
+      zeroIf(show.posts, Post.countDocuments({ status: "published" })),
+      zeroIf(
+        show.posts,
+        Post.countDocuments({ status: { $in: ["draft", "scheduled"] } }),
+      ),
     ]);
   return {
     products,
@@ -121,13 +135,38 @@ function Code({ children }: { children: ReactNode }) {
 }
 
 export default async function AdminDashboardPage() {
+  /*
+    The dashboard is the one page everyone with access can reach, so it is
+    also the one that must not leak the shape of modules they cannot see. A
+    tile is both a link and a count — showing "Blog posts 3" to someone with
+    no blog access tells them something and then refuses to elaborate.
+  */
+  const session = await auth();
+  const me = await findActiveUser(session?.user?.email);
+  const show = {
+    products: can(me, "products:read"),
+    testimonials: can(me, "testimonials:read"),
+    posts: can(me, "posts:read"),
+  };
+
+  const mine = [
+    show.products && "products",
+    show.testimonials && "testimonials",
+    show.posts && "blog posts",
+  ].filter(Boolean) as string[];
+
+  const subtitle =
+    mine.length === 0
+      ? "You have no modules yet. Ask an owner for access."
+      : `Manage ${new Intl.ListFormat("en", { style: "long", type: "conjunction" }).format(mine)}.`;
+
   const configured = isDatabaseConfigured();
   let counts: Awaited<ReturnType<typeof getCounts>> | null = null;
   let error: string | null = null;
 
   if (configured) {
     try {
-      counts = await getCounts();
+      counts = await getCounts(show);
     } catch (e) {
       error = e instanceof Error ? e.message : "Could not reach the database";
     }
@@ -141,10 +180,10 @@ export default async function AdminDashboardPage() {
             Dashboard
           </h1>
           <p className="mt-1 text-sm text-olive-dark">
-            Manage products, testimonials and blog posts.
+            {subtitle}
           </p>
         </div>
-        {counts && (
+        {counts && can(me, "products:write") && (
           <Link href="/admin/products/new" className="admin-btn admin-btn-primary">
             <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
               <path d="M10 4a1 1 0 0 1 1 1v4h4a1 1 0 1 1 0 2h-4v4a1 1 0 1 1-2 0v-4H5a1 1 0 1 1 0-2h4V5a1 1 0 0 1 1-1Z" />
@@ -183,7 +222,7 @@ export default async function AdminDashboardPage() {
 
         {counts && (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <StatCard
+            {show.products && <StatCard
               title="Products"
               href="/admin/products"
               published={counts.products}
@@ -194,8 +233,8 @@ export default async function AdminDashboardPage() {
                   <path d="M20 7.5 12 3 4 7.5m16 0L12 12M20 7.5v9L12 21m0-9L4 7.5M12 12v9m-8-4.5v-9" />
                 </svg>
               }
-            />
-            <StatCard
+            />}
+            {show.testimonials && <StatCard
               title="Testimonials"
               href="/admin/testimonials"
               published={counts.testimonials}
@@ -206,8 +245,8 @@ export default async function AdminDashboardPage() {
                   <path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12Z" />
                 </svg>
               }
-            />
-            <StatCard
+            />}
+            {show.posts && <StatCard
               title="Blog posts"
               href="/admin/blog"
               published={counts.posts}
@@ -219,7 +258,7 @@ export default async function AdminDashboardPage() {
                   <path d="M5 4h9l5 5v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm9 0v5h5M8 13h8M8 17h5" />
                 </svg>
               }
-            />
+            />}
           </div>
         )}
       </div>

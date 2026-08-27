@@ -10,6 +10,8 @@
  *   npm run users -- list
  *   npm run users -- add you@gmail.com owner "Your Name"
  *   npm run users -- role someone@gmail.com editor
+ *   npm run users -- module accounts@iksarva.com posts none
+ *   npm run users -- module accounts@iksarva.com posts follow
  *   npm run users -- suspend someone@gmail.com
  *   npm run users -- restore someone@gmail.com
  *   npm run users -- remove someone@gmail.com
@@ -22,7 +24,21 @@
 import { loadEnv } from "./load-env";
 import { connectToDatabase } from "../lib/db/connect";
 import { User } from "../lib/db/models/User";
-import { ROLES, ROLE_LABELS, isRole, type Role } from "../lib/auth/permissions";
+import {
+  LEVELS,
+  LEVEL_LABELS,
+  MODULES,
+  MODULE_LABELS,
+  ROLES,
+  ROLE_LABELS,
+  isLevel,
+  isModuleKey,
+  isRole,
+  levelIn,
+  type Level,
+  type ModuleKey,
+  type Role,
+} from "../lib/auth/permissions";
 
 loadEnv();
 
@@ -33,6 +49,7 @@ const COMMANDS = [
   "list",
   "add",
   "role",
+  "module",
   "suspend",
   "restore",
   "remove",
@@ -48,6 +65,7 @@ function usage(): never {
       "  npm run users -- list",
       "  npm run users -- add <email> [role] [name]",
       "  npm run users -- role <email> <role>",
+      "  npm run users -- module <email> <module> <level|follow>",
       "  npm run users -- suspend <email>",
       "  npm run users -- restore <email>",
       "  npm run users -- remove <email>",
@@ -55,6 +73,10 @@ function usage(): never {
       "",
       `Roles: ${ROLES.join(", ")}`,
       ...ROLES.map((r) => `  ${r.padEnd(8)} ${ROLE_LABELS[r].description}`),
+      "",
+      `Modules: ${MODULES.join(", ")}`,
+      `Levels:  ${LEVELS.join(", ")}, or "follow" to go back to the role`,
+      ...LEVELS.map((l) => `  ${l.padEnd(8)} ${LEVEL_LABELS[l].description}`),
       "",
     ].join("\n"),
   );
@@ -93,7 +115,7 @@ async function guardLastOwner(email: string, action: string) {
 
 async function list() {
   const users = await User.find({})
-    .select("email name role status addedBy lastSignInAt")
+    .select("email name role status modules addedBy lastSignInAt")
     .sort({ createdAt: 1 })
     .lean();
 
@@ -113,8 +135,22 @@ async function list() {
     console.log(
       `  ${String(user.email).padEnd(34)} ${String(user.role).padEnd(7)} ${user.name || ""}${suspended}`.trimEnd(),
     );
+    const access = MODULES.map((m) => {
+      const level = levelIn(
+        {
+          role: user.role as Role,
+          modules: (user.modules ?? {}) as Partial<Record<ModuleKey, Level>>,
+        },
+        m,
+      );
+      const overridden = (user.modules as Record<string, unknown> | undefined)?.[m];
+      return `${MODULE_LABELS[m]}:${level}${overridden ? "*" : ""}`;
+    }).join("  ");
+    console.log(`  ${" ".repeat(34)} ${access}`);
     console.log(`  ${" ".repeat(34)} last signed in ${seen}`);
   }
+
+  console.log("\n  * = set for this person; everything else follows their role.");
 
   const owners = users.filter(
     (u) => u.role === "owner" && u.status === "active",
@@ -161,6 +197,45 @@ async function setRole(rawEmail: string | undefined, rawRole: string | undefined
   }
   console.log(`\n${email} is now ${ROLE_LABELS[rawRole].label}.`);
   console.log("Takes effect on their next request.\n");
+}
+
+/**
+ * Override — or clear — one module for one person.
+ *
+ * "follow" removes the override entirely rather than writing the role's
+ * current level, so a later role change moves this module with it.
+ */
+async function setModule(
+  rawEmail: string | undefined,
+  rawModule: string | undefined,
+  rawLevel: string | undefined,
+) {
+  const email = normalise(rawEmail);
+
+  if (!rawModule || !isModuleKey(rawModule)) {
+    console.error(`\nChoose a module: ${MODULES.join(", ")}\n`);
+    process.exit(1);
+  }
+  const follow = rawLevel === "follow";
+  if (!follow && (!rawLevel || !isLevel(rawLevel))) {
+    console.error(`\nChoose a level: ${LEVELS.join(", ")}, or "follow"\n`);
+    process.exit(1);
+  }
+
+  const result = follow
+    ? await User.updateOne({ email }, { $unset: { [`modules.${rawModule}`]: "" } })
+    : await User.updateOne({ email }, { $set: { [`modules.${rawModule}`]: rawLevel } });
+
+  if (result.matchedCount === 0) {
+    console.log(`\n${email} does not have access. Add them first.\n`);
+    return;
+  }
+
+  console.log(
+    follow
+      ? `\n${MODULE_LABELS[rawModule]} now follows ${email}'s role.\n`
+      : `\n${email}: ${MODULE_LABELS[rawModule]} set to ${LEVEL_LABELS[rawLevel as Level].label}.\n`,
+  );
 }
 
 async function setStatus(
@@ -263,6 +338,7 @@ async function main() {
   if (command === "list") await list();
   else if (command === "add") await add(rest[0], rest[1], rest.slice(2).join(" "));
   else if (command === "role") await setRole(rest[0], rest[1]);
+  else if (command === "module") await setModule(rest[0], rest[1], rest[2]);
   else if (command === "suspend") await setStatus(rest[0], "suspended");
   else if (command === "restore") await setStatus(rest[0], "active");
   else if (command === "remove") await remove(rest[0]);

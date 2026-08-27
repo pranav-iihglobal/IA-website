@@ -17,7 +17,7 @@ export default async function UsersPage() {
 
   // Admins may look; only owners may change anything. The list enforces the
   // same split again in its controls, and the API enforces it for real.
-  if (!can(me.role, "users:read")) redirect("/admin");
+  if (!can(me, "users:read")) redirect("/admin");
 
   return (
     <>

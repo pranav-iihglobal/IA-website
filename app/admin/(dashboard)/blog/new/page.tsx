@@ -1,10 +1,13 @@
 import { EMPTY_POST, PostForm } from "@/components/admin/PostForm";
 import { getTestimonialOptions } from "@/lib/admin/products-options";
 import { BackLink } from "@/components/admin/ui";
+import { requirePageAccess } from "@/lib/admin/page-guard";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewPostPage() {
+  await requirePageAccess("posts:write");
+
   const testimonials = await getTestimonialOptions();
 
   return (

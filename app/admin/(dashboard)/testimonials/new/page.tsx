@@ -4,10 +4,13 @@ import {
 } from "@/components/admin/TestimonialForm";
 import { getProductOptions } from "@/lib/admin/products-options";
 import { BackLink } from "@/components/admin/ui";
+import { requirePageAccess } from "@/lib/admin/page-guard";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewTestimonialPage() {
+  await requirePageAccess("testimonials:write");
+
   const products = await getProductOptions();
   return (
     <>

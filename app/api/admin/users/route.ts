@@ -8,7 +8,14 @@ import {
   listUsers,
   normalizeEmail,
 } from "@/lib/auth/users";
-import { canAssignRole, isRole, ROLE_LABELS } from "@/lib/auth/permissions";
+import {
+  canAssignRole,
+  isRole,
+  MODULES,
+  ROLE_LABELS,
+  type Level,
+  type ModuleKey,
+} from "@/lib/auth/permissions";
 import { userCreateSchema, userUpdateSchema } from "@/lib/schemas";
 
 /**
@@ -29,6 +36,36 @@ import { userCreateSchema, userUpdateSchema } from "@/lib/schemas";
  * Reading the list needs users:read (admins and owners). Every mutation needs
  * users:manage, which only owners have.
  */
+
+/**
+ * Turn the submitted overrides into a Mongo update.
+ *
+ * `null` means "clear this override so the module follows the role again",
+ * which is $unset, not a value. An absent key is left alone entirely — so
+ * editing one module never silently resets the others.
+ */
+function moduleUpdate(
+  modules: Partial<Record<ModuleKey, Level | null | undefined>> | undefined,
+): { set: Partial<Record<ModuleKey, Level>>; cleared: ModuleKey[] } {
+  const set: Partial<Record<ModuleKey, Level>> = {};
+  const cleared: ModuleKey[] = [];
+  if (!modules) return { set, cleared };
+
+  for (const key of MODULES) {
+    if (!(key in modules)) continue;
+    const value = modules[key];
+    if (value === null) cleared.push(key);
+    else if (value) set[key] = value;
+  }
+  return { set, cleared };
+}
+
+/** `{ products: "view" }` → `{ "modules.products": "view" }`, for $set. */
+function dotted(set: Partial<Record<ModuleKey, Level>>): Record<string, Level> {
+  return Object.fromEntries(
+    Object.entries(set).map(([key, value]) => [`modules.${key}`, value]),
+  );
+}
 
 export const dynamic = "force-dynamic";
 
@@ -86,10 +123,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const { set } = moduleUpdate(parsed.data.modules);
     const created = await User.create({
       email,
       name: parsed.data.name,
       role: parsed.data.role,
+      modules: set,
       addedBy: me.email,
     });
 
@@ -121,7 +160,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const { id, role, status } = parsed.data;
+    const { id, role, status, modules } = parsed.data;
     if (!isValidObjectId(id)) {
       return NextResponse.json({ error: "Unknown person" }, { status: 400 });
     }
@@ -173,14 +212,28 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const update: Record<string, unknown> = {};
+    const { set, cleared } = moduleUpdate(modules);
+    const update: Record<string, unknown> = dotted(set);
     if (role) update.role = role;
     if (status) update.status = status;
-    if (Object.keys(update).length === 0) {
+
+    if (Object.keys(update).length === 0 && cleared.length === 0) {
       return NextResponse.json({ error: "Nothing to change" }, { status: 400 });
     }
 
-    await User.updateOne({ _id: id }, { $set: update });
+    await User.updateOne(
+      { _id: id },
+      {
+        ...(Object.keys(update).length ? { $set: update } : {}),
+        ...(cleared.length
+          ? {
+              $unset: Object.fromEntries(
+                cleared.map((key) => [`modules.${key}`, ""]),
+              ),
+            }
+          : {}),
+      },
+    );
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[users] update failed", error);

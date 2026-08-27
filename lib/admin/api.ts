@@ -53,7 +53,7 @@ export async function requirePermission(
     return NextResponse.json({ error: "Not authorised" }, { status: 403 });
   }
 
-  if (!can(user.role, permission)) {
+  if (!can(user, permission)) {
     /*
       Named in the response on purpose. This is not an attacker probing for
       what exists — they are signed in and we know exactly who they are. Being

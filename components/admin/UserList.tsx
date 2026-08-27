@@ -4,10 +4,18 @@ import { useCallback, useEffect, useState } from "react";
 import { adminFetch } from "@/lib/admin/fetch";
 import { formatShortDate } from "@/lib/format";
 import {
+  LEVELS,
+  LEVEL_LABELS,
+  MODULES,
+  MODULE_LABELS,
   ROLES,
   ROLE_LABELS,
   canAssignRole,
+  defaultLevelFor,
+  levelIn,
   rankOf,
+  type Level,
+  type ModuleKey,
   type Role,
 } from "@/lib/auth/permissions";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -29,6 +37,7 @@ interface Person {
   email: string;
   name: string;
   role: Role;
+  modules: Partial<Record<ModuleKey, Level>>;
   status: "active" | "suspended";
   addedBy: string;
   lastSignInAt: string | null;
@@ -75,6 +84,61 @@ const ROLE_OPTIONS = ROLES.map((r) => ({
   value: r,
   label: ROLE_LABELS[r].label,
 }));
+
+/**
+ * Per-module access for one person.
+ *
+ * "Follow role" is a real, distinct option rather than a synonym for whatever
+ * the role happens to grant today — pick it and changing the role later moves
+ * this module too. Pick an explicit level and it stays put. That distinction
+ * is the whole reason the overrides are stored sparsely.
+ */
+function ModuleAccess({
+  person,
+  disabled,
+  onChange,
+}: {
+  person: Person;
+  disabled: boolean;
+  onChange: (module: ModuleKey, level: Level | null) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {MODULES.map((module) => {
+        const override = person.modules?.[module];
+        const effective = levelIn(person, module);
+        return (
+          <label key={module} className="block">
+            <span className="block text-[10px] font-semibold uppercase tracking-wide text-olive">
+              {MODULE_LABELS[module]}
+            </span>
+            <select
+              value={override ?? ""}
+              disabled={disabled}
+              aria-label={`${MODULE_LABELS[module]} access for ${person.email}`}
+              title={LEVEL_LABELS[effective].description}
+              onChange={(e) =>
+                onChange(module, e.target.value === "" ? null : (e.target.value as Level))
+              }
+              className={`admin-input mt-0.5 h-9 w-32 appearance-none py-0 text-xs disabled:opacity-50 ${
+                effective === "none" ? "text-russet-dark/45" : ""
+              }`}
+            >
+              <option value="">
+                Follow role ({LEVEL_LABELS[defaultLevelFor(person.role)].label})
+              </option>
+              {LEVELS.map((level) => (
+                <option key={level} value={level}>
+                  {LEVEL_LABELS[level].label}
+                </option>
+              ))}
+            </select>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
 
 export function UserList({
   currentEmail,
@@ -277,10 +341,15 @@ export function UserList({
                       </>
                     }
                     meta={[
+                      MODULES.filter((m) => levelIn(person, m) !== "none")
+                        .map(
+                          (m) =>
+                            `${MODULE_LABELS[m]} ${LEVEL_LABELS[levelIn(person, m)].label.toLowerCase()}`,
+                        )
+                        .join(", ") || "No modules",
                       person.lastSignInAt
                         ? `Last signed in ${formatShortDate(person.lastSignInAt)}`
                         : "Never signed in",
-                      person.addedBy ? `added by ${person.addedBy}` : "",
                     ]
                       .filter(Boolean)
                       .join(" · ")}
@@ -294,11 +363,12 @@ export function UserList({
 
             <div className="admin-card mt-6 hidden overflow-hidden lg:block">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[820px] text-left text-sm">
+                <table className="w-full min-w-[1080px] text-left text-sm">
                   <thead className="admin-section-head text-[11px] uppercase tracking-[0.12em] text-olive">
                     <tr>
                       <th className="px-5 py-3 font-semibold">Person</th>
                       <th className="px-5 py-3 font-semibold">Role</th>
+                      <th className="px-5 py-3 font-semibold">Module access</th>
                       <th className="px-5 py-3 font-semibold">Last signed in</th>
                       <th className="px-5 py-3 text-right font-semibold">Access</th>
                     </tr>
@@ -364,6 +434,30 @@ export function UserList({
                                   </option>
                                 ))}
                               </select>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            {locked ? (
+                              <span className="text-xs text-russet-dark/45">
+                                {MODULES.map(
+                                  (m) =>
+                                    `${MODULE_LABELS[m]}: ${LEVEL_LABELS[levelIn(person, m)].label}`,
+                                ).join(" · ")}
+                              </span>
+                            ) : (
+                              <ModuleAccess
+                                person={person}
+                                disabled={isBusy}
+                                onChange={(module, level) =>
+                                  patch(
+                                    person,
+                                    { modules: { [module]: level } },
+                                    level === null
+                                      ? `${MODULE_LABELS[module]} follows ${person.email}'s role again`
+                                      : `${person.email}: ${MODULE_LABELS[module]} set to ${LEVEL_LABELS[level].label}`,
+                                  )
+                                }
+                              />
                             )}
                           </td>
                           <td className="px-5 py-3.5 text-xs text-russet-dark/65">

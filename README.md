@@ -53,9 +53,17 @@ Google sign-in only. Authentication costs the cluster nothing — no session sto
 | **Editor** | Writes and edits content, uploads images. Cannot delete or publish |
 | **Viewer** | Reads everything in the panel. Changes nothing |
 
-Roles nest, so each is the one above it plus more. Suspending is the usual way to cut someone off — their record stays, so the "last edited by" lines on old content still resolve to a person.
+Roles nest, so each is the one above it plus more.
 
-Access is never tested by role name. Every decision resolves to a permission string (`products:write`, `posts:publish`, `users:manage`, …) checked against one map in [`lib/auth/permissions.ts`](lib/auth/permissions.ts). Adding a module later means adding its permissions there and naming them in the routes — not revisiting every route to ask which roles are now allowed.
+**A role alone is too coarse for real jobs**, so access is also settable **per module**. Each of Products, Testimonials and Blog can be set to **No access / View / Edit / Full** for one person, overriding what their role would give. An accountant becomes a Viewer with Testimonials and Blog set to *No access* — they see the products list for SKU, HSN and GST and nothing else, and the Blog link is not in their nav at all. A copywriter becomes a Viewer with Blog set to *Edit* and everything else *No access*.
+
+A module left on **Follow role** is not a copy of what the role grants today — it genuinely follows, so changing someone's role later moves that module with it. Only explicitly-set modules stay put. That is why the overrides are stored sparsely rather than as a full grid.
+
+Suspending is the usual way to cut someone off — their record stays, so the "last edited by" lines on old content still resolve to a person.
+
+Access is never tested by role name. Every decision resolves to a permission string (`products:write`, `posts:publish`, `users:manage`, …) resolved against role **and** module overrides by `can()` in [`lib/auth/permissions.ts`](lib/auth/permissions.ts). Adding a module later means adding it to `MODULES`, adding its permissions, and naming them in the routes — not revisiting every route to ask which roles are now allowed.
+
+Enforced at three depths, because hiding a link is a courtesy and not a control: the nav omits modules you cannot read, `requirePageAccess()` redirects if you type the URL anyway, and `requirePermission()` refuses the API call underneath. `media:upload` is granted to anyone who can edit *something*, so a blog-only editor can still add a cover image and a viewer cannot obtain a signed upload URL.
 
 The first owner is created from a terminal, because the page that grants access sits behind the login it controls:
 
@@ -63,6 +71,8 @@ The first owner is created from a terminal, because the page that grants access 
 npm run users -- add you@gmail.com owner "Your Name"
 npm run users -- list
 npm run users -- role someone@gmail.com editor
+npm run users -- module accounts@iksarva.com posts none     # hide the blog
+npm run users -- module accounts@iksarva.com posts follow   # back to the role
 npm run users -- suspend someone@gmail.com
 npm run users -- remove someone@gmail.com
 npm run users -- migrate     # one-off, imports an old `directors` collection

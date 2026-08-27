@@ -1,5 +1,5 @@
 import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
-import { ROLES } from "@/lib/auth/permissions";
+import { LEVELS, ROLES } from "@/lib/auth/permissions";
 
 /**
  * Someone allowed into the admin panel.
@@ -42,6 +42,23 @@ const userSchema = new Schema(
       enum: ["active", "suspended"],
       default: "active",
       required: true,
+    },
+    /*
+      Per-module overrides. A module left unset follows the role, which is why
+      these have no defaults — "unset" and "explicitly set to the same thing
+      the role gives" must stay distinguishable, or changing someone's role
+      would silently fail to move the modules they never customised.
+    */
+    modules: {
+      type: new Schema(
+        {
+          products: { type: String, enum: LEVELS },
+          testimonials: { type: String, enum: LEVELS },
+          posts: { type: String, enum: LEVELS },
+        },
+        { _id: false },
+      ),
+      default: () => ({}),
     },
     /** Email of whoever granted this access. Set server-side from the session. */
     addedBy: { type: String, trim: true, default: "" },

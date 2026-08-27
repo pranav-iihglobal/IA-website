@@ -33,8 +33,9 @@ export default async function DashboardLayout({
     email: me.email,
     image: session?.user?.image ?? undefined,
     // Live from the database, so the nav can never offer a module the API
-    // would refuse.
-    role: me.role,
+    // would refuse — including per-module overrides, which is how an
+    // accountant sees Products and nothing else.
+    access: { role: me.role, modules: me.modules },
   };
 
   return (
