@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
-import { findActiveUser } from "@/lib/auth/users";
+import { currentActiveUser } from "@/lib/auth/current-user";
 import { can } from "@/lib/auth/permissions";
 import { UserList } from "@/components/admin/UserList";
 
@@ -9,10 +8,9 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "People" };
 
 export default async function UsersPage() {
-  const session = await auth();
   // Read live rather than from the session: a role changed a moment ago must
   // be the one this page enforces, and the session cannot know about it.
-  const me = await findActiveUser(session?.user?.email);
+  const me = await currentActiveUser();
   if (!me) redirect("/admin/restricted");
 
   // Admins may look; only owners may change anything. The list enforces the

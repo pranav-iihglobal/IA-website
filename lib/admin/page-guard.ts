@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
-import { findActiveUser, type ActiveUser } from "@/lib/auth/users";
+import { currentActiveUser } from "@/lib/auth/current-user";
+import type { ActiveUser } from "@/lib/auth/users";
 import { can, type Permission } from "@/lib/auth/permissions";
 
 /**
@@ -22,10 +22,10 @@ import { can, type Permission } from "@/lib/auth/permissions";
 export async function requirePageAccess(
   permission: Permission,
 ): Promise<ActiveUser> {
-  const session = await auth();
   // Read live rather than from the session: access changed a moment ago must
   // be the access this page enforces, and the token cannot know about it.
-  const me = await findActiveUser(session?.user?.email);
+  // Deduped per request, so the layout's identical lookup is not repeated.
+  const me = await currentActiveUser();
   if (!me) redirect("/admin/restricted");
   if (!can(me, permission)) redirect("/admin");
   return me;

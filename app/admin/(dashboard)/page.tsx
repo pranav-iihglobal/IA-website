@@ -4,8 +4,7 @@ import { connectToDatabase, isDatabaseConfigured } from "@/lib/db/connect";
 import { Product } from "@/lib/db/models/Product";
 import { Testimonial } from "@/lib/db/models/Testimonial";
 import { Post } from "@/lib/db/models/Post";
-import { auth } from "@/auth";
-import { findActiveUser } from "@/lib/auth/users";
+import { currentActiveUser } from "@/lib/auth/current-user";
 import { can } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
@@ -141,8 +140,7 @@ export default async function AdminDashboardPage() {
     tile is both a link and a count — showing "Blog posts 3" to someone with
     no blog access tells them something and then refuses to elaborate.
   */
-  const session = await auth();
-  const me = await findActiveUser(session?.user?.email);
+  const me = await currentActiveUser();
   const show = {
     products: can(me, "products:read"),
     testimonials: can(me, "testimonials:read"),

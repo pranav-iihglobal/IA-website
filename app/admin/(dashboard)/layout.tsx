@@ -3,8 +3,10 @@ import { ToastProvider } from "@/components/admin/Toast";
 import { NavProgress } from "@/components/NavProgress";
 import { RouteTransition } from "@/components/RouteTransition";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
-import { findActiveUser } from "@/lib/auth/users";
+import {
+  currentActiveUser,
+  currentSession,
+} from "@/lib/auth/current-user";
 
 /**
  * Authenticated admin area.
@@ -17,16 +19,18 @@ import { findActiveUser } from "@/lib/auth/users";
 export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const session = await auth();
-
   /*
     The authoritative check. The proxy runs on the edge and only knows that
     SOME valid session exists; whether this person still has access, and as
     what, is a database question and it is asked here on every single page
     load. Suspend or demote someone and their very next click reflects it.
   */
-  const me = await findActiveUser(session?.user?.email);
+  const me = await currentActiveUser();
   if (!me) redirect("/admin/restricted");
+
+  // Same decode currentActiveUser already did — the avatar lives on the
+  // token, not in the User document.
+  const session = await currentSession();
 
   const user = {
     name: me.name || session?.user?.name || undefined,

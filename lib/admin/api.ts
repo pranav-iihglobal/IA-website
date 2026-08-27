@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
-import { findActiveUser, type ActiveUser } from "@/lib/auth/users";
+import { currentActiveUser } from "@/lib/auth/current-user";
+import type { ActiveUser } from "@/lib/auth/users";
 import { can, ROLE_LABELS, type Permission } from "@/lib/auth/permissions";
 
 /**
@@ -46,7 +47,7 @@ export async function requirePermission(
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const user = await findActiveUser(email);
+  const user = await currentActiveUser();
   if (!user) {
     // Deliberately does not echo the address back or say why.
     console.warn("[admin api] rejected a signed-in account with no active user row");
@@ -79,8 +80,9 @@ export async function requirePermission(
  */
 export async function currentUser(): Promise<ActiveUser | null> {
   try {
-    const session = await auth();
-    return await findActiveUser(session?.user?.email);
+    // Deduped with requirePermission's lookup: a route that guards and then
+    // asks who is calling costs one database round trip, not two.
+    return await currentActiveUser();
   } catch {
     return null;
   }
