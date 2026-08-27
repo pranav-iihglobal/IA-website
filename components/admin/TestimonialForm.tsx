@@ -273,9 +273,10 @@ export function TestimonialForm({
                   ? "That does not look like a valid link for the chosen platform."
                   : undefined)
               }
-              hint={
-                values.video.url && videoValid ? "✓ Link looks good." : undefined
+              success={
+                values.video.url && videoValid ? "Link looks good." : undefined
               }
+              hint="Paste the full link from the app's share button."
             />
           </div>
         </Section>

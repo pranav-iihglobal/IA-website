@@ -1,10 +1,171 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { Bi } from "@/lib/content";
 
 /** Shared admin form primitives — see the .admin-* classes in globals.css. */
+
+/**
+ * Explanatory text for a field, on an icon beside its label.
+ *
+ * Hints used to sit under the control as a paragraph. In a single-column form
+ * that is fine; in a row — the People form is label, label, select, button —
+ * three lines of guidance under one field drags the whole row out of
+ * alignment and shoves the submit button sideways. An icon is a fixed size
+ * whatever the text says.
+ *
+ * Three details that make this a real tooltip rather than a `title`
+ * attribute:
+ *
+ *  - It opens on hover, on keyboard focus, and on tap. `title` does only the
+ *    first, after a delay nobody waits through, and never on touch.
+ *  - The text is ALSO rendered in a visually hidden span that the input
+ *    points at with aria-describedby, so a screen reader reads it when the
+ *    field is focused whether or not the tooltip is open. The visible bubble
+ *    is decorative and marked aria-hidden.
+ *  - It renders through a portal at fixed coordinates. The form sections are
+ *    `admin-card overflow-hidden`, which would otherwise clip the bubble on
+ *    the last field of a card.
+ */
+function InfoTip({
+  text,
+  label,
+  describedById,
+}: {
+  text: string;
+  /** The field name, so the icon announces what it explains. */
+  label: string;
+  describedById: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [spot, setSpot] = useState<{ top: number; left: number } | null>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+
+  const place = useCallback(() => {
+    const button = trigger.current;
+    if (!button) return;
+    const box = button.getBoundingClientRect();
+    const WIDTH = 240;
+    // Clamp so a field near the right edge does not push the bubble off-screen.
+    const left = Math.min(
+      Math.max(8, box.left + box.width / 2 - WIDTH / 2),
+      window.innerWidth - WIDTH - 8,
+    );
+    setSpot({ top: box.bottom + 8, left });
+  }, []);
+
+  const show = useCallback(() => {
+    place();
+    setOpen(true);
+  }, [place]);
+
+  useEffect(() => {
+    if (!open) return;
+    // Repositioning on scroll would be smoother, but closing is honest: the
+    // thing being explained has moved, and the reader can reopen it.
+    const close = () => setOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    // On touch there is no "pointer left the icon", so tapping anywhere else
+    // is what dismisses it.
+    const onPointerDown = (e: PointerEvent) => {
+      if (!trigger.current?.contains(e.target as Node)) setOpen(false);
+    };
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={trigger}
+        type="button"
+        /*
+          Focusable, so a sighted keyboard user can reveal the bubble. Its
+          accessible name says what it explains rather than repeating the
+          hint — a screen reader already gets the text from the input's
+          aria-describedby, and reading the same sentence twice is worse than
+          not offering it here at all.
+        */
+        aria-label={`About ${label}`}
+        /*
+          Hover is guarded to non-touch pointers. A tap fires pointerenter AND
+          focus AND click in sequence, so anything that toggles would open on
+          the first and close on the last — the bubble never appears on a
+          phone. Every opener here is idempotent for that reason: opening
+          twice is harmless, and closing is left to blur, Escape, or a tap
+          somewhere else.
+        */
+        onPointerEnter={(e) => {
+          if (e.pointerType !== "touch") show();
+        }}
+        onPointerLeave={(e) => {
+          if (e.pointerType !== "touch") setOpen(false);
+        }}
+        onFocus={show}
+        onBlur={() => setOpen(false)}
+        onClick={(e) => {
+          // Without this, a click inside a <label> also activates the field.
+          e.preventDefault();
+          e.stopPropagation();
+          show();
+        }}
+        /*
+          after:-inset-3.5 grows the tap target from the icon's 16px to 44px
+          without moving anything around it — the same minimum every other
+          control in this panel holds to.
+        */
+        className="admin-infotip relative ml-1 inline-flex h-4 w-4 shrink-0 translate-y-[1px] items-center justify-center rounded-full text-camel transition-colors after:absolute after:-inset-3.5 after:content-[''] hover:text-olive"
+      >
+        <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor">
+          <path
+            fillRule="evenodd"
+            d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1ZM7.1 5.1a.9.9 0 1 1 1.8 0 .9.9 0 0 1-1.8 0ZM8 6.9a.8.8 0 0 1 .8.8v3.4a.8.8 0 0 1-1.6 0V7.7a.8.8 0 0 1 .8-.8Z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </button>
+
+      {/* Always present, never shown — this is what screen readers read. */}
+      <span id={describedById} className="sr-only">
+        {text}
+      </span>
+
+      {open &&
+        spot &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <span
+            role="presentation"
+            aria-hidden="true"
+            style={{ top: spot.top, left: spot.left, width: 240 }}
+            className="pointer-events-none fixed z-50 rounded-xl bg-russet px-3 py-2 text-xs leading-relaxed text-cornsilk-light shadow-lg"
+          >
+            {text}
+          </span>,
+          document.body,
+        )}
+    </>
+  );
+}
 
 export function Section({
   title,
@@ -50,17 +211,66 @@ export function FieldError({ message }: { message?: string }) {
   );
 }
 
+/**
+ * Live confirmation under a field — the positive twin of FieldError.
+ *
+ * Deliberately NOT a hint. A hint explains what a field is for and can wait
+ * behind an icon; this reports what just happened to what you typed, and is
+ * useless if it is not on screen the moment it becomes true.
+ */
+export function FieldSuccess({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-olive">
+      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" fill="currentColor" aria-hidden="true">
+        <path
+          fillRule="evenodd"
+          d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm3.3-8.8a.9.9 0 0 0-1.3-1.2L7.2 8.1 6 6.9a.9.9 0 0 0-1.3 1.2l1.9 1.9a.9.9 0 0 0 1.3 0l3.4-3.8Z"
+          clipRule="evenodd"
+        />
+      </svg>
+      {message}
+    </p>
+  );
+}
+
 function Label({
   children,
   required,
+  hint,
+  hintId,
+  htmlFor,
 }: {
-  children: ReactNode;
+  /** Plain text — it doubles as the info icon's accessible name. */
+  children: string;
   required?: boolean;
+  hint?: string;
+  hintId?: string;
+  /** Omit for labels that are not for a single control (BiField, groups). */
+  htmlFor?: string;
 }) {
-  return (
-    <span className="admin-label text-sm font-semibold text-russet">
+  const labelText = children;
+
+  const content = (
+    <>
       {children}
       {required && <span className="ml-0.5 text-alloy">*</span>}
+      {hint && hintId && (
+        <InfoTip text={hint} label={labelText} describedById={hintId} />
+      )}
+    </>
+  );
+
+  return htmlFor ? (
+    <label
+      htmlFor={htmlFor}
+      className="admin-label inline-flex items-center text-sm font-semibold text-russet"
+    >
+      {content}
+    </label>
+  ) : (
+    <span className="admin-label inline-flex items-center text-sm font-semibold text-russet">
+      {content}
     </span>
   );
 }
@@ -70,6 +280,7 @@ export function TextField({
   value,
   onChange,
   error,
+  success,
   hint,
   type = "text",
   placeholder,
@@ -80,6 +291,8 @@ export function TextField({
   value: string | number;
   onChange: (value: string) => void;
   error?: string;
+  /** Live confirmation, shown inline. For explanation use `hint`. */
+  success?: string;
   hint?: string;
   type?: string;
   placeholder?: string;
@@ -87,9 +300,19 @@ export function TextField({
   /** Static text shown inside the field, e.g. a currency symbol. */
   prefix?: string;
 }) {
+  const id = useId();
+  const hintId = `${id}-hint`;
+
   return (
-    <label className="admin-field block">
-      <Label required={required}>{label}</Label>
+    /*
+      A div rather than a wrapping <label>: the hint icon is a button, and a
+      button inside a label makes every click on it also activate the label.
+      htmlFor keeps the association explicit instead.
+    */
+    <div className="admin-field">
+      <Label required={required} hint={hint} hintId={hintId} htmlFor={id}>
+        {label}
+      </Label>
       <div className="relative mt-1.5">
         {prefix && (
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-russet-dark/50">
@@ -97,19 +320,22 @@ export function TextField({
           </span>
         )}
         <input
+          id={id}
           type={type}
           value={value}
           placeholder={placeholder}
           aria-invalid={error ? true : undefined}
+          aria-describedby={hint ? hintId : undefined}
           onChange={(e) => onChange(e.target.value)}
           className={`admin-input ${prefix ? "pl-7" : ""}`}
         />
       </div>
-      {hint && !error && (
-        <span className="mt-1.5 block text-xs text-russet-dark/55">{hint}</span>
-      )}
+      {/* Errors and confirmations stay inline and visible. Something you must
+          fix, or proof that what you typed worked, is not what an icon is
+          for. */}
       <FieldError message={error} />
-    </label>
+      {!error && <FieldSuccess message={success} />}
+    </div>
   );
 }
 
@@ -128,13 +354,20 @@ export function SelectField({
   error?: string;
   hint?: string;
 }) {
+  const id = useId();
+  const hintId = `${id}-hint`;
+
   return (
-    <label className="admin-field block">
-      <Label>{label}</Label>
+    <div className="admin-field">
+      <Label hint={hint} hintId={hintId} htmlFor={id}>
+        {label}
+      </Label>
       <div className="relative mt-1.5">
         <select
+          id={id}
           value={value}
           aria-invalid={error ? true : undefined}
+          aria-describedby={hint ? hintId : undefined}
           onChange={(e) => onChange(e.target.value)}
           className="admin-input appearance-none pr-9"
         >
@@ -153,11 +386,8 @@ export function SelectField({
           <path d="M5.5 7.5 10 12l4.5-4.5H5.5Z" />
         </svg>
       </div>
-      {hint && !error && (
-        <span className="mt-1.5 block text-xs text-russet-dark/55">{hint}</span>
-      )}
       <FieldError message={error} />
-    </label>
+    </div>
   );
 }
 
@@ -173,6 +403,8 @@ export function Toggle({
   onChange: (checked: boolean) => void;
   hint?: string;
 }) {
+  const hintId = `${useId()}-hint`;
+
   return (
     <label className="flex cursor-pointer items-start gap-3">
       <button
@@ -180,6 +412,7 @@ export function Toggle({
         role="switch"
         aria-checked={checked}
         aria-label={label}
+        aria-describedby={hint ? hintId : undefined}
         onClick={() => onChange(!checked)}
         className={`mt-0.5 flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive/40 ${
           checked ? "bg-olive" : "bg-camel-light/60"
@@ -191,11 +424,9 @@ export function Toggle({
           }`}
         />
       </button>
-      <span onClick={() => onChange(!checked)}>
+      <span onClick={() => onChange(!checked)} className="inline-flex items-center">
         <span className="text-sm font-semibold text-russet">{label}</span>
-        {hint && (
-          <span className="block text-xs text-russet-dark/55">{hint}</span>
-        )}
+        {hint && <InfoTip text={hint} label={label} describedById={hintId} />}
       </span>
     </label>
   );
@@ -225,11 +456,14 @@ export function BiField({
   hint?: string;
 }) {
   const guFilled = Boolean(value.gu?.trim());
+  const hintId = `${useId()}-hint`;
 
   return (
     <div className="admin-field">
       <div className="flex items-center justify-between gap-3">
-        <Label required={required}>{label}</Label>
+        <Label required={required} hint={hint} hintId={hintId}>
+          {label}
+        </Label>
         <span
           title={
             guFilled
@@ -248,9 +482,6 @@ export function BiField({
           {guFilled ? "ગુજરાતી" : "EN fallback"}
         </span>
       </div>
-      {hint && (
-        <p className="mt-1 text-xs text-russet-dark/55">{hint}</p>
-      )}
       <div className="mt-1.5 grid gap-3 sm:grid-cols-2">
         {(["en", "gu"] as const).map((code) => {
           const isEn = code === "en";
@@ -365,11 +596,15 @@ export function FieldGroup({
   hint?: string;
   children: ReactNode;
 }) {
+  const hintId = `${useId()}-hint`;
+
   return (
     <div>
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-sm font-semibold text-russet">{label}</span>
-        {hint && <span className="text-xs text-russet-dark/55">{hint}</span>}
+        <span className="inline-flex items-center text-sm font-semibold text-russet">
+          {label}
+          {hint && <InfoTip text={hint} label={label} describedById={hintId} />}
+        </span>
       </div>
       <div className="mt-2">{children}</div>
     </div>

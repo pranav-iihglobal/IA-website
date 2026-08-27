@@ -575,6 +575,20 @@ select.admin-input {
   transition: color 0.18s ease;
 }
 
+/*
+  The info icon beside a field label. Its 44px tap target is an ::after
+  overlay, so the visible ring has to be drawn on the icon itself — outline
+  would trace the invisible box and float far from what you are looking at.
+*/
+.admin-infotip:focus {
+  outline: none;
+}
+.admin-infotip:focus-visible {
+  color: var(--color-olive);
+  box-shadow: 0 0 0 2px var(--color-cornsilk-light), 0 0 0 4px var(--color-olive);
+  border-radius: 9999px;
+}
+
 /* --- Buttons ------------------------------------------------------------- */
 .admin-btn {
   position: relative;
