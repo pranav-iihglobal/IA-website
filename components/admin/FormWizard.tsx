@@ -406,14 +406,26 @@ export function FormWizard({
 
               <div className="space-y-6">{step.content}</div>
 
-              {/* Step navigation + save */}
-              <div className="sticky bottom-0 z-10 mt-6 flex flex-wrap items-center gap-3 rounded-t-2xl border-t border-camel-light/50 bg-[var(--admin-surface)]/92 px-4 py-3.5 backdrop-blur">
+              {/*
+                Step navigation and save.
+
+                On a phone this is one row, not four wrapped controls. Back,
+                Next and Save at 390px wrapped onto two lines and the bar grew
+                to ~130px of permanently sticky screen, sitting on top of the
+                fields you were trying to fill in. Cancel is dropped from the
+                bar on mobile — the "‹ Products" link at the top of the page
+                already leaves, and a destructive-ish action does not deserve
+                a third of a phone's toolbar.
+              */}
+              <div className="sticky bottom-0 z-10 mt-6 flex items-center gap-2 rounded-t-2xl border-t border-camel-light/50 bg-[var(--admin-surface)]/92 px-3 py-3 backdrop-blur sm:flex-wrap sm:gap-3 sm:px-4 sm:py-3.5">
                 <Button
                   variant="secondary"
                   disabled={safeCurrent === 0}
                   onClick={() => goTo(safeCurrent - 1)}
+                  aria-label="Previous step"
                 >
-                  ← Back
+                  <span aria-hidden="true">←</span>
+                  <span className="hidden sm:inline">Back</span>
                 </Button>
 
                 {safeCurrent < total - 1 ? (
@@ -422,9 +434,9 @@ export function FormWizard({
                     onClick={() => goTo(safeCurrent + 1)}
                   >
                     {/*
-                    One flex item, not two — Button gaps its children, so a bare
-                    "Next" beside the span renders as "Next : Media".
-                  */}
+                      One flex item, not two — Button gaps its children, so a
+                      bare "Next" beside the span renders as "Next : Media".
+                    */}
                     <span>
                       Next
                       {/* The step name is useful but too long on a phone. */}
@@ -436,7 +448,7 @@ export function FormWizard({
                   </Button>
                 ) : null}
 
-                <div className="ml-auto flex items-center gap-3">
+                <div className="ml-auto flex min-w-0 items-center gap-3">
                   <span className="hidden items-center gap-1.5 text-xs font-medium sm:flex">
                     {dirty ? (
                       <>
@@ -452,12 +464,28 @@ export function FormWizard({
                       </>
                     )}
                   </span>
-                  <Button variant="ghost" onClick={onCancel} disabled={saving}>
+                  <Button
+                    variant="ghost"
+                    onClick={onCancel}
+                    disabled={saving}
+                    className="hidden sm:inline-flex"
+                  >
                     Cancel
                   </Button>
                   <Button type="submit" disabled={saving}>
                     {saving && <Spinner />}
-                    {saving ? "Saving…" : submitLabel}
+                    {/*
+                      "Create product" is 149px. With Back and Next beside it
+                      that is 326px of controls in a 280px bar at 320px wide —
+                      the narrowest phone still in real use. The short label
+                      is what makes one row possible there.
+                    */}
+                    <span className="hidden truncate sm:inline">
+                      {saving ? "Saving…" : submitLabel}
+                    </span>
+                    <span className="sm:hidden">
+                      {saving ? "Saving…" : "Save"}
+                    </span>
                   </Button>
                 </div>
               </div>

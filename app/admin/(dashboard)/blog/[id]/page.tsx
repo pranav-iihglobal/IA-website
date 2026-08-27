@@ -9,7 +9,7 @@ import {
   type PostFormValues,
 } from "@/components/admin/PostForm";
 import { getTestimonialOptions } from "@/lib/admin/products-options";
-import { BackLink } from "@/components/admin/ui";
+import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 
 export const dynamic = "force-dynamic";
@@ -66,10 +66,11 @@ export default async function EditPostPage({
 
   return (
     <>
-      <BackLink href="/admin/blog" label="Blog" />
-      <h1 className="font-display text-3xl font-bold text-russet">
-        Edit {(doc as LeanDoc).title?.en}
-      </h1>
+      <FormPageHeader
+        backHref="/admin/blog"
+        backLabel="Blog"
+        title={<>Edit {(doc as LeanDoc).title?.en}</>}
+      />
       <div className="mt-8">
         <PostForm
           initial={toFormValues(doc)}

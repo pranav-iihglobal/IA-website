@@ -1,6 +1,6 @@
 import { EMPTY_POST, PostForm } from "@/components/admin/PostForm";
 import { getTestimonialOptions } from "@/lib/admin/products-options";
-import { BackLink } from "@/components/admin/ui";
+import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 
 export const dynamic = "force-dynamic";
@@ -12,8 +12,11 @@ export default async function NewPostPage() {
 
   return (
     <>
-      <BackLink href="/admin/blog" label="Blog" />
-      <h1 className="font-display text-3xl font-bold text-russet">New post</h1>
+      <FormPageHeader
+        backHref="/admin/blog"
+        backLabel="Blog"
+        title={<>New post</>}
+      />
       <div className="mt-8">
         <PostForm
           initial={EMPTY_POST}

@@ -534,6 +534,8 @@ export function Button({
   disabled,
   title,
   icon,
+  className = "",
+  "aria-label": ariaLabel,
 }: {
   children: ReactNode;
   onClick?: () => void;
@@ -542,6 +544,10 @@ export function Button({
   disabled?: boolean;
   title?: string;
   icon?: ReactNode;
+  /** Extra classes — used for responsive visibility, not for restyling. */
+  className?: string;
+  /** Needed when the visible label collapses to an icon on small screens. */
+  "aria-label"?: string;
 }) {
   const styles = {
     primary: "admin-btn-primary",
@@ -557,7 +563,8 @@ export function Button({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`admin-btn ${styles}`}
+      aria-label={ariaLabel}
+      className={`admin-btn ${styles} ${className}`}
     >
       {icon}
       {children}
@@ -821,6 +828,39 @@ export function FilterTabs({
  * or drops columns. A card has room for every field the table shows, stacked
  * in reading order, so nothing is hidden and nothing scrolls.
  */
+/**
+ * The header every admin form page shares.
+ *
+ * Six pages had the same three lines copied out, all sized for a desktop: a
+ * 3xl heading and a full-size paragraph pushed the first field ~380px down a
+ * 844px phone screen, so almost half of it was spent restating a page title
+ * you had just tapped to reach. The heading steps down on small screens and
+ * the gap below it tightens; from sm up it is exactly what it was.
+ */
+export function FormPageHeader({
+  backHref,
+  backLabel,
+  title,
+  description,
+}: {
+  backHref: string;
+  backLabel: string;
+  title: ReactNode;
+  description?: ReactNode;
+}) {
+  return (
+    <>
+      <BackLink href={backHref} label={backLabel} />
+      <h1 className="font-display text-xl font-bold leading-tight text-russet sm:text-3xl">
+        {title}
+      </h1>
+      {description && (
+        <p className="mt-1 text-sm text-olive-dark sm:text-base">{description}</p>
+      )}
+    </>
+  );
+}
+
 export function RecordCard({
   thumb,
   title,
@@ -850,7 +890,15 @@ export function RecordCard({
   removable?: boolean;
 }) {
   return (
-    <li className="admin-card-item group relative rounded-2xl border border-camel-light/60 bg-cornsilk-light p-4 shadow-[0_1px_2px_rgba(95,47,20,0.05)] transition-shadow focus-within:shadow-[0_4px_14px_-6px_rgba(95,47,20,0.28)]">
+    /*
+      min-w-0 is load-bearing. A grid item defaults to min-width:auto, so it
+      cannot shrink below its own min-content — and `truncate` sets
+      white-space:nowrap, which makes the min-content of the title and meta
+      lines the FULL untruncated string. The result was a card 414px wide
+      inside a 350px grid on a phone: every admin list scrolled sideways, and
+      truncation never kicked in because the box just grew instead.
+    */
+    <li className="admin-card-item group relative min-w-0 rounded-2xl border border-camel-light/60 bg-cornsilk-light p-4 shadow-[0_1px_2px_rgba(95,47,20,0.05)] transition-shadow focus-within:shadow-[0_4px_14px_-6px_rgba(95,47,20,0.28)]">
       <div className="flex items-start gap-3">
         {thumb}
         <div className="min-w-0 flex-1">
@@ -883,9 +931,15 @@ export function RecordCard({
         <div className="mt-3 flex flex-wrap items-center gap-1.5">{badges}</div>
       )}
 
-      <div className="mt-3 flex items-center justify-between gap-3 border-t border-camel-light/40 pt-3">
+      {/*
+        Stacked on a phone, side by side from sm up. "Last edited 20 Aug ·
+        someone@gmail.com" and a Delete button competing for 350px left the
+        meta line truncated to almost nothing — the date was visible and who
+        edited it never was.
+      */}
+      <div className="mt-3 flex flex-col gap-2 border-t border-camel-light/40 pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         {meta ? (
-          <p className="min-w-0 truncate text-[11px] text-russet-dark/50">
+          <p className="min-w-0 text-[11px] leading-relaxed text-russet-dark/50 sm:truncate">
             {meta}
           </p>
         ) : (
@@ -901,7 +955,7 @@ export function RecordCard({
           type="button"
           onClick={onDelete}
           aria-label={`Delete ${label}`}
-          className="admin-btn admin-btn-danger admin-tap relative z-10 shrink-0 px-4 text-xs"
+          className="admin-btn admin-btn-danger admin-tap relative z-10 shrink-0 self-end px-4 text-xs sm:self-auto"
         >
           <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
             <path d="M8 2h4a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-.4l-.7 9.1A2 2 0 0 1 12.9 17H7.1a2 2 0 0 1-2-1.9L4.4 6H4a1 1 0 0 1 0-2h3V3a1 1 0 0 1 1-1Zm1 2h2V4H9Zm-2.6 2 .7 8.9a.5.5 0 0 0 .5.4h5.8a.5.5 0 0 0 .5-.4l.7-8.9H6.4Z" />

@@ -62,7 +62,7 @@ function StatCard({
   return (
     <Link
       href={href}
-      className="admin-card admin-card-hover group flex flex-col p-6"
+      className="admin-card admin-card-hover group flex flex-col p-4 sm:p-6"
     >
       <div className="flex items-start justify-between">
         <span
@@ -83,7 +83,7 @@ function StatCard({
       <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-olive">
         {title}
       </p>
-      <p className="mt-1 font-display text-4xl font-bold leading-none text-russet">
+      <p className="mt-1 font-display text-3xl font-bold leading-none text-russet sm:text-4xl">
         {published}
       </p>
       <p className="mt-2 text-sm text-russet-dark/65">
@@ -174,9 +174,9 @@ export default async function AdminDashboardPage() {
 
   return (
     <>
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-bold text-russet">
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-display text-2xl font-bold text-russet sm:text-3xl">
             Dashboard
           </h1>
           <p className="mt-1 text-sm text-olive-dark">
@@ -184,11 +184,16 @@ export default async function AdminDashboardPage() {
           </p>
         </div>
         {counts && can(me, "products:write") && (
-          <Link href="/admin/products/new" className="admin-btn admin-btn-primary">
+          <Link
+            href="/admin/products/new"
+            className="admin-btn admin-btn-primary shrink-0"
+            aria-label="New product"
+          >
             <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
               <path d="M10 4a1 1 0 0 1 1 1v4h4a1 1 0 1 1 0 2h-4v4a1 1 0 1 1-2 0v-4H5a1 1 0 1 1 0-2h4V5a1 1 0 0 1 1-1Z" />
             </svg>
-            New product
+            <span className="hidden sm:inline">New product</span>
+            <span className="sm:hidden">New</span>
           </Link>
         )}
       </header>
@@ -221,7 +226,7 @@ export default async function AdminDashboardPage() {
         )}
 
         {counts && (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
             {show.products && <StatCard
               title="Products"
               href="/admin/products"

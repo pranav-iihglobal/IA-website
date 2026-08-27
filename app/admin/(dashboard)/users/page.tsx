@@ -22,7 +22,7 @@ export default async function UsersPage() {
   return (
     <>
       <header>
-        <h1 className="font-display text-3xl font-bold text-russet">People</h1>
+        <h1 className="font-display text-2xl font-bold text-russet sm:text-3xl">People</h1>
         <p className="mt-1 text-olive-dark">
           Everyone who can sign in to this panel, and what each of them may do.
           Changes take effect on their next request.

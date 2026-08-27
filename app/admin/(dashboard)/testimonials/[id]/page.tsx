@@ -9,7 +9,7 @@ import {
   type TestimonialFormValues,
 } from "@/components/admin/TestimonialForm";
 import { getProductOptions } from "@/lib/admin/products-options";
-import { BackLink } from "@/components/admin/ui";
+import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 
 export const dynamic = "force-dynamic";
@@ -63,10 +63,11 @@ export default async function EditTestimonialPage({
 
   return (
     <>
-      <BackLink href="/admin/testimonials" label="Testimonials" />
-      <h1 className="font-display text-3xl font-bold text-russet">
-        Edit {(doc as LeanDoc).farmerName?.en}
-      </h1>
+      <FormPageHeader
+        backHref="/admin/testimonials"
+        backLabel="Testimonials"
+        title={<>Edit {(doc as LeanDoc).farmerName?.en}</>}
+      />
       <div className="mt-8">
         <TestimonialForm
           initial={toFormValues(doc)}
