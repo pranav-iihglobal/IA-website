@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/auth";
-import { isAllowlistConfigured } from "@/lib/auth/allowlist";
+import { isOwnerConfigured } from "@/lib/auth/allowlist";
 import { SITE } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +53,7 @@ export default async function RestrictedPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
-  const { heading, body } = !isAllowlistConfigured()
+  const { heading, body } = !isOwnerConfigured()
     ? NOT_CONFIGURED
     : (MESSAGES[error ?? ""] ?? FALLBACK);
 

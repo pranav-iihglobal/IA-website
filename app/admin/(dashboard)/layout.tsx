@@ -4,7 +4,7 @@ import { NavProgress } from "@/components/NavProgress";
 import { RouteTransition } from "@/components/RouteTransition";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { isAllowedEmail } from "@/lib/auth/allowlist";
+import { isAuthorisedEmail } from "@/lib/auth/directors";
 
 /**
  * Authenticated admin area.
@@ -22,7 +22,9 @@ export default async function DashboardLayout({
     change or an edge-runtime failure must never be the only thing standing
     between a stranger's Google account and the panel.
   */
-  if (!isAllowedEmail(session?.user?.email)) redirect("/admin/restricted");
+  if (!(await isAuthorisedEmail(session?.user?.email))) {
+    redirect("/admin/restricted");
+  }
 
   const user = {
     name: session?.user?.name ?? undefined,

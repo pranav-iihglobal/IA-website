@@ -1,52 +1,57 @@
 /**
- * Who may sign in to the admin panel.
+ * Owners — the permanent, environment-level access list.
  *
- * ADMIN_ALLOWED_EMAILS is the authorization boundary. It is a comma-separated
- * list of addresses, and it is REQUIRED — with nothing configured, nobody
- * gets in.
+ * ADMIN_ALLOWED_EMAILS holds the addresses that can always reach the admin
+ * panel, whatever the database says. Everyone else is managed from inside the
+ * panel (see lib/auth/directors.ts and /admin/directors).
  *
- * This used to defer to Google's OAuth "test users" list and allow everyone
- * when unset. That was wrong twice over:
+ * Two reasons it still exists rather than moving everything into the database:
  *
- *  - Test users are a consent-screen development feature, not access control.
- *    The restriction only applies while the OAuth app is in "Testing" status;
- *    publishing it, or making it Internal in a Workspace, silently opens
- *    sign-in to every Google account on earth.
- *  - An authorization check must never fail open. "Not configured" has to
- *    mean "deny", or a missing environment variable becomes a public door.
+ *  - Lockout. The collection that grants access is itself edited through the
+ *    panel. An empty collection, a bad delete or an Atlas outage must never
+ *    be able to shut the last director out of the thing they would use to fix
+ *    it. Owners are the way back in.
+ *  - The edge. middleware.ts runs on the edge runtime, where Mongoose cannot
+ *    run at all. This check is pure string work, so it is the one that can
+ *    happen there.
  *
- * The list is checked on every request, not only at sign-in — see
- * middleware.ts and lib/admin/api.ts. Sessions are JWTs valid for 14 days, so
- * a sign-in-only check would let someone keep access for a fortnight after
- * being removed from the list.
+ * It fails closed. Nothing configured means no owners, and with an empty
+ * database that means nobody gets in — which is the correct default for an
+ * authorisation check, and the bug this file previously had.
+ *
+ * Note that Google's OAuth "test users" list is NOT an access control. It
+ * only restricts anything while the consent screen is in Testing status;
+ * publishing the app, or making it Internal in a Workspace, opens sign-in to
+ * every Google account with no visible change here.
  */
 
 /** Lowercased, trimmed — Google reports addresses in their canonical form. */
-function normalize(email: string): string {
+export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-/** The configured allowlist. Empty when the variable is unset or blank. */
-export function getAllowedEmails(): string[] {
+/** The configured owners. Empty when the variable is unset or blank. */
+export function getOwnerEmails(): string[] {
   const raw = process.env.ADMIN_ALLOWED_EMAILS;
   if (!raw) return [];
-  return raw.split(",").map(normalize).filter(Boolean);
+  return raw.split(",").map(normalizeEmail).filter(Boolean);
 }
 
-/** True when an allowlist has actually been configured. */
-export function isAllowlistConfigured(): boolean {
-  return getAllowedEmails().length > 0;
+/** True when at least one owner is configured. */
+export function isOwnerConfigured(): boolean {
+  return getOwnerEmails().length > 0;
 }
 
 /**
- * True when this address may use the admin panel.
+ * True when this address is a permanent owner.
  *
- * Fails closed: no allowlist, no access. A missing or malformed email is
- * always rejected — there is nothing to check it against.
+ * Edge-safe and synchronous. Being false does not mean "denied" — the address
+ * may still be a director in the database. Use isAuthorisedEmail() from
+ * lib/auth/directors.ts wherever a database is reachable.
  */
-export function isAllowedEmail(email: string | null | undefined): boolean {
+export function isOwnerEmail(email: string | null | undefined): boolean {
   if (!email) return false;
-  const allowed = getAllowedEmails();
-  if (allowed.length === 0) return false;
-  return allowed.includes(normalize(email));
+  const owners = getOwnerEmails();
+  if (owners.length === 0) return false;
+  return owners.includes(normalizeEmail(email));
 }

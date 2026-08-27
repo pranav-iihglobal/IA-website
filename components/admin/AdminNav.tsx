@@ -54,6 +54,13 @@ const LINKS: {
       <Icon path="M5 4h9l5 5v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm9 0v5h5M8 13h8M8 17h5" />
     ),
   },
+  {
+    href: "/admin/directors",
+    label: "Directors",
+    icon: (
+      <Icon path="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm13 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    ),
+  },
 ];
 
 export interface AdminUser {

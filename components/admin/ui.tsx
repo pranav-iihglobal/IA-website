@@ -595,6 +595,7 @@ export function RecordCard({
   editHref,
   onDelete,
   label,
+  removable = true,
 }: {
   /** Square-ish image or initial, already sized by the caller. */
   thumb: ReactNode;
@@ -605,10 +606,13 @@ export function RecordCard({
   badges?: ReactNode;
   /** Last-edited line, or anything else worth a footnote. */
   meta?: string;
-  editHref: string;
+  /** Omit for a record with nothing to open — the card is then not a link. */
+  editHref?: string;
   onDelete: () => void;
   /** Record name, for the delete button's accessible label. */
   label: string;
+  /** False hides Delete, for rows that must not be removed. */
+  removable?: boolean;
 }) {
   return (
     <li className="admin-card-item group relative rounded-2xl border border-camel-light/60 bg-cornsilk-light p-4 shadow-[0_1px_2px_rgba(95,47,20,0.05)] transition-shadow focus-within:shadow-[0_4px_14px_-6px_rgba(95,47,20,0.28)]">
@@ -621,12 +625,16 @@ export function RecordCard({
             `relative z-10` so it stays its own target.
           */}
           <h3 className="font-semibold leading-snug text-russet">
-            <Link
-              href={editHref}
-              className="after:absolute after:inset-0 after:rounded-2xl group-hover:text-alloy-dark"
-            >
-              {title}
-            </Link>
+            {editHref ? (
+              <Link
+                href={editHref}
+                className="after:absolute after:inset-0 after:rounded-2xl group-hover:text-alloy-dark"
+              >
+                {title}
+              </Link>
+            ) : (
+              title
+            )}
           </h3>
           {subtitle && (
             <p className="mt-0.5 truncate text-xs text-russet-dark/55">
@@ -653,6 +661,7 @@ export function RecordCard({
           Delete is the only button here — Edit is the card itself. It sits
           above the stretched link, and it is the one red thing on the card.
         */}
+        {removable && (
         <button
           type="button"
           onClick={onDelete}
@@ -664,6 +673,7 @@ export function RecordCard({
           </svg>
           Delete
         </button>
+        )}
       </div>
     </li>
   );

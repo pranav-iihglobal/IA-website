@@ -350,3 +350,22 @@ export function slugify(input: string): string {
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
 }
+
+/**
+ * A director added from /admin/directors.
+ *
+ * Email is the identity — it is what Google verifies and what `updatedBy`
+ * records — so it is the only required field. The name is a label for the
+ * list, nothing more.
+ */
+export const directorSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(1, "Email is required")
+    .email("Enter a valid email address"),
+  name: z.string().trim().max(80, "Keep the name under 80 characters").default(""),
+});
+
+export type DirectorInput = z.infer<typeof directorSchema>;

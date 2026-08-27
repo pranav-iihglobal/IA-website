@@ -41,22 +41,31 @@ Google sign-in only. Nothing about auth touches MongoDB, so it costs the free-ti
 
 **How a sign-in works.** `/admin/login` offers one button. Google authenticates the director and redirects back to `/api/auth/callback/google`. The app then issues its own session — a JWT in a cookie, signed with `AUTH_SECRET`, valid for 14 days. Google is only consulted at sign-in; every request afterwards is authenticated by that cookie, which is why `AUTH_SECRET` matters as much as the Google credentials do.
 
-**Who is allowed in.** One gate: **`ADMIN_ALLOWED_EMAILS`**, a comma-separated list of Google addresses. It **fails closed** — unset means nobody can sign in, including you — and it is enforced in four places, so no single change can quietly open the door:
+**Who is allowed in.** Two lists, and access is the union of them:
 
-| Where | What it stops |
-|---|---|
-| `signIn` callback (`auth.ts`) | Issuing a session to an address not on the list |
-| `middleware.ts` | Any request to `/admin/*` or `/api/admin/*` from a session not on the list |
-| `requireAdmin()` (`lib/admin/api.ts`) | Any API mutation, even if the matcher changed |
-| Dashboard layout | Server-rendering an admin page |
+1. **Owners** — `ADMIN_ALLOWED_EMAILS`, a comma-separated environment variable. Permanent, and checked without touching the database.
+2. **Directors** — managed from **/admin/directors** inside the panel itself. Add someone by their Google address and they can sign in immediately; remove them and they lose access on their next request.
 
-Because it is re-checked on every request rather than trusted from sign-in, removing someone takes effect immediately instead of when their 14-day session expires.
+Owners exist so the panel can never lock everyone out of itself. The collection that grants access is edited *through* the panel, so an empty collection, a mistaken delete or an Atlas outage would otherwise be unrecoverable. If MongoDB is down, owners still get in and can fix things.
 
-> ⚠️ **Google's "test users" list is not access control.** It only restricts anything while the OAuth consent screen is in **Testing** status. Publishing the app — or making it **Internal** in a Workspace — opens sign-in to every Google account, with no warning and no visible change here. `ADMIN_ALLOWED_EMAILS` is what actually protects the panel.
+The whole thing **fails closed**: with no owners configured and no directors in the database, nobody signs in — including you. That is the correct default for an authorisation check.
 
-**Adding a director:** append their address to `ADMIN_ALLOWED_EMAILS` (Vercel → Settings → Environment Variables) and redeploy.
+Enforced in four places, so no single change can quietly open the door:
 
-**Removing one:** delete their address and redeploy. They lose access on their next request. To be certain their current session is dead, rotate `AUTH_SECRET` as well — every session is a JWT signed with it, so changing it invalidates all of them at once.
+| Where | Runtime | Checks |
+|---|---|---|
+| `signIn` callback (`auth.ts`) | Node | Owners + database. Refuses to mint a session at all |
+| `middleware.ts` | Edge | Owners, or a token minted for an authorised account |
+| `requireAdmin()` (`lib/admin/api.ts`) | Node | Owners + database, on every API call |
+| Dashboard layout | Node | Owners + database, on every admin page |
+
+Middleware runs on the edge, where Mongoose cannot run, so it does the cheap half and the two Node layers behind it do the authoritative lookup. That is also why the config is split across `auth.config.ts` (edge-safe) and `auth.ts` (reaches the database) — importing `auth.ts` from middleware fails the build.
+
+> ⚠️ **Google's "test users" list is not access control.** It only restricts anything while the OAuth consent screen is in **Testing** status. Publishing the app — or making it **Internal** in a Workspace — opens sign-in to every Google account, with no warning and no visible change here. The two lists above are what actually protect the panel.
+
+**Guards on the directors page:** you cannot remove your own access (it would lock you out of the page that undoes it), and owners cannot be removed there at all — they live in the environment.
+
+**To cut off a session immediately** rather than on the person's next request, rotate `AUTH_SECRET`. Every session is a JWT signed with it, so changing it invalidates all of them at once.
 
 Run `npm run check-auth` to verify the rules.
 
@@ -114,7 +123,7 @@ The OAuth client already exists: Google Cloud project **IKSARVA Admin** → OAut
    - `http://localhost:3000/api/auth/callback/google`
    - `https://iksarva.com/api/auth/callback/google`
 3. Generate `AUTH_SECRET` with `openssl rand -base64 32`.
-4. **Set `ADMIN_ALLOWED_EMAILS`** to the director addresses, comma separated.
+4. **Set `ADMIN_ALLOWED_EMAILS`** to at least your own address. That makes you a permanent owner; everyone else can then be added from /admin/directors.
 
 #### Who can sign in
 

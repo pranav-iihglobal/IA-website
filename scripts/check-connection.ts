@@ -8,7 +8,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import { loadEnv } from "./load-env";
 import { connectToDatabase } from "../lib/db/connect";
-import { getAllowedEmails } from "../lib/auth/allowlist";
+import { getOwnerEmails } from "../lib/auth/allowlist";
 
 let problems = 0;
 
@@ -63,14 +63,16 @@ function checkAuth() {
     );
   }
 
-  // Optional second gate — see lib/auth/allowlist.ts.
-  const allowed = getAllowedEmails();
-  if (allowed) {
-    pass("Allowlist", `only ${allowed.join(", ")}`);
+  // Permanent owners — see lib/auth/allowlist.ts. Everyone else is managed
+  // from /admin/directors, which needs a database, so it is not checked here.
+  const owners = getOwnerEmails();
+  if (owners.length > 0) {
+    pass("Owners", owners.join(", "));
   } else {
-    pass(
-      "Allowlist",
-      "not set — access is whoever is a test user on the Google consent screen",
+    fail(
+      "Owners",
+      "ADMIN_ALLOWED_EMAILS not set — with no directors in the database, nobody can sign in",
+      'ADMIN_ALLOWED_EMAILS="you@gmail.com"',
     );
   }
 }

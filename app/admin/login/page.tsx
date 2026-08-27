@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { isAllowedEmail } from "@/lib/auth/allowlist";
+import { isAuthorisedEmail } from "@/lib/auth/directors";
 import { auth } from "@/auth";
 import { SITE } from "@/lib/content";
 import { GoogleSignInButton } from "@/components/admin/GoogleSignInButton";
@@ -25,7 +25,9 @@ export default async function AdminLoginPage({
     would trap a signed-in-but-rejected account in a loop: /admin/login →
     /admin → /admin/restricted, with no way back to the account picker.
   */
-  if (session?.user && isAllowedEmail(session.user.email)) redirect("/admin");
+  if (session?.user && (await isAuthorisedEmail(session.user.email))) {
+    redirect("/admin");
+  }
 
   const { next } = await searchParams;
   // Only ever return to somewhere inside the admin panel — an attacker-supplied

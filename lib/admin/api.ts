@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
-import { isAllowedEmail } from "@/lib/auth/allowlist";
+import { isAuthorisedEmail } from "@/lib/auth/directors";
 
 /**
  * Shared helpers for admin API route handlers.
@@ -39,7 +39,7 @@ export async function requireAdmin(): Promise<NextResponse | null> {
   if (!email) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
-  if (!isAllowedEmail(email)) {
+  if (!(await isAuthorisedEmail(email))) {
     // Deliberately does not echo the address back or say why.
     console.warn("[admin api] rejected a signed-in account not on the allowlist");
     return NextResponse.json({ error: "Not authorised" }, { status: 403 });

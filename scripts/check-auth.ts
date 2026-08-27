@@ -9,7 +9,7 @@
  *
  *   npm run check-auth
  */
-import { getAllowedEmails, isAllowedEmail, isAllowlistConfigured } from "@/lib/auth/allowlist";
+import { getOwnerEmails, isOwnerConfigured, isOwnerEmail } from "@/lib/auth/allowlist";
 
 let failures = 0;
 
@@ -37,31 +37,31 @@ function withAllowlist<T>(value: string | undefined, run: () => T): T {
 
 console.log("Fails closed when nothing is configured:");
 withAllowlist(undefined, () => {
-  check("unset rejects a real address", isAllowedEmail("someone@gmail.com"), false);
-  check("unset rejects everything", isAllowedEmail("director@iksarva.com"), false);
-  check("unset reports not configured", isAllowlistConfigured(), false);
+  check("unset rejects a real address", isOwnerEmail("someone@gmail.com"), false);
+  check("unset rejects everything", isOwnerEmail("director@iksarva.com"), false);
+  check("unset reports not configured", isOwnerConfigured(), false);
 });
 withAllowlist("", () => {
-  check("empty string rejects", isAllowedEmail("someone@gmail.com"), false);
+  check("empty string rejects", isOwnerEmail("someone@gmail.com"), false);
 });
 withAllowlist("   ,  , ", () => {
-  check("separators only rejects", isAllowedEmail("someone@gmail.com"), false);
-  check("separators only is not configured", isAllowlistConfigured(), false);
+  check("separators only rejects", isOwnerEmail("someone@gmail.com"), false);
+  check("separators only is not configured", isOwnerConfigured(), false);
 });
 
 console.log("\nAllows exactly the configured addresses:");
 withAllowlist("director.one@iksarva.com, Director.Two@IKSARVA.com", () => {
-  check("listed address", isAllowedEmail("director.one@iksarva.com"), true);
-  check("case-insensitive", isAllowedEmail("DIRECTOR.TWO@iksarva.com"), true);
-  check("surrounding spaces ignored", isAllowedEmail("  director.one@iksarva.com  "), true);
-  check("unlisted address rejected", isAllowedEmail("stranger@gmail.com"), false);
-  check("empty email rejected", isAllowedEmail(""), false);
-  check("null email rejected", isAllowedEmail(null), false);
-  check("undefined email rejected", isAllowedEmail(undefined), false);
-  check("no partial match", isAllowedEmail("director.one@iksarva.com.attacker.test"), false);
-  check("no substring match", isAllowedEmail("not-director.one@iksarva.com"), false);
-  check("reports configured", isAllowlistConfigured(), true);
-  check("parses both entries", getAllowedEmails().length, 2);
+  check("listed address", isOwnerEmail("director.one@iksarva.com"), true);
+  check("case-insensitive", isOwnerEmail("DIRECTOR.TWO@iksarva.com"), true);
+  check("surrounding spaces ignored", isOwnerEmail("  director.one@iksarva.com  "), true);
+  check("unlisted address rejected", isOwnerEmail("stranger@gmail.com"), false);
+  check("empty email rejected", isOwnerEmail(""), false);
+  check("null email rejected", isOwnerEmail(null), false);
+  check("undefined email rejected", isOwnerEmail(undefined), false);
+  check("no partial match", isOwnerEmail("director.one@iksarva.com.attacker.test"), false);
+  check("no substring match", isOwnerEmail("not-director.one@iksarva.com"), false);
+  check("reports configured", isOwnerConfigured(), true);
+  check("parses both entries", getOwnerEmails().length, 2);
 });
 
 if (failures > 0) {
