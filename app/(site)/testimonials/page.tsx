@@ -7,6 +7,7 @@ import { Reveal } from "@/components/Reveal";
 import { TestimonialsBrowser } from "@/components/TestimonialsBrowser";
 import { ShareResultCta } from "@/components/ShareResultCta";
 import { FloatingLeaves } from "@/components/Decor";
+import { OG_IMAGE } from "@/lib/seo";
 
 /** Rebuilt hourly, and immediately when an admin saves a testimonial. */
 export const revalidate = 3600;
@@ -19,6 +20,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Farmers' experiences | IKSARVA",
     url: "/testimonials",
+    images: [OG_IMAGE],
   },
 };
 

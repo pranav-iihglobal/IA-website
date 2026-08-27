@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DEALERS, UI } from "@/lib/content";
 import { T } from "@/components/T";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { OG_IMAGE } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Become a Dealer",
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Become an IKSARVA Dealer",
     url: "/dealers",
+    images: [OG_IMAGE],
   },
 };
 

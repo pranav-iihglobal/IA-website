@@ -12,6 +12,8 @@ import { joinPlace } from "@/lib/testimonials-source";
 import { BiImage } from "@/components/BiImage";
 import { formatArticleDate } from "@/lib/format";
 import { postCategoryLabel } from "@/lib/content";
+import { BreadcrumbJsonLd } from "@/components/Breadcrumbs";
+import { ogImages } from "@/lib/seo";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -47,7 +49,8 @@ export async function generateMetadata({
       title,
       description,
       url: `/learn/${article.slug}`,
-      images: cover ? [{ url: cover }] : undefined,
+      // The cover when there is one, the site card otherwise.
+      images: ogImages(cover ? [{ url: cover }] : null),
     },
   };
 }
@@ -82,6 +85,13 @@ export default async function ArticlePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
+      <BreadcrumbJsonLd
+        trail={[
+          { name: "Learn", path: "/learn" },
+          { name: article.title.en, path: `/learn/${article.slug}` },
+        ]}
+      />
+
       <nav className="mb-6 text-sm" aria-label="Breadcrumb">
         <Link href="/learn" className="-ml-2 inline-flex min-h-11 items-center rounded-lg px-2 font-medium text-alloy-dark hover:underline">
           ← <T text={UI.backToLearn} />

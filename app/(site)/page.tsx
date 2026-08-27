@@ -11,6 +11,7 @@ import { WaveDivider } from "@/components/Illustrations";
 import { Hero3D } from "@/components/Hero3D";
 import { Reveal } from "@/components/Reveal";
 import { CropsMarquee, FloatingLeaves } from "@/components/Decor";
+import { OG_IMAGE } from "@/lib/seo";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -19,6 +20,7 @@ export const metadata: Metadata = {
     description:
       "Roots to riches. Built for the soil that has been worked too hard.",
     url: "/",
+    images: [OG_IMAGE],
   },
 };
 

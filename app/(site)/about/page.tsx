@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ABOUT, SITE } from "@/lib/content";
 import { T } from "@/components/T";
 import { FounderDoodle, WaveDivider } from "@/components/Illustrations";
+import { OG_IMAGE } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "About",
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "About IKSARVA Agritech",
     url: "/about",
+    images: [OG_IMAGE],
   },
 };
 

@@ -11,6 +11,12 @@ const organizationJsonLd = {
   name: SITE.name,
   alternateName: "IKSARVA",
   url: SITE.url,
+  /*
+    Google needs a raster logo for the knowledge panel; an SVG is not
+    accepted. This is the same 512px icon the PWA installs with.
+  */
+  logo: `${SITE.url}/icons/android/launchericon-512x512.png`,
+  image: `${SITE.url}/og-image.png`,
   slogan: SITE.tagline,
   email: SITE.email,
   telephone: SITE.phoneDisplay,

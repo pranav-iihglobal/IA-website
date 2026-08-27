@@ -8,6 +8,7 @@ import { Reveal } from "@/components/Reveal";
 import { BiImage } from "@/components/BiImage";
 import { formatArticleDate } from "@/lib/format";
 import { postCategoryLabel } from "@/lib/content";
+import { OG_IMAGE } from "@/lib/seo";
 
 export const revalidate = 3600;
 
@@ -19,6 +20,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Knowledge for your field | IKSARVA",
     url: "/learn",
+    images: [OG_IMAGE],
   },
 };
 

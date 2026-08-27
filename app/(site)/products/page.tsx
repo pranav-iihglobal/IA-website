@@ -4,6 +4,7 @@ import { T } from "@/components/T";
 import { ProductCard } from "@/components/ProductCard";
 import { Reveal } from "@/components/Reveal";
 import { getDisplayProducts } from "@/lib/products-source";
+import { OG_IMAGE } from "@/lib/seo";
 
 /** Rebuilt hourly, and immediately whenever an admin saves a product. */
 export const revalidate = 3600;
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "IKSARVA Products — Biofertilizers for North Gujarat",
     url: "/products",
+    images: [OG_IMAGE],
   },
 };
 

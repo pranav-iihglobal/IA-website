@@ -22,6 +22,8 @@ import { Composition } from "@/components/product/Composition";
 import { ProductStrip } from "@/components/product/ProductStrip";
 import { AvailabilityBadge } from "@/components/product/Availability";
 import { joinPlace } from "@/lib/testimonials-source";
+import { BreadcrumbJsonLd } from "@/components/Breadcrumbs";
+import { ogImages } from "@/lib/seo";
 
 export const revalidate = 3600;
 /** Products added in the admin after build render on first request. */
@@ -49,10 +51,14 @@ export async function generateMetadata({
       title: `${name} | ${SITE.shortName}`,
       description: product.tagline.en,
       url: `/products/${product.slug}`,
-      images: product.images
-        .map((i) => cldUrl(i.url, CLD.productDetail))
-        .filter(Boolean)
-        .map((url) => ({ url: url as string })),
+      // Its own photos when it has them, the site card when it does not —
+      // a product with no pack shot yet still previews as something.
+      images: ogImages(
+        product.images
+          .map((i) => cldUrl(i.url, CLD.productDetail))
+          .filter(Boolean)
+          .map((url) => ({ url: url as string })),
+      ),
     },
   };
 }
@@ -76,6 +82,10 @@ export default async function ProductPage({
     .map((i) => cldUrl(i.url, CLD.productDetail))
     .filter(Boolean) as string[];
   const outOfStock = product.availability === "out_of_stock";
+  /** MRPs of the packs that actually carry one. */
+  const pricedPacks = product.packSizes
+    .map((pack) => pack.mrp)
+    .filter((mrp): mrp is number => typeof mrp === "number" && mrp > 0);
 
   const productJsonLd = {
     "@context": "https://schema.org",
@@ -91,13 +101,35 @@ export default async function ProductPage({
     },
     image: images.length > 0 ? images : undefined,
     url: `${SITE.url}/products/${product.slug}`,
-    offers: {
-      "@type": "Offer",
-      availability: outOfStock
-        ? "https://schema.org/OutOfStock"
-        : "https://schema.org/InStock",
-      url: `${SITE.url}/products/${product.slug}`,
-    },
+    /*
+      A real offer now that pack prices are public. Google's Product rich
+      result needs a price to show one at all — without it the listing is
+      just a name, which is what this was emitting.
+
+      AggregateOffer rather than one Offer per pack: a product is sold in
+      several sizes and the honest summary is the range. Falls back to the
+      bare availability-only Offer when nothing is priced, because an offer
+      claiming a price of zero would be worse than no price.
+    */
+    offers: pricedPacks.length
+      ? {
+          "@type": "AggregateOffer",
+          priceCurrency: "INR",
+          lowPrice: Math.min(...pricedPacks),
+          highPrice: Math.max(...pricedPacks),
+          offerCount: pricedPacks.length,
+          availability: outOfStock
+            ? "https://schema.org/OutOfStock"
+            : "https://schema.org/InStock",
+          url: `${SITE.url}/products/${product.slug}`,
+        }
+      : {
+          "@type": "Offer",
+          availability: outOfStock
+            ? "https://schema.org/OutOfStock"
+            : "https://schema.org/InStock",
+          url: `${SITE.url}/products/${product.slug}`,
+        },
   };
 
   /**
@@ -136,6 +168,13 @@ export default async function ProductPage({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       )}
+
+      <BreadcrumbJsonLd
+        trail={[
+          { name: "Products", path: "/products" },
+          { name, path: `/products/${product.slug}` },
+        ]}
+      />
 
       <nav className="mb-6 text-sm" aria-label="Breadcrumb">
         <Link

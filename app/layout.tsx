@@ -78,8 +78,35 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: SITE.shortName,
-    locale: "en_IN",
+    /*
+      The pages are Gujarati by default with an English toggle, so gu_IN is
+      the honest primary and en_IN the alternate. Facebook and WhatsApp use
+      this to pick a locale for the preview card.
+    */
+    locale: "gu_IN",
+    alternateLocale: ["en_IN"],
     url: SITE.url,
+    /*
+      Every link shared anywhere previewed with no picture before this — on
+      WhatsApp, which is how this business actually reaches people, a link
+      with no image is a grey box. Product and article pages override it with
+      their own; this is the fallback for everything else.
+    */
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: `${SITE.shortName} — ${SITE.tagline}`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE.shortName} — Biofertilizers from North Gujarat`,
+    description:
+      "Mycorrhizal cultures, NPK consortia and biostimulants that work with the microbial life in your field.",
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,

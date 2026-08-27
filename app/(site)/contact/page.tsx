@@ -3,6 +3,7 @@ import { CONTACT, SITE, UI } from "@/lib/content";
 import { T } from "@/components/T";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { SocialLinks } from "@/components/SocialLinks";
+import { OG_IMAGE } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Contact IKSARVA Agritech",
     url: "/contact",
+    images: [OG_IMAGE],
   },
 };
 
