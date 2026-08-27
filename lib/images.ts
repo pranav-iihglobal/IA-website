@@ -14,6 +14,12 @@ export const CLD = {
   cardThumb: "f_auto,q_auto,c_fill,g_auto,w_800,h_600",
   /** Product detail hero. */
   productDetail: "f_auto,q_auto,c_limit,w_1200",
+  /**
+   * Home page flagship pack shot. c_limit, not c_fill: this one floats on the
+   * olive panel at its own proportions rather than filling a card's crop, so
+   * cropping it to a fixed ratio would slice the top off a tall pouch.
+   */
+  flagshipShot: "f_auto,q_auto,c_limit,w_600",
   /** Blog cover image. */
   blogCover: "f_auto,q_auto,c_fill,g_auto,w_1600,h_900",
   /** Small square thumb for admin lists and testimonial photos. */

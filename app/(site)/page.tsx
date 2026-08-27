@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { HOME, SITE, UI, DEALERS } from "@/lib/content";
 import { getDisplayProducts } from "@/lib/products-source";
 import { T } from "@/components/T";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
-import { ProductCard } from "@/components/ProductCard";
+import { ProductCard, ProductArt } from "@/components/ProductCard";
+import { CLD, cldUrl, isCloudinaryUrl } from "@/lib/images";
 import { WaveDivider } from "@/components/Illustrations";
 import { Hero3D } from "@/components/Hero3D";
 import { Reveal } from "@/components/Reveal";
@@ -25,6 +27,7 @@ export const revalidate = 3600;
 export default async function HomePage() {
   const products = await getDisplayProducts();
   const flagship = products.find((p) => p.featured) ?? products[0];
+  const flagshipShot = cldUrl(flagship?.imageUrl, CLD.flagshipShot);
   const others = products.filter((p) => p.slug !== flagship?.slug);
 
   return (
@@ -75,7 +78,7 @@ export default async function HomePage() {
 
       <CropsMarquee />
 
-      {/* Flagship: FloraMax */}
+      {/* Flagship product — whichever one is marked featured. */}
       <section className="container-page py-14">
         <Reveal>
           <h2 className="font-display text-3xl font-bold text-russet sm:text-4xl">
@@ -130,15 +133,30 @@ export default async function HomePage() {
               className="animate-float mx-auto block w-48 md:w-56"
               aria-label="Flagship product page"
             >
-              {/* PLACEHOLDER pack shot */}
-              <svg viewBox="0 0 200 260" fill="none" className="w-full drop-shadow-lg" aria-hidden="true">
-                <rect x="20" y="10" width="160" height="240" rx="14" fill="#FCFCE4" />
-                <rect x="20" y="10" width="160" height="30" rx="14" fill="#C66828" />
-                <rect x="40" y="70" width="120" height="90" rx="10" fill="#F9ECC9" />
-                <path d="M100 88c14 9 21 20 21 30 0 14-9 23-21 23s-21-9-21-23c0-10 7-21 21-30Z" fill="#C66828" />
-                <text x="100" y="190" textAnchor="middle" fill="#5F2F14" fontFamily="Georgia, serif" fontSize="22" fontWeight="bold">FloraMax</text>
-                <text x="100" y="215" textAnchor="middle" fill="#783E19" fontFamily="Georgia, serif" fontSize="14">25g · 1 acre</text>
-              </svg>
+              {/*
+                The real pack shot when one has been uploaded, the same
+                illustration the cards use when one has not. This used to be a
+                hand-drawn SVG with "FloraMax" and its pack size baked into
+                the markup — which meant an uploaded photo never appeared
+                here, and promoting a different product to flagship would
+                still have drawn FloraMax.
+              */}
+              {flagshipShot ? (
+                <Image
+                  src={flagshipShot}
+                  alt=""
+                  width={600}
+                  height={780}
+                  priority
+                  unoptimized={isCloudinaryUrl(flagship.imageUrl)}
+                  className="h-auto w-full drop-shadow-lg"
+                />
+              ) : (
+                <ProductArt
+                  art={flagship.artFallback}
+                  className="w-full drop-shadow-lg"
+                />
+              )}
             </Link>
           </div>
         </div>
