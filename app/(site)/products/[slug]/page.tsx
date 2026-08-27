@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { MISC, SITE, UI, resolveText } from "@/lib/content";
-import { CLD, cldUrl, isCloudinaryUrl } from "@/lib/images";
+import { CLD, cldUrl } from "@/lib/images";
 import {
   getDisplayProduct,
   getDisplayProductSlugs,
@@ -17,8 +16,12 @@ import { Downloads } from "@/components/product/Downloads";
 import { ApplicationSteps } from "@/components/product/ApplicationSteps";
 import { FieldResults } from "@/components/product/FieldResults";
 import { ProductFaq } from "@/components/product/ProductFaq";
+import { Gallery } from "@/components/product/Gallery";
+import { PackSizes } from "@/components/product/PackSizes";
+import { Composition } from "@/components/product/Composition";
 import { ProductStrip } from "@/components/product/ProductStrip";
 import { AvailabilityBadge } from "@/components/product/Availability";
+import { joinPlace } from "@/lib/testimonials-source";
 
 export const revalidate = 3600;
 /** Products added in the admin after build render on first request. */
@@ -46,9 +49,10 @@ export async function generateMetadata({
       title: `${name} | ${SITE.shortName}`,
       description: product.tagline.en,
       url: `/products/${product.slug}`,
-      images: product.imageUrl
-        ? [{ url: cldUrl(product.imageUrl, CLD.productDetail)! }]
-        : undefined,
+      images: product.images
+        .map((i) => cldUrl(i.url, CLD.productDetail))
+        .filter(Boolean)
+        .map((url) => ({ url: url as string })),
     },
   };
 }
@@ -63,7 +67,14 @@ export default async function ProductPage({
   if (!product) notFound();
 
   const name = resolveText(product.name, "en");
-  const image = cldUrl(product.imageUrl, CLD.productDetail);
+  /*
+    Every photo, not just the primary. Google's Product schema takes an array
+    and prefers several; this page previously offered one because that was
+    all the read layer carried.
+  */
+  const images = product.images
+    .map((i) => cldUrl(i.url, CLD.productDetail))
+    .filter(Boolean) as string[];
   const outOfStock = product.availability === "out_of_stock";
 
   const productJsonLd = {
@@ -78,7 +89,7 @@ export default async function ProductPage({
       name: SITE.name,
       url: SITE.url,
     },
-    image: image ? [image] : undefined,
+    image: images.length > 0 ? images : undefined,
     url: `${SITE.url}/products/${product.slug}`,
     offers: {
       "@type": "Offer",
@@ -136,17 +147,8 @@ export default async function ProductPage({
       </nav>
 
       <header className="grid items-center gap-8 sm:grid-cols-[auto_1fr]">
-        {image ? (
-          <Image
-            src={image}
-            alt={`${name} pack`}
-            width={640}
-            height={640}
-            priority
-            unoptimized={isCloudinaryUrl(product.imageUrl)}
-            className="mx-auto w-full max-w-xs rounded-2xl object-cover shadow-md sm:w-72"
-            sizes="(max-width: 640px) 100vw, 320px"
-          />
+        {product.images.length > 0 ? (
+          <Gallery images={product.images} productName={name} />
         ) : (
           <ProductArt
             art={product.artFallback}
@@ -219,6 +221,19 @@ export default async function ProductPage({
           <p className="mt-2 text-sm leading-relaxed">
             <T text={product.dosageSummary} />
           </p>
+          {typeof product.amountPerAcre === "number" && (
+            <p className="mt-2 text-sm font-semibold text-olive-dark">
+              {product.amountPerAcre} {product.dosageUnit} / acre
+            </p>
+          )}
+          {product.cropStage.en && (
+            <p className="mt-3 text-sm leading-relaxed">
+              <span className="font-semibold text-russet">
+                <T text={UI.cropStage} />:
+              </span>{" "}
+              <T text={product.cropStage} />
+            </p>
+          )}
         </div>
         <div className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-6">
           <h2 className="font-display text-xl font-bold text-russet">
@@ -237,7 +252,24 @@ export default async function ProductPage({
         <p className="mt-2 text-sm leading-relaxed">
           <T text={product.cropsNote} />
         </p>
+        {/* Collected in the admin since the beginning; nothing rendered it. */}
+        {product.suitableCrops.length > 0 && (
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {product.suitableCrops.map((crop) => (
+              <li
+                key={crop}
+                className="rounded-full bg-laurel-light/60 px-3 py-1 text-xs font-semibold text-olive-dark"
+              >
+                {crop}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
+
+      <PackSizes sizes={product.packSizes} />
+
+      <Composition rows={product.composition} regulatory={product.regulatory} />
 
       <ApplicationSteps steps={product.applicationSteps} />
 
@@ -259,15 +291,13 @@ export default async function ProductPage({
                 t={{
                   id: t.id,
                   farmerName: t.farmerName,
-                  place: {
-                    en: [t.village, t.district].filter(Boolean).join(", "),
-                    gu: [t.village, t.district].filter(Boolean).join(", "),
-                  },
+                  place: joinPlace(t.village, t.taluka, t.district),
                   crop: t.crop,
                   quote: t.quote,
                   photo: t.photo,
                   video: t.video,
                   productName: t.productName,
+                  rating: t.rating,
                   verified: t.verified,
                   verifiedVia: t.verifiedVia,
                 }}

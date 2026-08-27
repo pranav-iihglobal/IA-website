@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { Bi } from "@/lib/content";
+import { POST_CATEGORIES } from "@/lib/content";
 import { slugify } from "@/lib/schemas";
 import { ImageUploader, type AdminImage } from "./ImageUploader";
 import { adminFetch } from "@/lib/admin/fetch";
@@ -353,10 +354,11 @@ export function PostForm({
               value={values.category}
               onChange={(v) => update("category", v)}
               options={[
-                { value: "soil-health", label: "Soil health" },
-                { value: "crop-guides", label: "Crop guides" },
-                { value: "company-news", label: "Company news" },
-                { value: "other", label: "Other" },
+                // Same map the public pages render, so the two cannot drift.
+                ...Object.entries(POST_CATEGORIES).map(([value, label]) => ({
+                  value,
+                  label: label.en,
+                })),
               ]}
             />
             <TextField

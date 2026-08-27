@@ -49,6 +49,7 @@ export default async function TestimonialsPage() {
               id: t.id,
               farmerName: t.farmerName,
               place: t.place,
+              rating: t.rating,
               district: t.district,
               crop: t.crop,
               quote: t.quote,

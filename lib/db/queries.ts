@@ -11,25 +11,53 @@ import type { Bi } from "@/lib/content";
  * Every function here returns PLAIN, SERIALIZABLE objects (string ids, no
  * Mongoose documents) so results can cross the server/client boundary.
  *
- * Field projections are explicit and deliberately narrow: `packSizes` and
- * `dealerPrice` are commercially sensitive and are never selected here.
+ * Field projections are explicit and deliberately narrow. `packSizes` IS
+ * selected — a farmer needs to know what a pack costs — but `dealerPrice`
+ * lives inside it and is stripped in toPublicProduct, never by omission from
+ * the projection. Dropping the whole subtree would have been safer and also
+ * would have hidden the MRP, so the removal is done once, explicitly, where
+ * it can be read.
  */
 
 /**
- * Fields safe to send to the browser. Note: no packSizes / dealerPrice.
- * This is an explicit allowlist — a new public field must be added here or
- * it silently renders blank.
+ * Fields safe to send to the browser.
+ *
+ * An explicit allowlist — a new public field must be added here or it
+ * silently renders blank, which is exactly how several admin fields ended up
+ * being editable but invisible.
+ *
+ * `sku`, `hsnCode` and `gstRatePercent` stay out on purpose: they are for
+ * invoices, not for farmers.
  */
 const PUBLIC_PRODUCT_FIELDS =
   "name slug category categoryLabel tagline description benefits format " +
   "complianceNote whatsappMessage dosage suitableCrops cropsNote images " +
   "artFallback featured displayOrder assets applicationSteps fieldResults " +
   "faqs relatedProducts pairsWellWith pinnedTestimonials availability " +
-  "availabilityNote";
+  "availabilityNote packSizes composition regulatory";
 
 /** Slim projection for the cards shown in "related" / "use together" strips. */
 const PRODUCT_CARD_FIELDS =
   "name slug categoryLabel tagline images artFallback featured";
+
+export interface PublicPackSize {
+  label: string;
+  netQuantity?: number;
+  unit: string;
+  /** Maximum retail price. dealerPrice is deliberately absent. */
+  mrp?: number;
+}
+
+export interface PublicComposition {
+  ingredient: string;
+  quantity: string;
+}
+
+export interface PublicRegulatory {
+  fcoCompliant: boolean;
+  fcoSchedule: string;
+  licenseNo: string;
+}
 
 export interface PublicImage {
   url: string;
@@ -118,6 +146,10 @@ export interface PublicProduct {
   pinnedTestimonials: PublicTestimonial[];
   availability: Availability;
   availabilityNote: Bi;
+
+  packSizes: PublicPackSize[];
+  composition: PublicComposition[];
+  regulatory: PublicRegulatory;
 }
 
 function bi(value: unknown): Bi {
@@ -229,6 +261,31 @@ function toPublicProduct(doc: any): PublicProduct {
       .map(toPublicTestimonial),
     availability: doc.availability ?? "in_stock",
     availabilityNote: bi(doc.availabilityNote),
+
+    /*
+      Rebuilt field by field rather than spread. dealerPrice sits on the same
+      subdocument as mrp, and a spread would carry it to the browser the
+      moment anyone added it to the projection.
+    */
+    packSizes: (doc.packSizes ?? [])
+      .filter((p: any) => p?.label)
+      .map((p: any) => ({
+        label: p.label,
+        netQuantity: p.netQuantity ?? undefined,
+        unit: p.unit ?? "g",
+        mrp: p.mrp ?? undefined,
+      })),
+    composition: (doc.composition ?? [])
+      .filter((c: any) => c?.ingredient)
+      .map((c: any) => ({
+        ingredient: c.ingredient,
+        quantity: c.quantity ?? "",
+      })),
+    regulatory: {
+      fcoCompliant: Boolean(doc.regulatory?.fcoCompliant),
+      fcoSchedule: doc.regulatory?.fcoSchedule ?? "",
+      licenseNo: doc.regulatory?.licenseNo ?? "",
+    },
   };
 }
 

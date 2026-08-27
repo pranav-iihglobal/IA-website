@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { MISC, SITE, UI, HOME, resolveText } from "@/lib/content";
 import { CLD, cldUrl } from "@/lib/images";
@@ -9,6 +8,10 @@ import { T } from "@/components/T";
 import { BiHtml } from "@/components/BiHtml";
 import { TestimonialCard } from "@/components/TestimonialCard";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { joinPlace } from "@/lib/testimonials-source";
+import { BiImage } from "@/components/BiImage";
+import { formatArticleDate } from "@/lib/format";
+import { postCategoryLabel } from "@/lib/content";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -88,14 +91,31 @@ export default async function ArticlePage({
       <h1 className="font-display text-3xl font-bold leading-tight text-russet sm:text-4xl">
         <T text={article.title} />
       </h1>
-      <p className="mt-2 text-xs font-medium uppercase tracking-wide text-camel-dark">
-        {article.readingTime} <T text={UI.minRead} />
+      <p className="mt-2 flex flex-wrap items-center gap-x-2 text-xs font-medium uppercase tracking-wide text-camel-dark">
+        {article.publishedAt && (
+          <>
+            <T text={formatArticleDate(article.publishedAt)} />
+            <span aria-hidden="true">·</span>
+          </>
+        )}
+        {postCategoryLabel(article.category) && (
+          <>
+            <span className="text-olive">
+              <T text={postCategoryLabel(article.category)!} />
+            </span>
+            <span aria-hidden="true">·</span>
+          </>
+        )}
+        <span>
+          {article.readingTime} <T text={UI.minRead} />
+        </span>
       </p>
 
       {cover && (
-        <Image
+        <BiImage
           src={cover}
-          alt={article.coverImage?.alt.en ?? ""}
+          alt={article.coverImage?.alt}
+          fallback={article.title.en}
           width={1600}
           height={900}
           priority
@@ -111,6 +131,24 @@ export default async function ArticlePage({
         className="prose-article mt-8"
       />
 
+      {/*
+        Tags were editable in the admin, reached the public layer, and were
+        rendered nowhere. Plain text for now rather than links — tag landing
+        pages do not exist yet, and a link to a 404 is worse than no link.
+      */}
+      {article.tags.length > 0 && (
+        <ul className="mt-8 flex flex-wrap gap-2 border-t border-cornsilk-dark pt-6">
+          {article.tags.map((tag) => (
+            <li
+              key={tag}
+              className="rounded-full bg-meringue px-3 py-1 text-xs font-semibold text-russet-dark/75"
+            >
+              {tag}
+            </li>
+          ))}
+        </ul>
+      )}
+
       {article.pinnedTestimonials.length > 0 && (
         <section className="mt-12">
           <h2 className="font-display text-2xl font-bold text-russet">
@@ -124,15 +162,13 @@ export default async function ArticlePage({
                 t={{
                   id: t.id,
                   farmerName: t.farmerName,
-                  place: {
-                    en: [t.village, t.district].filter(Boolean).join(", "),
-                    gu: [t.village, t.district].filter(Boolean).join(", "),
-                  },
+                  place: joinPlace(t.village, t.taluka, t.district),
                   crop: t.crop,
                   quote: t.quote,
                   photo: t.photo,
                   video: t.video,
                   productName: t.productName,
+                  rating: t.rating,
                   verified: t.verified,
                   verifiedVia: t.verifiedVia,
                 }}

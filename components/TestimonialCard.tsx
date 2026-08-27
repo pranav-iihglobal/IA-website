@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { Bi } from "@/lib/content";
-import { TESTIMONIALS_PAGE } from "@/lib/content";
+import { TESTIMONIALS_PAGE, UI, resolveText } from "@/lib/content";
 import type { VerifiedVia } from "@/lib/verified";
 import { verifiedLabel } from "@/lib/verified";
 import { CLD, cldUrl } from "@/lib/images";
@@ -29,6 +29,38 @@ export interface TestimonialCardData {
   sample?: boolean;
   verified?: boolean;
   verifiedVia?: VerifiedVia;
+  /** 1-5, or null when the farmer did not give one. */
+  rating?: number | null;
+}
+
+/**
+ * The 1-5 rating the admin has always collected and no page ever showed.
+ *
+ * Rendered as one labelled element rather than five: a screen reader wants
+ * "Rated 4 out of 5", not "star star star star star". The filled count is
+ * rounded, because a farmer gives whole stars.
+ */
+function Stars({ rating }: { rating: number }) {
+  const filled = Math.round(Math.min(5, Math.max(0, rating)));
+  return (
+    <span
+      className="mt-1 flex items-center gap-0.5"
+      role="img"
+      aria-label={resolveText(UI.ratedStars, "en").replace("{n}", String(filled))}
+    >
+      {[1, 2, 3, 4, 5].map((n) => (
+        <svg
+          key={n}
+          viewBox="0 0 20 20"
+          className={`h-4 w-4 ${n <= filled ? "text-alloy" : "text-camel-light"}`}
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M10 1.6l2.5 5.1 5.6.8-4 3.9 1 5.6-5-2.6-5 2.6 1-5.6-4-3.9 5.6-.8L10 1.6Z" />
+        </svg>
+      ))}
+    </span>
+  );
 }
 
 function QuoteMark() {
@@ -125,6 +157,7 @@ export function TestimonialCard({
               <T text={t.place} />
             </p>
           )}
+          {typeof t.rating === "number" && <Stars rating={t.rating} />}
           <div className="mt-2 flex flex-wrap gap-2">
             {t.crop.en && (
               <span className="rounded-full bg-laurel-light/60 px-3 py-0.5 text-xs font-semibold text-olive-dark">

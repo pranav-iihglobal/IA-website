@@ -8,8 +8,12 @@ import {
   type Availability,
   type PublicApplicationStep,
   type PublicFaq,
+  type PublicComposition,
   type PublicFieldResult,
+  type PublicImage,
+  type PublicPackSize,
   type PublicPairing,
+  type PublicRegulatory,
   type PublicProduct,
   type PublicProductAsset,
   type PublicProductRef,
@@ -37,10 +41,21 @@ export interface DisplayProduct {
   whatsappMessage: string;
   dosageSummary: Bi;
   applicationMethod: Bi;
+  cropStage: Bi;
+  amountPerAcre?: number;
+  dosageUnit: string;
+  suitableCrops: string[];
   cropsNote: Bi;
+  /** Every uploaded photo, primary first. */
+  images: PublicImage[];
+  /** Convenience alias for images[0]?.url — the card and hero use it. */
   imageUrl: string | null;
   artFallback: "sachet" | "roots" | "network";
   featured: boolean;
+
+  packSizes: PublicPackSize[];
+  composition: PublicComposition[];
+  regulatory: PublicRegulatory;
 
   assets: PublicProductAsset[];
   applicationSteps: PublicApplicationStep[];
@@ -64,6 +79,9 @@ const NO_RICH_SECTIONS = {
   pinnedTestimonials: [] as PublicTestimonial[],
   availability: "in_stock" as Availability,
   availabilityNote: { en: "", gu: "" },
+  packSizes: [] as PublicPackSize[],
+  composition: [] as PublicComposition[],
+  regulatory: { fcoCompliant: false, fcoSchedule: "", licenseNo: "" },
 };
 
 function fromDb(p: PublicProduct): DisplayProduct {
@@ -79,10 +97,26 @@ function fromDb(p: PublicProduct): DisplayProduct {
     whatsappMessage: p.whatsappMessage,
     dosageSummary: p.dosage.summary,
     applicationMethod: p.dosage.applicationMethod,
+    cropStage: p.dosage.cropStage,
+    amountPerAcre: p.dosage.amountPerAcre,
+    dosageUnit: p.dosage.unit,
+    suitableCrops: p.suitableCrops,
     cropsNote: p.cropsNote,
+    /*
+      The whole array, primary first. This mapper used to keep only
+      primaryImage, so a product with five uploaded photos showed one and the
+      alt text on every one of them was thrown away.
+    */
+    images: [...p.images].sort(
+      (a, b) => Number(b.isPrimary) - Number(a.isPrimary),
+    ),
     imageUrl: p.primaryImage,
     artFallback: p.artFallback,
     featured: p.featured,
+
+    packSizes: p.packSizes,
+    composition: p.composition,
+    regulatory: p.regulatory,
 
     assets: p.assets,
     applicationSteps: p.applicationSteps,
@@ -97,6 +131,7 @@ function fromDb(p: PublicProduct): DisplayProduct {
 }
 
 function fromLegacy(p: (typeof LEGACY_PRODUCTS)[number]): DisplayProduct {
+  const legacyImage = getProductImage(p.slug);
   return {
     slug: p.slug,
     name: { en: p.name, gu: p.name },
@@ -109,8 +144,12 @@ function fromLegacy(p: (typeof LEGACY_PRODUCTS)[number]): DisplayProduct {
     whatsappMessage: p.whatsappMessage,
     dosageSummary: p.dosage,
     applicationMethod: p.application,
+    cropStage: { en: "", gu: "" },
+    dosageUnit: "g",
+    suitableCrops: [],
     cropsNote: p.crops,
-    imageUrl: getProductImage(p.slug),
+    images: legacyImage ? [{ url: legacyImage, alt: { en: "", gu: "" }, isPrimary: true }] : [],
+    imageUrl: legacyImage,
     artFallback: p.art,
     featured: Boolean(p.flagship),
     // The bundled content predates the rich sections — a DB outage degrades

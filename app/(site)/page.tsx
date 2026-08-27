@@ -28,6 +28,16 @@ export default async function HomePage() {
   const products = await getDisplayProducts();
   const flagship = products.find((p) => p.featured) ?? products[0];
   const flagshipShot = cldUrl(flagship?.imageUrl, CLD.flagshipShot);
+  /*
+    Server component, so there is no language context here — English alt with
+    the Gujarati as backup, then the product name. Better than the alt="" this
+    replaced either way.
+  */
+  const flagshipAlt =
+    flagship?.images[0]?.alt.en ||
+    flagship?.images[0]?.alt.gu ||
+    flagship?.name.en ||
+    "";
   const others = products.filter((p) => p.slug !== flagship?.slug);
 
   return (
@@ -144,7 +154,7 @@ export default async function HomePage() {
               {flagshipShot ? (
                 <Image
                   src={flagshipShot}
-                  alt=""
+                  alt={flagshipAlt}
                   width={600}
                   height={780}
                   priority
@@ -174,6 +184,7 @@ export default async function HomePage() {
                   categoryLabel: p.categoryLabel,
                   tagline: p.tagline,
                   imageUrl: p.imageUrl,
+                  imageAlt: p.images[0]?.alt ?? null,
                   artFallback: p.artFallback,
                   featured: p.featured,
                 }}

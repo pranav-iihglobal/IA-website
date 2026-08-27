@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { LEARN, UI } from "@/lib/content";
 import { CLD, cldUrl } from "@/lib/images";
 import { getDisplayPosts } from "@/lib/posts-source";
 import { T } from "@/components/T";
 import { Reveal } from "@/components/Reveal";
+import { BiImage } from "@/components/BiImage";
+import { formatArticleDate } from "@/lib/format";
+import { postCategoryLabel } from "@/lib/content";
 
 export const revalidate = 3600;
 
@@ -46,9 +48,10 @@ export default async function LearnPage() {
               */}
               <article className="group relative overflow-hidden rounded-2xl border border-cornsilk-dark bg-cornsilk transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
                 {cover && (
-                  <Image
+                  <BiImage
                     src={cover}
-                    alt={a.coverImage?.alt.en ?? ""}
+                    alt={a.coverImage?.alt}
+                    fallback={a.title.en}
                     width={1600}
                     height={900}
                     unoptimized
@@ -65,8 +68,26 @@ export default async function LearnPage() {
                       <T text={a.title} />
                     </Link>
                   </h2>
-                  <p className="mt-1 text-xs font-medium uppercase tracking-wide text-camel-dark">
-                    {a.readingTime} <T text={UI.minRead} />
+                  {/* Date, category and reading time — the first two reached
+                      the public layer but nothing ever rendered them. */}
+                  <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs font-medium uppercase tracking-wide text-camel-dark">
+                    {a.publishedAt && (
+                      <>
+                        <T text={formatArticleDate(a.publishedAt)} />
+                        <span aria-hidden="true">·</span>
+                      </>
+                    )}
+                    {postCategoryLabel(a.category) && (
+                      <>
+                        <span className="text-olive">
+                          <T text={postCategoryLabel(a.category)!} />
+                        </span>
+                        <span aria-hidden="true">·</span>
+                      </>
+                    )}
+                    <span>
+                      {a.readingTime} <T text={UI.minRead} />
+                    </span>
                   </p>
                   <p className="mt-3 text-sm leading-relaxed text-russet-dark/80">
                     <T text={a.excerpt} />

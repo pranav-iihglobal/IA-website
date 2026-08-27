@@ -24,11 +24,24 @@ export interface DisplayTestimonial {
   productSlug: string | null;
   verified: boolean;
   verifiedVia: "whatsapp" | "field_visit" | "photo" | "";
+  /** 1-5, collected in the admin. Null when the farmer did not give one. */
+  rating: number | null;
   sample: boolean;
 }
 
-function joinPlace(village: string, district: string): Bi {
-  const parts = [village, district].filter(Boolean).join(", ");
+/**
+ * "Village, Taluka, District" — as a farmer would give their address.
+ *
+ * Taluka used to be dropped here: the admin asks for all three, and only two
+ * survived to the card. Blanks are filtered, so a testimonial with only a
+ * district still reads correctly rather than as ", , Banaskantha".
+ */
+export function joinPlace(
+  village: string,
+  taluka: string,
+  district: string,
+): Bi {
+  const parts = [village, taluka, district].filter(Boolean).join(", ");
   return { en: parts, gu: parts };
 }
 
@@ -39,7 +52,7 @@ export async function getDisplayTestimonials(): Promise<DisplayTestimonial[]> {
       return docs.map((t) => ({
         id: t.id,
         farmerName: t.farmerName,
-        place: joinPlace(t.village, t.district),
+        place: joinPlace(t.village, t.taluka, t.district),
         district: t.district,
         crop: t.crop,
         quote: t.quote,
@@ -49,6 +62,7 @@ export async function getDisplayTestimonials(): Promise<DisplayTestimonial[]> {
         productSlug: t.productSlug,
         verified: t.verified,
         verifiedVia: t.verifiedVia,
+        rating: t.rating,
         sample: false,
       }));
     }
@@ -70,6 +84,9 @@ export async function getDisplayTestimonials(): Promise<DisplayTestimonial[]> {
     productSlug: null,
     verified: false,
     verifiedVia: "" as const,
+    // The bundled samples carry no rating, and inventing one would put a
+    // number on a quote nobody actually rated.
+    rating: null,
     sample: Boolean(t.sample),
   }));
 }

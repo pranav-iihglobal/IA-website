@@ -109,6 +109,31 @@ export const NAV: { href: string; label: Bi }[] = [
 /* 3. SHARED / UI STRINGS                                                     */
 /* ========================================================================== */
 
+/**
+ * Blog category labels, in both languages.
+ *
+ * The category is stored as a slug. Rendering that slug directly put "OTHER"
+ * on the public article cards — shared here so the admin dropdown and the
+ * public page can never disagree about what a category is called.
+ */
+export const POST_CATEGORIES: Record<string, Bi> = {
+  "soil-health": { en: "Soil health", gu: "જમીનની તંદુરસ્તી" },
+  "crop-guides": { en: "Crop guides", gu: "પાક માર્ગદર્શન" },
+  "company-news": { en: "Company news", gu: "કંપની સમાચાર" },
+  other: { en: "Other", gu: "અન્ય" },
+};
+
+/**
+ * The label for a category, or null when there is nothing worth showing.
+ *
+ * "other" is the default every post starts with, so printing it would put the
+ * same meaningless word on every article.
+ */
+export function postCategoryLabel(category: string): Bi | null {
+  if (!category || category === "other") return null;
+  return POST_CATEGORIES[category] ?? { en: category, gu: category };
+}
+
 export const UI = {
   askOnWhatsApp: { en: "Ask on WhatsApp", gu: "વોટ્સએપ પર પૂછો" },
   chatOnWhatsApp: { en: "Chat on WhatsApp", gu: "વોટ્સએપ પર વાત કરો" },
@@ -122,6 +147,22 @@ export const UI = {
   benefits: { en: "Why farmers use it", gu: "ખેડૂતો કેમ વાપરે છે" },
   flagship: { en: "Flagship product", gu: "મુખ્ય પ્રોડક્ટ" },
   backToProducts: { en: "All products", gu: "બધી પ્રોડક્ટ્સ" },
+
+  // Pack sizes, composition and licence details. All three were editable in
+  // the admin long before anything rendered them.
+  packSizesHeading: { en: "Pack sizes", gu: "પેક સાઇઝ" },
+  mrpNote: {
+    en: "Prices are maximum retail price, inclusive of taxes. Your dealer may charge less.",
+    gu: "કિંમત મહત્તમ છૂટક કિંમત (MRP) છે, કર સહિત. તમારા ડીલર ઓછી કિંમત પણ રાખી શકે.",
+  },
+  compositionHeading: { en: "What is inside", gu: "અંદર શું છે" },
+  fcoLabel: { en: "Regulatory", gu: "નિયમન" },
+  fcoCompliant: { en: "FCO compliant", gu: "FCO મુજબ" },
+  licenceNo: { en: "Licence no.", gu: "લાઇસન્સ નં." },
+  suitableCrops: { en: "Suitable crops", gu: "યોગ્ય પાક" },
+  cropStage: { en: "When to apply", gu: "ક્યારે વાપરવું" },
+  moreImages: { en: "More photos", gu: "વધુ ફોટા" },
+  ratedStars: { en: "Rated {n} out of 5", gu: "5 માંથી {n} રેટિંગ" },
   backToLearn: { en: "All articles", gu: "બધા લેખ" },
   minRead: { en: "min read", gu: "મિનિટનું વાંચન" },
   /** Quiet staff link in the footer bar to the admin panel. */

@@ -6,6 +6,7 @@ import type { Bi } from "@/lib/content";
 import { UI } from "@/lib/content";
 import { CLD, cldUrl, isCloudinaryUrl } from "@/lib/images";
 import { T } from "./T";
+import { useLanguage } from "./LanguageProvider";
 import { NetworkArt, RootsArt, SachetArt } from "./Illustrations";
 
 /**
@@ -24,6 +25,8 @@ export interface ProductCardData {
   tagline: Bi;
   /** Primary image URL (Cloudinary or /public path). */
   imageUrl?: string | null;
+  /** Uploaded alt text for that image. Falls back to the product name. */
+  imageAlt?: Bi | null;
   /** SVG illustration shown when there is no photo yet. */
   artFallback?: "sachet" | "roots" | "network";
   featured?: boolean;
@@ -49,6 +52,7 @@ export function ProductCard({
   product: ProductCardData;
   linkToDetail?: boolean;
 }) {
+  const { t } = useLanguage();
   const photo = cldUrl(product.imageUrl, CLD.cardThumb);
 
   const inner = (
@@ -57,7 +61,15 @@ export function ProductCard({
         {photo ? (
           <Image
             src={photo}
-            alt=""
+            /*
+              A product photo is content, not decoration, so alt="" was wrong
+              — and the admin has been collecting this text all along. `t()`
+              picks the reader's language; the name is the fallback when
+              nobody wrote one.
+            */
+            alt={
+              (product.imageAlt && t(product.imageAlt)) || t(product.name)
+            }
             width={800}
             height={600}
             unoptimized={isCloudinaryUrl(product.imageUrl)}

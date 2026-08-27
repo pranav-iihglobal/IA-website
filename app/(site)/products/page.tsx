@@ -42,6 +42,7 @@ export default async function ProductsPage() {
                 categoryLabel: p.categoryLabel,
                 tagline: p.tagline,
                 imageUrl: p.imageUrl,
+                imageAlt: p.images[0]?.alt ?? null,
                 artFallback: p.artFallback,
                 featured: p.featured,
               }}
