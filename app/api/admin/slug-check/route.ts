@@ -3,7 +3,7 @@ import { isValidObjectId } from "mongoose";
 import { connectToDatabase, isDatabaseConfigured } from "@/lib/db/connect";
 import { Product } from "@/lib/db/models/Product";
 import { Post } from "@/lib/db/models/Post";
-import { errorResponse, requireAdmin } from "@/lib/admin/api";
+import { errorResponse, requirePermission } from "@/lib/admin/api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * collection is what actually enforces it.
  */
 export async function GET(request: NextRequest) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("products:read");
   if (unauthorized) return unauthorized;
 
   try {

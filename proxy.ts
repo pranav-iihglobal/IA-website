@@ -12,13 +12,20 @@ const { auth } = NextAuth(authConfig);
 /**
  * Guards the admin panel and its API.
  *
- * Runs on the edge and only verifies the signed session JWT — no database,
- * no Node-only crypto. Sign-in itself happens at /api/auth/*, which this
- * matcher deliberately does not cover.
+ * Runs on the edge and answers exactly one question: is there a valid session?
+ * No database, no roles, no permissions — none of which the edge can verify.
  *
- * This is the fast, coarse layer. The authoritative check lives behind it in
- * the Node runtime (the dashboard layout and requireAdmin), which can query
- * the Director collection on every request.
+ * That is enough, because a session cannot exist unless the signIn callback in
+ * auth.ts approved it against the database. So "has a session" already means
+ * "was an active user moments ago". What that person may DO, and whether they
+ * still may, is decided immediately behind this by the Node-runtime layers —
+ * the dashboard layout and requirePermission() — which read the database on
+ * every request. Suspending or demoting someone therefore takes effect on
+ * their very next request rather than when their token expires.
+ *
+ * Resisting the temptation to cache the role in the token is the point. An
+ * earlier version did, and locked out every user when the flag failed to
+ * survive the trip from the JWT to the Session.
  */
 
 /** Reachable while signed out, or sign-in could never complete. */
@@ -32,33 +39,12 @@ export default auth((request) => {
   }
 
   const email = request.auth?.user?.email;
-
-  /*
-    The edge runtime cannot reach MongoDB, so this layer answers only the
-    cheap half of the question: was this session minted for an account that
-    was authorised at sign-in?
-
-    Whether they are STILL authorised is decided a moment later by the
-    dashboard layout and requireAdmin(), both of which run in Node and query
-    the Director collection on every request. Removing someone therefore
-    takes effect on their very next request; this check only spares a
-    database round trip for the ordinary case of a valid session.
-  */
-  const mintedForAdmin = request.auth?.user?.admin === true;
-  if (email && mintedForAdmin) return NextResponse.next();
+  if (email) return NextResponse.next();
 
   if (pathname.startsWith("/api/")) {
     return NextResponse.json(
-      { error: email ? "Not authorised" : "Not authenticated" },
-      { status: email ? 403 : 401, headers: { "cache-control": "no-store" } },
-    );
-  }
-
-  // Signed in with a Google account that is not on the list: say so, rather
-  // than bouncing them back to a sign-in button that will never work.
-  if (email) {
-    return NextResponse.redirect(
-      new URL("/admin/restricted", request.nextUrl.origin),
+      { error: "Not authenticated" },
+      { status: 401, headers: { "cache-control": "no-store" } },
     );
   }
 

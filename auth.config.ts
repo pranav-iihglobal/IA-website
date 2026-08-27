@@ -9,17 +9,27 @@ import type { NextAuthConfig } from "next-auth";
  * file holds everything that is pure JavaScript over the request and the
  * token, and auth.ts adds the `signIn` callback that queries the database.
  *
- * Nothing in here may import from lib/db/**, lib/auth/directors.ts, or
+ * Nothing in here may import from lib/db/** or lib/auth/users.ts, or
  * anything that reaches them.
+ *
+ * Note what is deliberately NOT here: the role. An earlier version stashed an
+ * `admin` flag on the token at sign-in for the proxy to read, and it locked
+ * out every user, because `request.auth` in the proxy is a Session — whatever
+ * the session callback returns — not the token, and the flag was never copied
+ * across. The fix is not to copy it more carefully; it is to stop duplicating
+ * authorisation state into a second runtime that cannot verify it. A session
+ * can only exist if the signIn callback approved it, so its mere existence is
+ * all the proxy needs. What the person may actually DO is answered against the
+ * database, in Node, on every request. See lib/auth/users.ts.
  */
 export const authConfig: NextAuthConfig = {
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      // Always show the account chooser: both directors may share a browser,
-      // and silently reusing whichever Google session is active is worse than
-      // one extra click.
+      // Always show the account chooser: colleagues may share a browser, and
+      // silently reusing whichever Google session is active is worse than one
+      // extra click.
       authorization: { params: { prompt: "select_account" } },
     }),
   ],
@@ -43,19 +53,6 @@ export const authConfig: NextAuthConfig = {
         token.name = profile.name ?? token.name;
         token.email = profile.email ?? token.email;
         token.picture = profile.picture ?? token.picture;
-        /*
-          Reaching here means the signIn callback in auth.ts returned true, so
-          this account was authorised at the moment the token was minted.
-          proxy.ts reads this flag on the edge, where it cannot ask the
-          database.
-
-          It is a fast path, not the authority: access can be revoked after
-          the token exists, so the Node-runtime layers behind the proxy — the
-          dashboard layout and requireAdmin() — re-check against the database
-          on every request. A revoked director gets past the proxy and is
-          stopped immediately after.
-        */
-        token.admin = true;
       }
       return token;
     },
@@ -65,13 +62,6 @@ export const authConfig: NextAuthConfig = {
         session.user.name = token.name ?? null;
         session.user.email = token.email ?? "";
         session.user.image = token.picture ?? null;
-        /*
-          Must be copied explicitly. `request.auth` in proxy.ts is a Session,
-          which is whatever THIS callback returns — not the JWT above. A flag
-          set on the token and never copied here is simply absent on the edge,
-          which reads as "not an admin" and locks out every director.
-        */
-        session.user.admin = token.admin === true;
       }
       return session;
     },

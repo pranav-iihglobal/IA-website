@@ -8,7 +8,7 @@ import {
   currentEditor,
   errorResponse,
   fieldErrors,
-  requireAdmin,
+  requirePermission,
   revalidatePost,
 } from "@/lib/admin/api";
 
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 const PAGE_SIZE = 20;
 
 export async function GET(request: NextRequest) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("posts:read");
   if (unauthorized) return unauthorized;
 
   try {
@@ -66,8 +66,22 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * "Published" is a separate power from "can write a post".
+ *
+ * An editor drafts; making something visible to the public is an admin's
+ * call. Enforced on the STATUS being written, not on the route, because the
+ * same PATCH both saves a draft and publishes it depending on one field.
+ *
+ * Scheduled counts as publishing — it is publishing with a timer.
+ */
+async function refusePublish(status: string): Promise<NextResponse | null> {
+  if (status !== "published" && status !== "scheduled") return null;
+  return requirePermission("posts:publish");
+}
+
 export async function POST(request: NextRequest) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("posts:write");
   if (unauthorized) return unauthorized;
 
   try {
@@ -81,6 +95,9 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    const denied = await refusePublish(parsed.data.status);
+    if (denied) return denied;
 
     const data = {
       ...parsed.data,

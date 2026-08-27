@@ -9,7 +9,7 @@ import {
   currentEditor,
   errorResponse,
   fieldErrors,
-  requireAdmin,
+  requirePermission,
   revalidateProduct,
 } from "@/lib/admin/api";
 
@@ -54,7 +54,7 @@ function badId() {
 
 /** Full document for the edit form (includes admin-only pricing). */
 export async function GET(_request: NextRequest, { params }: Params) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("products:read");
   if (unauthorized) return unauthorized;
 
   try {
@@ -73,7 +73,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
 }
 
 export async function PATCH(request: NextRequest, { params }: Params) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("products:write");
   if (unauthorized) return unauthorized;
 
   try {
@@ -126,7 +126,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("products:delete");
   if (unauthorized) return unauthorized;
 
   try {

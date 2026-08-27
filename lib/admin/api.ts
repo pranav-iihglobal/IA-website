@@ -1,23 +1,29 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
-import { isAuthorisedEmail } from "@/lib/auth/directors";
+import { findActiveUser, type ActiveUser } from "@/lib/auth/users";
+import { can, ROLE_LABELS, type Permission } from "@/lib/auth/permissions";
 
 /**
  * Shared helpers for admin API route handlers.
  */
 
 /**
- * Defence in depth: the proxy already blocks unauthorised requests to
- * /api/admin/*, but every handler re-checks so a future matcher change can
- * never silently expose a mutation endpoint.
+ * Defence in depth, and the only place authorisation is actually decided.
  *
- * Authentication and authorisation are separate questions here. Having a
- * valid session only proves Google vouched for the address; whether that
- * address may touch this data is the Director collection's call, and it is
- * asked again on every request rather than trusted from sign-in time.
+ * The proxy already turned away anyone without a session, but it runs on the
+ * edge and cannot reach the database, so it knows nothing about roles. This
+ * does, and it asks fresh every request — a demoted or suspended user loses
+ * access on their very next call rather than when their token expires.
+ *
+ * Authentication and authorisation stay separate questions here. A valid
+ * session only proves Google vouched for the address; whether that address
+ * may perform THIS action is the User collection's call, checked against the
+ * permission the route names.
  */
-export async function requireAdmin(): Promise<NextResponse | null> {
+export async function requirePermission(
+  permission: Permission,
+): Promise<NextResponse | null> {
   let session;
   try {
     session = await auth();
@@ -39,16 +45,49 @@ export async function requireAdmin(): Promise<NextResponse | null> {
   if (!email) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
-  if (!(await isAuthorisedEmail(email))) {
+
+  const user = await findActiveUser(email);
+  if (!user) {
     // Deliberately does not echo the address back or say why.
-    console.warn("[admin api] rejected a signed-in account that is not a director");
+    console.warn("[admin api] rejected a signed-in account with no active user row");
     return NextResponse.json({ error: "Not authorised" }, { status: 403 });
   }
+
+  if (!can(user.role, permission)) {
+    /*
+      Named in the response on purpose. This is not an attacker probing for
+      what exists — they are signed in and we know exactly who they are. Being
+      told "your role cannot do this" is the difference between a colleague
+      asking for an upgrade and a colleague filing a bug.
+    */
+    return NextResponse.json(
+      {
+        error: `Your role (${ROLE_LABELS[user.role].label}) cannot do this. Ask an owner for access.`,
+      },
+      { status: 403 },
+    );
+  }
+
   return null;
 }
 
 /**
- * Which director is saving this, for the "last edited by" line in the admin.
+ * The signed-in user as the database sees them right now, or null.
+ *
+ * For routes that need more than a yes/no — the ones whose rules depend on
+ * WHO is asking, like refusing to let someone remove their own access.
+ */
+export async function currentUser(): Promise<ActiveUser | null> {
+  try {
+    const session = await auth();
+    return await findActiveUser(session?.user?.email);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Which user is saving this, for the "last edited by" line in the admin.
  *
  * Read from the verified Google session, never from the request body —
  * otherwise a client could claim to be anyone.

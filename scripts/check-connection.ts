@@ -62,7 +62,7 @@ function checkAuth() {
     );
   }
 
-  // Who can sign in lives in the database now — `npm run directors -- list`.
+  // Who can sign in lives in the database now — `npm run users -- list`.
 }
 
 async function checkMongo() {

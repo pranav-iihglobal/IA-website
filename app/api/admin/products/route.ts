@@ -7,7 +7,7 @@ import {
   currentEditor,
   errorResponse,
   fieldErrors,
-  requireAdmin,
+  requirePermission,
   revalidateProduct,
 } from "@/lib/admin/api";
 
@@ -18,7 +18,7 @@ const PAGE_SIZE = 20;
 
 /** List products for the admin table: search + status filter + pagination. */
 export async function GET(request: NextRequest) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("products:read");
   if (unauthorized) return unauthorized;
 
   try {
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
 /** Create a product. */
 export async function POST(request: NextRequest) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("products:write");
   if (unauthorized) return unauthorized;
 
   try {

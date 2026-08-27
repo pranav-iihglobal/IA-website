@@ -4,13 +4,15 @@ import { NavProgress } from "@/components/NavProgress";
 import { RouteTransition } from "@/components/RouteTransition";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { isAuthorisedEmail } from "@/lib/auth/directors";
+import { findActiveUser } from "@/lib/auth/users";
 
 /**
  * Authenticated admin area.
  *
- * Access is enforced in proxy.ts; the check here is a second, redundant
- * one, and the session read that follows is only to show who is signed in.
+ * The proxy has already established that a session exists. This is where that
+ * session becomes a person: the database says who they are and what they may
+ * do, and both the guard below and the nav are driven by that answer rather
+ * than by anything carried in the token.
  */
 export default async function DashboardLayout({
   children,
@@ -18,18 +20,21 @@ export default async function DashboardLayout({
   const session = await auth();
 
   /*
-    Last line of defence. proxy.ts already enforces this, but a matcher
-    change or an edge-runtime failure must never be the only thing standing
-    between a stranger's Google account and the panel.
+    The authoritative check. The proxy runs on the edge and only knows that
+    SOME valid session exists; whether this person still has access, and as
+    what, is a database question and it is asked here on every single page
+    load. Suspend or demote someone and their very next click reflects it.
   */
-  if (!(await isAuthorisedEmail(session?.user?.email))) {
-    redirect("/admin/restricted");
-  }
+  const me = await findActiveUser(session?.user?.email);
+  if (!me) redirect("/admin/restricted");
 
   const user = {
-    name: session?.user?.name ?? undefined,
-    email: session?.user?.email ?? undefined,
+    name: me.name || session?.user?.name || undefined,
+    email: me.email,
     image: session?.user?.image ?? undefined,
+    // Live from the database, so the nav can never offer a module the API
+    // would refuse.
+    role: me.role,
   };
 
   return (

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ROLES } from "@/lib/auth/permissions";
 
 /**
  * Shared zod schemas — the single source of truth for validation on BOTH the
@@ -352,20 +353,44 @@ export function slugify(input: string): string {
 }
 
 /**
- * A director added from /admin/directors.
+ * Someone with access to the admin panel, managed at /admin/users.
  *
  * Email is the identity — it is what Google verifies and what `updatedBy`
  * records — so it is the only required field. The name is a label for the
  * list, nothing more.
  */
-export const directorSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .min(1, "Email is required")
-    .email("Enter a valid email address"),
-  name: z.string().trim().max(80, "Keep the name under 80 characters").default(""),
+const emailField = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(1, "Email is required")
+  .email("Enter a valid email address");
+
+const nameField = z
+  .string()
+  .trim()
+  .max(80, "Keep the name under 80 characters")
+  .default("");
+
+/** Adding someone to the admin panel. */
+export const userCreateSchema = z.object({
+  email: emailField,
+  name: nameField,
+  // No default: choosing what someone may do should be a deliberate act, not
+  // something that happens by omission.
+  role: z.enum(ROLES, { message: "Choose a role" }),
 });
 
-export type DirectorInput = z.infer<typeof directorSchema>;
+/**
+ * Changing an existing person. Both fields optional — the UI sends whichever
+ * one the owner actually touched — but at least one must be present, or the
+ * request is a no-op the route rejects.
+ */
+export const userUpdateSchema = z.object({
+  id: z.string().trim().min(1),
+  role: z.enum(ROLES).optional(),
+  status: z.enum(["active", "suspended"]).optional(),
+});
+
+export type UserCreateInput = z.infer<typeof userCreateSchema>;
+export type UserUpdateInput = z.infer<typeof userUpdateSchema>;

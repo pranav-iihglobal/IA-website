@@ -9,7 +9,7 @@ import {
   currentEditor,
   errorResponse,
   fieldErrors,
-  requireAdmin,
+  requirePermission,
   revalidateTestimonials,
 } from "@/lib/admin/api";
 
@@ -23,7 +23,7 @@ function badId() {
 }
 
 export async function GET(_request: NextRequest, { params }: Params) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("testimonials:read");
   if (unauthorized) return unauthorized;
   try {
     const { id } = await params;
@@ -39,7 +39,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
 }
 
 export async function PATCH(request: NextRequest, { params }: Params) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("testimonials:write");
   if (unauthorized) return unauthorized;
 
   try {
@@ -88,7 +88,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("testimonials:delete");
   if (unauthorized) return unauthorized;
 
   try {

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useState, type ReactNode } from "react";
+import { can, type Permission, type Role } from "@/lib/auth/permissions";
 
 function Icon({ path }: { path: string }) {
   return (
@@ -28,6 +29,8 @@ const LINKS: {
   label: string;
   exact?: boolean;
   icon: ReactNode;
+  /** Hidden unless the signed-in role holds this. Omit for always-visible. */
+  needs?: Permission;
 }[] = [
   {
     href: "/admin",
@@ -55,8 +58,9 @@ const LINKS: {
     ),
   },
   {
-    href: "/admin/directors",
-    label: "Directors",
+    href: "/admin/users",
+    label: "People",
+    needs: "users:read",
     icon: (
       <Icon path="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm13 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
     ),
@@ -66,6 +70,8 @@ const LINKS: {
 export interface AdminUser {
   name?: string;
   email?: string;
+  /** Read live from the database by the layout, never from the session. */
+  role?: Role;
   /** Google profile picture. */
   image?: string;
 }
@@ -105,9 +111,16 @@ export function AdminNav({ user }: { user: AdminUser }) {
     signOut({ redirectTo: "/admin/login" });
   }
 
+  /*
+    Hiding a link is a courtesy, not a control — the page and its API refuse
+    the request regardless. Showing someone a module that will only tell them
+    no is just a worse way to say the same thing.
+  */
+  const visible = LINKS.filter((link) => !link.needs || can(user.role, link.needs));
+
   const nav = (
     <ul className="space-y-1">
-      {LINKS.map((link) => {
+      {visible.map((link) => {
         const active = link.exact
           ? pathname === link.href
           : pathname.startsWith(link.href);

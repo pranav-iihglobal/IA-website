@@ -10,7 +10,7 @@ import {
   currentEditor,
   errorResponse,
   fieldErrors,
-  requireAdmin,
+  requirePermission,
   revalidatePost,
 } from "@/lib/admin/api";
 
@@ -24,7 +24,7 @@ function badId() {
 }
 
 export async function GET(_request: NextRequest, { params }: Params) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("posts:read");
   if (unauthorized) return unauthorized;
   try {
     const { id } = await params;
@@ -39,8 +39,22 @@ export async function GET(_request: NextRequest, { params }: Params) {
   }
 }
 
+/**
+ * "Published" is a separate power from "can write a post".
+ *
+ * An editor drafts; making something visible to the public is an admin's
+ * call. Enforced on the STATUS being written, not on the route, because the
+ * same PATCH both saves a draft and publishes it depending on one field.
+ *
+ * Scheduled counts as publishing — it is publishing with a timer.
+ */
+async function refusePublish(status: string): Promise<NextResponse | null> {
+  if (status !== "published" && status !== "scheduled") return null;
+  return requirePermission("posts:publish");
+}
+
 export async function PATCH(request: NextRequest, { params }: Params) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("posts:write");
   if (unauthorized) return unauthorized;
 
   try {
@@ -57,6 +71,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         { status: 400 },
       );
     }
+
+    const denied = await refusePublish(parsed.data.status);
+    if (denied) return denied;
 
     await connectToDatabase();
     const existing = await Post.findById(id);
@@ -90,7 +107,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 }
 
 export async function DELETE(_request: NextRequest, { params }: Params) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("posts:delete");
   if (unauthorized) return unauthorized;
 
   try {

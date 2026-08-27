@@ -1,0 +1,57 @@
+import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
+import { ROLES } from "@/lib/auth/permissions";
+
+/**
+ * Someone allowed into the admin panel.
+ *
+ * Email is the identity, because it is what Google verifies and what
+ * `updatedBy` already records across the content collections. Stored
+ * lowercase and uniquely indexed, so one person cannot exist twice under
+ * different casing.
+ *
+ * There is no password field and there never will be — Google does the
+ * authentication, this collection only answers what that person may do.
+ *
+ * Suspending rather than deleting is the normal way to cut someone off:
+ * their row stays, so the "last edited by" lines on old content still
+ * resolve to a person rather than a dangling address.
+ */
+const userSchema = new Schema(
+  {
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      index: true,
+    },
+    /** Optional label, purely so the list reads as people rather than logins. */
+    name: { type: String, trim: true, default: "" },
+    role: {
+      type: String,
+      enum: ROLES,
+      // The least privilege that still lets someone in. A misconfigured or
+      // half-written document must never default to power.
+      default: "viewer",
+      required: true,
+      index: true,
+    },
+    status: {
+      type: String,
+      enum: ["active", "suspended"],
+      default: "active",
+      required: true,
+    },
+    /** Email of whoever granted this access. Set server-side from the session. */
+    addedBy: { type: String, trim: true, default: "" },
+    /** Stamped on each sign-in, so a stale account is visible as stale. */
+    lastSignInAt: { type: Date, default: null },
+  },
+  { timestamps: true },
+);
+
+export type UserDoc = InferSchemaType<typeof userSchema>;
+
+export const User: Model<UserDoc> =
+  (models.User as Model<UserDoc>) ?? model<UserDoc>("User", userSchema);

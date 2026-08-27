@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { requireAdmin, errorResponse } from "@/lib/admin/api";
+import { requirePermission, errorResponse } from "@/lib/admin/api";
 import {
   CLOUDINARY_FOLDERS,
   getCloudinary,
@@ -22,7 +22,7 @@ const bodySchema = z.object({
  * inside Vercel's free-tier limits) and the API secret never leaves it.
  */
 export async function POST(request: NextRequest) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("media:upload");
   if (unauthorized) return unauthorized;
 
   if (!isCloudinaryConfigured()) {

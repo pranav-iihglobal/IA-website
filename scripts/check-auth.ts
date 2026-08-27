@@ -3,13 +3,17 @@
  *
  * Every other check in this repo tests the signed-out path — that a stranger
  * gets a redirect or a 401. That path was always fine. What shipped broken
- * was the opposite one: a real director, correctly signed in, bounced to
- * /admin/restricted because the `admin` flag was set on the JWT and read off
- * the Session, which are two different objects. Nothing caught it, because
+ * was the opposite one: a real user, correctly signed in, bounced to
+ * /admin/restricted because a flag was set on the JWT and read off the
+ * Session, which are two different objects. Nothing caught it, because
  * testing it needs a session, and getting a session needed Google.
  *
  * It does not. A session cookie is just a JWE signed with AUTH_SECRET, and
  * this app has AUTH_SECRET. So we mint one and drive the guard with it.
+ *
+ * The inverse matters just as much, and is why the token no longer carries a
+ * role at all: a cookie CLAIMING to be an owner must get nowhere, because
+ * authorisation is read from the database and never from the token.
  *
  *   npm run build && npm start          # in one terminal
  *   npm run check-auth                  # in another
@@ -67,8 +71,8 @@ async function main() {
     process.exit(1);
   }
 
-  const admin = await cookieFor({ admin: true });
-  const plain = await cookieFor({});
+  const session = await cookieFor({});
+  const forged = await cookieFor({ role: "owner", admin: true });
 
   const cases: Case[] = [
     {
@@ -87,29 +91,31 @@ async function main() {
     },
     {
       /*
-        The regression this file exists for. A director holding a valid
-        session must get PAST the proxy. Past it the Node layer re-checks the
-        Director collection, so a 403 or a bounce to /admin/restricted from
-        THERE is still correct — what must never happen is the proxy itself
-        turning them away, which is what a missing `admin` flag caused.
+        The regression this file exists for. Someone holding a valid session
+        must get PAST the proxy. Past it the Node layer looks them up in the
+        User collection, so a 403 or a bounce to /admin/restricted from THERE
+        is correct — what must never happen is the proxy turning them away on
+        its own, which is what a stale role cached in the token once caused.
       */
-      label: "signed in, admin flag",
+      label: "signed in",
       path: "/api/admin/products",
-      cookie: admin,
+      cookie: session,
       expect: (s) => s !== 401,
       describe: "not 401 (the proxy let it reach the Node check)",
     },
     {
-      label: "signed in, NO admin flag",
-      path: "/api/admin/products",
-      cookie: plain,
+      // A token carrying a role must not be believed. Authorisation is the
+      // database's answer, and this address is in nobody's User collection.
+      label: "signed in, forged owner role",
+      path: "/api/admin/users",
+      cookie: forged,
       expect: (s) => s === 403,
-      describe: "403 (session predates the Director module)",
+      describe: "403 — a role claimed by the token counts for nothing",
     },
     {
-      label: "signed in, NO admin flag",
+      label: "signed in, unknown account",
       path: "/admin/products",
-      cookie: plain,
+      cookie: session,
       expect: redirectsTo("/admin/restricted"),
       describe: "sent to /admin/restricted",
     },

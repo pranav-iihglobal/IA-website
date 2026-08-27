@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { isAuthorisedEmail } from "@/lib/auth/directors";
+import { isAuthorisedEmail } from "@/lib/auth/users";
 import { auth } from "@/auth";
 import { SITE } from "@/lib/content";
 import { GoogleSignInButton } from "@/components/admin/GoogleSignInButton";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  * Admin sign-in.
  *
  * One button. There is no password to type, reset or leak — Google vouches
- * for the director's identity and this app only decides whether to accept it.
+ * for the person's identity and this app only decides whether to accept it.
  */
 export default async function AdminLoginPage({
   searchParams,
@@ -62,7 +62,7 @@ export default async function AdminLoginPage({
         </div>
 
         <p className="mt-6 text-center text-xs leading-relaxed text-russet-dark/55">
-          Access is limited to IKSARVA directors. If your account is not
+          Access is limited to the IKSARVA team. If your account is not
           approved, Google will refuse the sign-in.
         </p>
 

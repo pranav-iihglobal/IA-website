@@ -7,7 +7,7 @@ import {
   currentEditor,
   errorResponse,
   fieldErrors,
-  requireAdmin,
+  requirePermission,
   revalidateTestimonials,
 } from "@/lib/admin/api";
 
@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 const PAGE_SIZE = 20;
 
 export async function GET(request: NextRequest) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("testimonials:read");
   if (unauthorized) return unauthorized;
 
   try {
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requirePermission("testimonials:write");
   if (unauthorized) return unauthorized;
 
   try {

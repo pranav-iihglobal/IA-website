@@ -21,6 +21,7 @@ npm run dev                    # http://localhost:3000  ·  admin at /admin
 | `npm run check-seed` | Validates what the seed would write against the zod schemas — no database needed |
 | `npm run check-connection` | Checks the Google sign-in config and pings MongoDB and Cloudinary |
 | `npm run check-auth` | Drives the admin guard with a minted session cookie — needs a running server; add a URL to check a deployed one |
+| `npm run users -- list` | Manage who can sign in and what they may do, from a terminal |
 | `npm run check-models` | Validates every Mongoose model against a minimal document — no database needed |
 
 ## ✏️ Site content (one file)
@@ -35,48 +36,63 @@ npm run dev                    # http://localhost:3000  ·  admin at /admin
 
 ## Admin panel
 
-Sign in at **/admin** with **Google**. There is no password anywhere in this app, no user collection and no registration — see [Authentication](#authentication) below. `proxy.ts` guards every `/admin/*` page and `/api/admin/*` route, and `/admin` is excluded from search engines.
+Sign in at **/admin** with **Google**. There is no password anywhere in this app and no registration — the `users` collection records who may sign in and what they may do, never how they prove who they are. See [Authentication](#authentication) below. `proxy.ts` guards every `/admin/*` page and `/api/admin/*` route, and `/admin` is excluded from search engines.
 
 ### Authentication
 
-Google sign-in only. Nothing about auth touches MongoDB, so it costs the free-tier cluster nothing.
+Google sign-in only. Authentication costs the cluster nothing — no session store, no password hashes. Authorisation is a database read, one indexed `findOne` per request.
 
-**How a sign-in works.** `/admin/login` offers one button. Google authenticates the director and redirects back to `/api/auth/callback/google`. The app then issues its own session — a JWT in a cookie, signed with `AUTH_SECRET`, valid for 14 days. Google is only consulted at sign-in; every request afterwards is authenticated by that cookie, which is why `AUTH_SECRET` matters as much as the Google credentials do.
+**How a sign-in works.** `/admin/login` offers one button. Google authenticates the person and redirects back to `/api/auth/callback/google`. The app then issues its own session — a JWT in a cookie, signed with `AUTH_SECRET`, valid for 14 days. Google is only consulted at sign-in; every request afterwards is authenticated by that cookie, which is why `AUTH_SECRET` matters as much as the Google credentials do.
 
-**Who is allowed in.** One list, in the database, managed at **/admin/directors**. Add someone by their Google address and they can sign in immediately; remove them and they lose access on their next request. No environment variable, no redeploy.
+**Who is allowed in, and as what.** One collection, managed at **/admin/users**. Add someone by their Google address, pick a role, and they can sign in immediately; change or revoke it and their next request reflects it. No environment variable, no redeploy.
 
-The first director is created from a terminal, because the page that grants access sits behind the login it controls:
+| Role | Can |
+|---|---|
+| **Owner** | Everything, including adding and removing people |
+| **Admin** | All content — writing, publishing, deleting. Cannot change who has access |
+| **Editor** | Writes and edits content, uploads images. Cannot delete or publish |
+| **Viewer** | Reads everything in the panel. Changes nothing |
+
+Roles nest, so each is the one above it plus more. Suspending is the usual way to cut someone off — their record stays, so the "last edited by" lines on old content still resolve to a person.
+
+Access is never tested by role name. Every decision resolves to a permission string (`products:write`, `posts:publish`, `users:manage`, …) checked against one map in [`lib/auth/permissions.ts`](lib/auth/permissions.ts). Adding a module later means adding its permissions there and naming them in the routes — not revisiting every route to ask which roles are now allowed.
+
+The first owner is created from a terminal, because the page that grants access sits behind the login it controls:
 
 ```bash
-npm run directors -- add you@gmail.com "Your Name"
-npm run directors -- list
-npm run directors -- remove someone@gmail.com
+npm run users -- add you@gmail.com owner "Your Name"
+npm run users -- list
+npm run users -- role someone@gmail.com editor
+npm run users -- suspend someone@gmail.com
+npm run users -- remove someone@gmail.com
+npm run users -- migrate     # one-off, imports an old `directors` collection
 ```
 
-That script talks to MongoDB directly and never asks who you are, so guard it the way you guard `MONGODB_URI`. It is also the way back in if the collection is ever emptied.
+That script talks to MongoDB directly and never asks who you are, so guard it the way you guard `MONGODB_URI`. It is also the way back in if every owner is ever locked out.
 
-It **fails closed**: no directors means nobody signs in. Enforced in four places, so no single change can quietly open the door:
+It **fails closed**: no users means nobody signs in, and an unreachable database refuses everyone rather than letting anyone through. Three guards protect the panel from being made unusable — you cannot change your own access, the last active owner cannot be removed, suspended or demoted, and nobody can grant a role above their own.
+
+Enforced in three places:
 
 | Where | Runtime | Checks |
 |---|---|---|
 | `signIn` callback (`auth.ts`) | Node | The database. Refuses to mint a session at all |
-| `proxy.ts` | Edge | That the token was minted for an authorised account |
-| `requireAdmin()` (`lib/admin/api.ts`) | Node | The database, on every API call |
-| Dashboard layout | Node | The database, on every admin page |
+| `proxy.ts` | Edge | Only that a session exists — see below |
+| `requirePermission()` (`lib/admin/api.ts`) and the dashboard layout | Node | The database, on every request, for the specific permission |
 
-The proxy runs on the edge, where Mongoose cannot run, so it does the cheap half and the two Node layers behind it do the authoritative lookup on every request. That is also why the config is split across `auth.config.ts` (edge-safe) and `auth.ts` (reaches the database) — importing `auth.ts` from the proxy fails the build.
+**The session deliberately carries no role.** An earlier version cached an `admin` flag on the token for the proxy to read, and it locked out every user — `request.auth` in the proxy is a Session, not the JWT, and the flag was never copied across. The fix was not to copy it more carefully but to stop duplicating authorisation state into a runtime that cannot verify it. A session can only exist if the `signIn` callback approved it against the database, so its existence is all the edge needs; what the person may actually do is read from MongoDB in Node on every request. That is also why a demotion takes effect instantly rather than at token expiry.
 
-The "authorised account" the proxy checks is the `admin` flag, and it has to be written **twice**: onto the JWT in the `jwt` callback, and onto the Session in the `session` callback. They are different objects — `request.auth` inside the proxy is a Session, not the token — and a flag set on one is simply absent on the other. Getting that wrong locks out every director while looking perfectly correct, so both shapes are declared in `types/next-auth.d.ts` and `npm run check-auth` drives the signed-in path end to end.
+`npm run check-auth` drives both directions against a running server, including a cookie that forges `role: "owner"` — which must get nowhere.
 
-> ⚠️ **Google's "test users" list is not access control.** It only restricts anything while the OAuth consent screen is in **Testing** status. Publishing the app — or making it **Internal** in a Workspace — opens sign-in to every Google account, with no warning and no visible change here. The Director collection is what actually protects the panel.
+The config is split across `auth.config.ts` (edge-safe) and `auth.ts` (reaches the database) because Mongoose cannot run on the edge; importing `auth.ts` from the proxy fails the build.
 
-**Two guards on the page:** you cannot remove your own access, and you cannot remove the last director. Both would lock everyone out of the page that undoes it.
+> ⚠️ **Google's "test users" list is not access control.** It only restricts anything while the OAuth consent screen is in **Testing** status. Publishing the app — or making it **Internal** in a Workspace — opens sign-in to every Google account, with no warning and no visible change here. The User collection is what actually protects the panel.
 
 **To cut off a session immediately** rather than on the person's next request, rotate `AUTH_SECRET`. Every session is a JWT signed with it, so changing it invalidates all of them at once.
 
 The production redirect URI `https://iksarva.com/api/auth/callback/google` must exist on the OAuth client, or sign-in fails on the live site with `redirect_uri_mismatch`.
 
-**Audit trail:** every product, testimonial and post records `updatedBy` — the signed-in director's Google email — on create and update. Admin list rows show it as "last edited · date · who".
+**Audit trail:** every product, testimonial and post records `updatedBy` — the signed-in user's Google email — on create and update. Admin list rows show it as "last edited · date · who".
 
 Three modules, each with search, status filter, pagination and delete-with-confirm:
 
@@ -128,9 +144,9 @@ The OAuth client already exists: Google Cloud project **IKSARVA Admin** → OAut
    - `http://localhost:3000/api/auth/callback/google`
    - `https://iksarva.com/api/auth/callback/google`
 3. Generate `AUTH_SECRET` with `openssl rand -base64 32`.
-4. **Create yourself as the first director** once the database is connected:
-   `npm run directors -- add you@gmail.com`. Everyone after that is added from
-   /admin/directors.
+4. **Create yourself as the first owner** once the database is connected:
+   `npm run users -- add you@gmail.com owner`. Everyone after that is added
+   from /admin/users.
 
 Local development must run on **port 3000** — the registered redirect URI is `localhost:3000`, and Google rejects the callback from any other port.
 
@@ -207,7 +223,7 @@ only (a worker caching localhost is a reliable way to wonder why your changes
 aren't showing up). The rules:
 
 - **`/admin` and `/api` are never cached.** Caching an authenticated page
-  would be a security bug, and a cached API response would show a director
+  would be a security bug, and a cached API response would show someone
   stale data they are about to edit.
 - **Page navigations are network-first**, falling back to the cache and then
   to `/offline`. A good connection always wins; a bad one gets the last
@@ -271,7 +287,7 @@ lib/
   posts-source.ts         Same for blog (falls back to content/learn/*.md)
   cloudinary.ts images.ts sanitize.ts auth/ admin/
 content/learn/*.md        Original articles — kept as a fallback after seeding
-scripts/                  seed, check-seed, check-connection, check-auth, directors
+scripts/                  seed, check-seed, check-connection, check-auth, users
 proxy.ts                  Guards /admin and /api/admin
 ```
 

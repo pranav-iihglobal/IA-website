@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/auth";
-import { countDirectors } from "@/lib/auth/directors";
+import { countUsers } from "@/lib/auth/users";
 import { SITE } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * Where a sign-in that did not succeed ends up, and where the admin layout
  * sends a signed-in account that is not a director.
  *
- * Access is decided by the Director collection, not by Google. Google's OAuth
+ * Access is decided by the User collection, not by Google. Google's OAuth
  * "test users" list only restricts anything while the consent screen is in
  * Testing status, so it is not something to hang authorisation on.
  */
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 const MESSAGES: Record<string, { heading: string; body: string }> = {
   AccessDenied: {
     heading: "Access restricted",
-    body: "This admin panel is limited to IKSARVA directors. The Google account you used is not on the approved list.",
+    body: "This admin panel is limited to the IKSARVA team. The Google account you used has no access, or it has been suspended.",
   },
   Verification: {
     heading: "Sign-in link expired",
@@ -32,19 +32,19 @@ const MESSAGES: Record<string, { heading: string; body: string }> = {
 
 const FALLBACK = {
   heading: "Access restricted",
-  body: "This admin panel is limited to IKSARVA directors. The Google account you used is not on the approved list.",
+  body: "This admin panel is limited to the IKSARVA team. The Google account you used has no access, or it has been suspended.",
 };
 
 /**
- * Shown when there are no directors at all.
+ * Shown when there are no users at all.
  *
  * Without this the first person to arrive sees "you are not on the approved
  * list" and has no way to guess that there is no list yet. Safe to surface:
  * it reveals that setup is unfinished, not who has access.
  */
 const NOT_CONFIGURED = {
-  heading: "No directors yet",
-  body: "Nobody has been given access to this panel, so nobody can sign in. Create the first director from a terminal with: npm run directors -- add you@gmail.com",
+  heading: "Nobody has access yet",
+  body: "Nobody has been given access to this panel, so nobody can sign in. Create the first owner from a terminal with: npm run users -- add you@gmail.com owner",
 };
 
 export default async function RestrictedPage({
@@ -58,7 +58,7 @@ export default async function RestrictedPage({
     whoever is staring at this page, so they are told apart here. -1 means the
     database could not be reached, which is neither.
   */
-  const total = await countDirectors();
+  const total = await countUsers();
   const { heading, body } =
     total === 0 ? NOT_CONFIGURED : (MESSAGES[error ?? ""] ?? FALLBACK);
 
