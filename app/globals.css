@@ -854,3 +854,29 @@ select.admin-input {
   }
 }
 }
+
+/* ==========================================================================
+   Overrides that must beat Tailwind utilities
+   ========================================================================== */
+
+/*
+  Deliberately unlayered. Everything above lives in @layer components, which
+  Tailwind orders BEFORE @layer utilities — so a rule written there loses to
+  the `flex` utility already on the element, which is exactly what happened
+  the first time this was written. Unlayered CSS beats every layer.
+*/
+/*
+  Inside the wizard's accordion, the open step's first section header repeats
+  what the header directly above it already says — the same title and the
+  same description, roughly 130px of a phone screen spent saying it twice.
+  Hidden below xl only; from xl up there is no accordion header and this is
+  the only place the section is named.
+
+  Scoped to the panel and to the FIRST section, so a step made of several
+  sections keeps the headers that still distinguish them.
+*/
+@media (max-width: 1279px) {
+  #wizard-step-panel > .space-y-6 > section:first-child > .admin-section-head {
+    display: none;
+  }
+}

@@ -147,15 +147,30 @@ export function FormWizard({
 }) {
   const [current, setCurrent] = useState(0);
   const topRef = useRef<HTMLDivElement>(null);
-  const railRef = useRef<HTMLDivElement>(null);
 
   const total = steps.length;
   const safeCurrent = Math.min(current, total - 1);
   const step = steps[safeCurrent];
 
+  /**
+   * Move to a step and put it where the eye already is.
+   *
+   * Below xl that means the accordion header you just tapped, so its fields
+   * open directly beneath it. At xl the headers are display:none and
+   * scrollIntoView on a hidden element silently does nothing — offsetParent
+   * is the test for that — so it falls back to the top of the form, which is
+   * what the desktop layout wants anyway.
+   */
   const goTo = useCallback((index: number) => {
     setCurrent(index);
-    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const header = document.querySelector<HTMLElement>(
+      `[data-step-header="${index}"]`,
+    );
+    if (header && header.offsetParent !== null) {
+      header.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }, []);
 
   // A rejected save should land you on the problem, not leave you hunting.
@@ -169,14 +184,6 @@ export function FormWizard({
     // steps is rebuilt every render; errors is the real trigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [errors]);
-
-  // Keep the active pill visible when the horizontal rail overflows.
-  useEffect(() => {
-    const active = railRef.current?.querySelector<HTMLElement>(
-      '[data-active="true"]',
-    );
-    active?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [safeCurrent]);
 
   /**
    * Alt+← / Alt+→ walk the steps. Plain arrows would fight every text field
@@ -310,78 +317,121 @@ export function FormWizard({
 
         {/* ---------- Content column ---------- */}
         <div className="min-w-0">
-          {/* Horizontal rail (below xl) */}
-          <div className="admin-card sticky top-[64px] z-20 mb-6 overflow-hidden lg:top-2 xl:hidden">
-            <div className="h-1 bg-meringue">
+          {/*
+            Below xl the steps are an accordion, not a horizontal rail.
+
+            The rail was a scrolling strip of pills: on a phone it showed
+            three of eight steps and clipped the fourth mid-word, with no
+            indication the rest existed. A vertical list shows every step, its
+            state, and what it contains, and the open one drops its fields
+            directly underneath.
+
+            The content is rendered ONCE, further down. It is placed under the
+            active header by CSS order rather than by nesting it inside each
+            accordion item — nesting would mean mounting the step's content
+            per item, and one of those steps holds a rich text editor. At xl
+            the container is `block`, order is ignored and the headers are
+            hidden, so the desktop layout is exactly what it was.
+          */}
+          <div className="mb-4 flex items-center gap-3 xl:hidden">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-meringue">
               <div
-                className="h-full bg-olive transition-[width] duration-300"
-                style={{ width: `${((safeCurrent + 1) / total) * 100}%` }}
+                className="h-full rounded-full bg-olive transition-[width] duration-300"
+                style={{ width: `${(steps.filter((s) => s.complete).length / total) * 100}%` }}
               />
             </div>
-            <div
-              ref={railRef}
-              className="flex gap-1.5 overflow-x-auto px-3 py-2.5"
-              role="group"
-              aria-label="Form steps"
-            >
-              {steps.map((s, index) => {
-                const active = index === safeCurrent;
-                const failures = errorCount(s, errors);
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    data-active={active}
-                    aria-current={active ? "step" : undefined}
-                    onClick={() => goTo(index)}
-                    title={s.description ?? s.title}
-                    className={`admin-tap flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${
-                      active
-                        ? "bg-olive text-cornsilk-light"
-                        : failures > 0
-                          ? "bg-alloy/12 text-alloy-dark hover:bg-alloy/20"
-                          : "text-russet-dark/65 hover:bg-meringue hover:text-russet"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-                        active
-                          ? "bg-cornsilk-light/25 text-cornsilk-light"
-                          : failures > 0
-                            ? "bg-alloy text-cornsilk-light"
-                            : s.complete
-                              ? "bg-laurel text-olive-dark"
-                              : "bg-meringue-dark/50 text-russet-dark/60"
-                      }`}
-                    >
-                      {failures > 0 ? (
-                        <AlertIcon />
-                      ) : s.complete ? (
-                        <CheckIcon />
-                      ) : (
-                        index + 1
-                      )}
-                    </span>
-                    <span className="whitespace-nowrap">{s.title}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <span className="shrink-0 text-xs font-semibold text-russet-dark/60">
+              {steps.filter((s) => s.complete).length}/{total} done
+            </span>
           </div>
 
+          {/*
+            flex below xl so `order` interleaves the single content node
+            between the headers; plain block at xl, where order does nothing
+            and the headers are hidden.
+          */}
           <div
-            className={
-              aside
-                ? "grid gap-8 2xl:grid-cols-[minmax(0,1fr)_20rem]"
-                : undefined
-            }
+            className={`flex flex-col gap-2 xl:block ${
+              aside ? "2xl:grid 2xl:gap-8 2xl:grid-cols-[minmax(0,1fr)_20rem]" : ""
+            }`}
           >
-            <div className="min-w-0">
+            {steps.map((s, index) => {
+              const active = index === safeCurrent;
+              const failures = errorCount(s, errors);
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => goTo(index)}
+                  aria-expanded={active}
+                  aria-controls="wizard-step-panel"
+                  data-step-header={index}
+                  style={{ order: index * 2, scrollMarginTop: "72px" }}
+                  className={`admin-tap flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors xl:hidden ${
+                    active
+                      ? "border-olive bg-olive text-cornsilk-light"
+                      : failures > 0
+                        ? "border-alloy/40 bg-alloy/10"
+                        : "border-camel-light/60 bg-cornsilk-light"
+                  }`}
+                >
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                      active
+                        ? "bg-cornsilk-light/25 text-cornsilk-light"
+                        : failures > 0
+                          ? "bg-alloy text-cornsilk-light"
+                          : s.complete
+                            ? "bg-laurel text-olive-dark"
+                            : "bg-meringue-dark/50 text-russet-dark/60"
+                    }`}
+                  >
+                    {failures > 0 ? <AlertIcon /> : s.complete ? <CheckIcon /> : index + 1}
+                  </span>
+
+                  <span className="min-w-0 flex-1">
+                    <span className={`block truncate font-semibold ${active ? "" : "text-russet"}`}>
+                      {s.title}
+                    </span>
+                    <span
+                      className={`block truncate text-[11px] ${
+                        active
+                          ? "text-cornsilk/75"
+                          : failures > 0
+                            ? "font-semibold text-alloy-dark"
+                            : "text-russet-dark/50"
+                      }`}
+                    >
+                      {failures > 0
+                        ? `${failures} field${failures === 1 ? "" : "s"} need fixing`
+                        : (s.description ?? "") + (s.optional ? " · optional" : "")}
+                    </span>
+                  </span>
+
+                  <span
+                    aria-hidden="true"
+                    className={`shrink-0 text-lg leading-none transition-transform ${
+                      active ? "rotate-180" : "text-camel"
+                    }`}
+                  >
+                    ⌃
+                  </span>
+                </button>
+              );
+            })}
+
+            <div
+              id="wizard-step-panel"
+              style={{ order: safeCurrent * 2 + 1 }}
+              className="min-w-0 xl:order-none"
+            >
               {/* Where you are, plus whether this step can be skipped. The
                 section header inside step.content names the step itself, so
-                this row deliberately does not repeat the title. */}
+                this row deliberately does not repeat the title. The step
+                counter is desktop-only now — below xl the accordion header
+                directly above already says which step this is. */}
               <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-olive">
+                <span className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-olive xl:inline">
                   Step {safeCurrent + 1} of {total}
                 </span>
                 {step.optional && (
@@ -496,7 +546,18 @@ export function FormWizard({
               </p>
             </div>
 
-            {aside}
+            {/*
+              Ordered past every header and the panel. Without an explicit
+              order it defaults to 0 and sorts alongside the FIRST accordion
+              header, which dropped the live preview between "Basics" and its
+              own fields. On a phone the preview belongs after the form; at
+              2xl the grid takes over and order stops mattering.
+            */}
+            {aside && (
+              <div style={{ order: total * 2 + 2 }} className="min-w-0 2xl:order-none">
+                {aside}
+              </div>
+            )}
           </div>
         </div>
       </div>

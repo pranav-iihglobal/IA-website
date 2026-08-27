@@ -457,6 +457,8 @@ export function BiField({
 }) {
   const guFilled = Boolean(value.gu?.trim());
   const hintId = `${useId()}-hint`;
+  /** Which language the phone layout is showing. Ignored from sm up. */
+  const [tab, setTab] = useState<"en" | "gu">("en");
 
   return (
     <div className="admin-field">
@@ -470,7 +472,7 @@ export function BiField({
               ? "Gujarati is filled in"
               : "Gujarati is empty — English is shown to everyone"
           }
-          className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors ${
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors ${
             guFilled
               ? "bg-laurel-light/55 text-olive-dark"
               : "bg-meringue-dark/40 text-russet-dark/55"
@@ -482,14 +484,63 @@ export function BiField({
           {guFilled ? "ગુજરાતી" : "EN fallback"}
         </span>
       </div>
+
+      {/*
+        One language at a time on a phone, both side by side from sm up.
+
+        Every bilingual field is two inputs and two captions — four rows for
+        one piece of information. The product form has a dozen of them, which
+        made it endless to scroll on a phone for no gain: nobody types the
+        English and the Gujarati of a tagline at the same moment. The toggle
+        is hidden from sm up, where both fit and comparing them is useful.
+
+        Both inputs stay mounted either way. Hiding one with CSS rather than
+        unmounting it keeps what you typed when you switch, and keeps the
+        field's value in one place.
+      */}
+      <div className="mt-1.5 flex gap-1 rounded-full bg-meringue-dark/30 p-1 sm:hidden">
+        {(["en", "gu"] as const).map((code) => {
+          const isEn = code === "en";
+          const active = tab === code;
+          const hasError = Boolean(isEn ? errors?.en : errors?.gu);
+          return (
+            <button
+              key={code}
+              type="button"
+              onClick={() => setTab(code)}
+              aria-pressed={active}
+              className={`admin-tap flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors ${
+                active
+                  ? "bg-cornsilk-light text-russet shadow-sm"
+                  : "text-russet-dark/60"
+              }`}
+            >
+              {isEn ? "English" : "ગુજરાતી"}
+              {hasError && (
+                <span
+                  aria-label="has an error"
+                  className="h-1.5 w-1.5 rounded-full bg-alloy"
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="mt-1.5 grid gap-3 sm:grid-cols-2">
         {(["en", "gu"] as const).map((code) => {
           const isEn = code === "en";
           const fieldValue = (isEn ? value.en : value.gu) ?? "";
           const error = isEn ? errors?.en : errors?.gu;
           return (
-            <div key={code}>
-              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-olive">
+            <div
+              key={code}
+              // Hidden below sm unless it is the selected tab; always shown
+              // from sm up, where the pair sits side by side.
+              className={tab === code ? "" : "hidden sm:block"}
+            >
+              {/* The toggle already names the language on a phone. */}
+              <span className="mb-1 hidden text-xs font-semibold uppercase tracking-wide text-olive sm:block">
                 {isEn ? "English" : "ગુજરાતી"}
                 {!isEn && (
                   <span className="ml-1 normal-case tracking-normal text-russet-dark/45">
@@ -502,6 +553,7 @@ export function BiField({
                   rows={rows}
                   value={fieldValue}
                   aria-invalid={error ? true : undefined}
+                  aria-label={`${label} — ${isEn ? "English" : "Gujarati"}`}
                   onChange={(e) =>
                     onChange({ ...value, [code]: e.target.value })
                   }
@@ -511,6 +563,7 @@ export function BiField({
                 <input
                   value={fieldValue}
                   aria-invalid={error ? true : undefined}
+                  aria-label={`${label} — ${isEn ? "English" : "Gujarati"}`}
                   onChange={(e) =>
                     onChange({ ...value, [code]: e.target.value })
                   }
