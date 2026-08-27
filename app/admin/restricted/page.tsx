@@ -1,16 +1,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/auth";
-import { isOwnerConfigured } from "@/lib/auth/allowlist";
+import { countDirectors } from "@/lib/auth/directors";
 import { SITE } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Where a sign-in that did not succeed ends up, and where middleware sends a
- * signed-in account that is not on the allowlist.
+ * Where a sign-in that did not succeed ends up, and where the admin layout
+ * sends a signed-in account that is not a director.
  *
- * Access is decided by ADMIN_ALLOWED_EMAILS, not by Google. Google's OAuth
+ * Access is decided by the Director collection, not by Google. Google's OAuth
  * "test users" list only restricts anything while the consent screen is in
  * Testing status, so it is not something to hang authorisation on.
  */
@@ -36,15 +36,15 @@ const FALLBACK = {
 };
 
 /**
- * Shown when the server has no allowlist at all.
+ * Shown when there are no directors at all.
  *
- * Without this a locked-out director sees "you are not on the approved list"
- * and has no way to guess that the list itself is missing. The check is safe
- * to surface: it reveals a misconfiguration, not who is on the list.
+ * Without this the first person to arrive sees "you are not on the approved
+ * list" and has no way to guess that there is no list yet. Safe to surface:
+ * it reveals that setup is unfinished, not who has access.
  */
 const NOT_CONFIGURED = {
-  heading: "Admin access is not configured",
-  body: "ADMIN_ALLOWED_EMAILS is not set on the server, so nobody can sign in. Add the director email addresses to that environment variable and redeploy.",
+  heading: "No directors yet",
+  body: "Nobody has been given access to this panel, so nobody can sign in. Create the first director from a terminal with: npm run directors -- add you@gmail.com",
 };
 
 export default async function RestrictedPage({
@@ -53,9 +53,14 @@ export default async function RestrictedPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
-  const { heading, body } = !isOwnerConfigured()
-    ? NOT_CONFIGURED
-    : (MESSAGES[error ?? ""] ?? FALLBACK);
+  /*
+    An empty collection and "you are not on the list" look identical to
+    whoever is staring at this page, so they are told apart here. -1 means the
+    database could not be reached, which is neither.
+  */
+  const total = await countDirectors();
+  const { heading, body } =
+    total === 0 ? NOT_CONFIGURED : (MESSAGES[error ?? ""] ?? FALLBACK);
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">

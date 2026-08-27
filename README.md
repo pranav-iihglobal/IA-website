@@ -41,33 +41,34 @@ Google sign-in only. Nothing about auth touches MongoDB, so it costs the free-ti
 
 **How a sign-in works.** `/admin/login` offers one button. Google authenticates the director and redirects back to `/api/auth/callback/google`. The app then issues its own session — a JWT in a cookie, signed with `AUTH_SECRET`, valid for 14 days. Google is only consulted at sign-in; every request afterwards is authenticated by that cookie, which is why `AUTH_SECRET` matters as much as the Google credentials do.
 
-**Who is allowed in.** Two lists, and access is the union of them:
+**Who is allowed in.** One list, in the database, managed at **/admin/directors**. Add someone by their Google address and they can sign in immediately; remove them and they lose access on their next request. No environment variable, no redeploy.
 
-1. **Owners** — `ADMIN_ALLOWED_EMAILS`, a comma-separated environment variable. Permanent, and checked without touching the database.
-2. **Directors** — managed from **/admin/directors** inside the panel itself. Add someone by their Google address and they can sign in immediately; remove them and they lose access on their next request.
+The first director is created from a terminal, because the page that grants access sits behind the login it controls:
 
-Owners exist so the panel can never lock everyone out of itself. The collection that grants access is edited *through* the panel, so an empty collection, a mistaken delete or an Atlas outage would otherwise be unrecoverable. If MongoDB is down, owners still get in and can fix things.
+```bash
+npm run directors -- add you@gmail.com "Your Name"
+npm run directors -- list
+npm run directors -- remove someone@gmail.com
+```
 
-The whole thing **fails closed**: with no owners configured and no directors in the database, nobody signs in — including you. That is the correct default for an authorisation check.
+That script talks to MongoDB directly and never asks who you are, so guard it the way you guard `MONGODB_URI`. It is also the way back in if the collection is ever emptied.
 
-Enforced in four places, so no single change can quietly open the door:
+It **fails closed**: no directors means nobody signs in. Enforced in four places, so no single change can quietly open the door:
 
 | Where | Runtime | Checks |
 |---|---|---|
-| `signIn` callback (`auth.ts`) | Node | Owners + database. Refuses to mint a session at all |
-| `middleware.ts` | Edge | Owners, or a token minted for an authorised account |
-| `requireAdmin()` (`lib/admin/api.ts`) | Node | Owners + database, on every API call |
-| Dashboard layout | Node | Owners + database, on every admin page |
+| `signIn` callback (`auth.ts`) | Node | The database. Refuses to mint a session at all |
+| `middleware.ts` | Edge | That the token was minted for an authorised account |
+| `requireAdmin()` (`lib/admin/api.ts`) | Node | The database, on every API call |
+| Dashboard layout | Node | The database, on every admin page |
 
-Middleware runs on the edge, where Mongoose cannot run, so it does the cheap half and the two Node layers behind it do the authoritative lookup. That is also why the config is split across `auth.config.ts` (edge-safe) and `auth.ts` (reaches the database) — importing `auth.ts` from middleware fails the build.
+Middleware runs on the edge, where Mongoose cannot run, so it does the cheap half and the two Node layers behind it do the authoritative lookup on every request. That is also why the config is split across `auth.config.ts` (edge-safe) and `auth.ts` (reaches the database) — importing `auth.ts` from middleware fails the build.
 
-> ⚠️ **Google's "test users" list is not access control.** It only restricts anything while the OAuth consent screen is in **Testing** status. Publishing the app — or making it **Internal** in a Workspace — opens sign-in to every Google account, with no warning and no visible change here. The two lists above are what actually protect the panel.
+> ⚠️ **Google's "test users" list is not access control.** It only restricts anything while the OAuth consent screen is in **Testing** status. Publishing the app — or making it **Internal** in a Workspace — opens sign-in to every Google account, with no warning and no visible change here. The Director collection is what actually protects the panel.
 
-**Guards on the directors page:** you cannot remove your own access (it would lock you out of the page that undoes it), and owners cannot be removed there at all — they live in the environment.
+**Two guards on the page:** you cannot remove your own access, and you cannot remove the last director. Both would lock everyone out of the page that undoes it.
 
 **To cut off a session immediately** rather than on the person's next request, rotate `AUTH_SECRET`. Every session is a JWT signed with it, so changing it invalidates all of them at once.
-
-Run `npm run check-auth` to verify the rules.
 
 The production redirect URI `https://iksarva.com/api/auth/callback/google` must exist on the OAuth client, or sign-in fails on the live site with `redirect_uri_mismatch`.
 
@@ -123,24 +124,9 @@ The OAuth client already exists: Google Cloud project **IKSARVA Admin** → OAut
    - `http://localhost:3000/api/auth/callback/google`
    - `https://iksarva.com/api/auth/callback/google`
 3. Generate `AUTH_SECRET` with `openssl rand -base64 32`.
-4. **Set `ADMIN_ALLOWED_EMAILS`** to at least your own address. That makes you a permanent owner; everyone else can then be added from /admin/directors.
-
-#### Who can sign in
-
-`ADMIN_ALLOWED_EMAILS` is the authorisation boundary, and it **fails closed** —
-unset means nobody gets in, including you. It is checked on every request, not
-just at sign-in, so removing an address revokes that person's access
-immediately rather than when their 14-day session expires.
-
-Do **not** rely on Google's OAuth "test users" list for this. Test users are a
-consent-screen development feature: the restriction applies only while the
-consent screen is in **Testing** status. Publishing the app — or making it
-**Internal** in a Workspace — silently opens sign-in to every Google account,
-with no warning and no visible change in the app.
-
-To add or remove a director, edit the variable in Vercel and redeploy. To cut
-off an existing session immediately, also rotate `AUTH_SECRET`: sessions are
-JWTs signed with it, so changing it invalidates every one of them at once.
+4. **Create yourself as the first director** once the database is connected:
+   `npm run directors -- add you@gmail.com`. Everyone after that is added from
+   /admin/directors.
 
 Local development must run on **port 3000** — the registered redirect URI is `localhost:3000`, and Google rejects the callback from any other port.
 

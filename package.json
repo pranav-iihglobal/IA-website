@@ -12,7 +12,7 @@
     "check-connection": "tsx scripts/check-connection.ts",
     "icons": "tsx scripts/generate-icons.ts",
     "check-models": "tsx scripts/check-models.ts",
-    "check-auth": "tsx scripts/check-auth.ts"
+    "directors": "tsx scripts/directors.ts"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",

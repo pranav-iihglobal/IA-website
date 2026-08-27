@@ -1,41 +1,69 @@
 import { connectToDatabase } from "@/lib/db/connect";
 import { Director } from "@/lib/db/models/Director";
-import { isOwnerEmail, normalizeEmail } from "./allowlist";
 
 /**
- * Authorisation, resolved against the database.
+ * Who may use the admin panel.
  *
- * Node runtime only — Mongoose cannot run on the edge, which is why
- * middleware.ts uses the cheaper checks in ./allowlist and this module is
- * called from the places that can reach a database: the sign-in callback,
- * the admin API handlers and the dashboard layout. Those are the layers that
- * actually gate reading and writing, so revocation still takes effect on the
- * very next request rather than whenever a token expires.
+ * One list, in the database, managed at /admin/directors. There is no
+ * environment variable: adding and removing people is ordinary admin work,
+ * not a deploy.
+ *
+ * The bootstrap problem — the page that grants access sits behind the login
+ * it controls — is solved by `npm run directors`, which reads MONGODB_URI and
+ * writes the collection directly. That is how the first director is created,
+ * and how you get back in if the collection is ever emptied.
+ *
+ * Node runtime only: Mongoose cannot run on the edge, which is why
+ * middleware.ts trusts the session token instead and the authoritative checks
+ * live in the dashboard layout and requireAdmin(). Those run on every
+ * request, so removing someone takes effect immediately rather than when
+ * their token expires.
  *
  * Deliberately not cached. A findOne on a unique index costs almost nothing,
- * two people use this panel, and caching would mean removing someone leaves
- * them with access for the length of the cache. Correctness is worth more
- * than the query.
+ * a handful of people use this panel, and a cache would mean a removed
+ * director keeps access for however long the cache lives. Correctness is
+ * worth more than the query.
  */
 
-/** Owners (from env) plus directors (from the database). */
+/** Lowercased, trimmed — Google reports addresses in their canonical form. */
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+/**
+ * True when this address may use the admin panel.
+ *
+ * Fails closed. An unreachable database is not a reason to let someone in;
+ * use `npm run directors` to recover if that is what is actually wrong.
+ */
 export async function isAuthorisedEmail(
   email: string | null | undefined,
 ): Promise<boolean> {
   if (!email) return false;
-  // Owners are allowed without touching the database, so the panel stays
-  // reachable when Atlas is down or the collection is empty.
-  if (isOwnerEmail(email)) return true;
-
   try {
     await connectToDatabase();
-    const found = await Director.exists({ email: normalizeEmail(email) });
-    return Boolean(found);
+    return Boolean(await Director.exists({ email: normalizeEmail(email) }));
   } catch (error) {
-    // Fail closed. An unreachable database is not a reason to let someone in;
-    // owners can still get in via the env list above and fix things.
     console.error("[auth] director lookup failed", error);
     return false;
+  }
+}
+
+/**
+ * How many people have access.
+ *
+ * Zero means the panel is closed to everyone, which the restricted page
+ * reports specifically — otherwise the first director sees "you are not on
+ * the list" and has no way to guess there is no list yet.
+ */
+export async function countDirectors(): Promise<number> {
+  try {
+    await connectToDatabase();
+    return await Director.countDocuments({});
+  } catch {
+    // Unknown rather than zero. Saying "nobody has access" when the database
+    // is merely unreachable would send someone off to fix the wrong thing.
+    return -1;
   }
 }
 
@@ -45,49 +73,21 @@ export interface DirectorEntry {
   name: string;
   addedBy: string;
   createdAt: string | null;
-  /** Owners come from ADMIN_ALLOWED_EMAILS and cannot be removed here. */
-  isOwner: boolean;
 }
 
-/**
- * Everyone with access, owners first.
- *
- * Owners are synthesised from the environment rather than read from the
- * collection, so the list shown in the panel is the whole truth about who can
- * get in — not just the half that happens to be stored.
- */
-export async function listAuthorised(): Promise<DirectorEntry[]> {
-  const { getOwnerEmails } = await import("./allowlist");
-  const owners = getOwnerEmails();
-
-  const entries: DirectorEntry[] = owners.map((email) => ({
-    id: `owner:${email}`,
-    email,
-    name: "",
-    addedBy: "",
-    createdAt: null,
-    isOwner: true,
-  }));
-
+/** Everyone with access, oldest first. */
+export async function listDirectors(): Promise<DirectorEntry[]> {
   await connectToDatabase();
   const docs = await Director.find({})
     .select("email name addedBy createdAt")
     .sort({ createdAt: 1 })
     .lean();
 
-  for (const doc of docs) {
-    // An address that is also an owner is already listed; showing it twice
-    // would imply removing the row would remove their access, and it would not.
-    if (owners.includes(doc.email)) continue;
-    entries.push({
-      id: String(doc._id),
-      email: doc.email,
-      name: doc.name ?? "",
-      addedBy: doc.addedBy ?? "",
-      createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : null,
-      isOwner: false,
-    });
-  }
-
-  return entries;
+  return docs.map((doc) => ({
+    id: String(doc._id),
+    email: doc.email,
+    name: doc.name ?? "",
+    addedBy: doc.addedBy ?? "",
+    createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : null,
+  }));
 }

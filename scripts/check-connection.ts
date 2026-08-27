@@ -8,7 +8,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import { loadEnv } from "./load-env";
 import { connectToDatabase } from "../lib/db/connect";
-import { getOwnerEmails } from "../lib/auth/allowlist";
 
 let problems = 0;
 
@@ -63,18 +62,7 @@ function checkAuth() {
     );
   }
 
-  // Permanent owners — see lib/auth/allowlist.ts. Everyone else is managed
-  // from /admin/directors, which needs a database, so it is not checked here.
-  const owners = getOwnerEmails();
-  if (owners.length > 0) {
-    pass("Owners", owners.join(", "));
-  } else {
-    fail(
-      "Owners",
-      "ADMIN_ALLOWED_EMAILS not set — with no directors in the database, nobody can sign in",
-      'ADMIN_ALLOWED_EMAILS="you@gmail.com"',
-    );
-  }
+  // Who can sign in lives in the database now — `npm run directors -- list`.
 }
 
 async function checkMongo() {

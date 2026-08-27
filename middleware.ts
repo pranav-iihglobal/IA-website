@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import NextAuth from "next-auth";
 import { authConfig } from "@/auth.config";
-import { isOwnerEmail } from "@/lib/auth/allowlist";
 
 /*
   Built from auth.config.ts, NOT from auth.ts. auth.ts queries MongoDB in its
@@ -36,20 +35,18 @@ export default auth((request) => {
   const token = request.auth as { admin?: boolean } | null;
 
   /*
-    The edge runtime cannot reach MongoDB, so this layer answers the cheap
-    half of the question: is there a session that was minted for an
-    authorised account, or is this a permanent owner?
+    The edge runtime cannot reach MongoDB, so this layer answers only the
+    cheap half of the question: was this session minted for an account that
+    was authorised at sign-in?
 
-    Whether that account is STILL authorised is decided a moment later by the
+    Whether they are STILL authorised is decided a moment later by the
     dashboard layout and requireAdmin(), both of which run in Node and query
-    the database on every request. Removing a director therefore takes effect
-    on their very next request — this check just avoids a database round trip
-    for the common case of an ordinary, still-valid session.
+    the Director collection on every request. Removing someone therefore
+    takes effect on their very next request; this check only spares a
+    database round trip for the ordinary case of a valid session.
   */
   const mintedForAdmin = request.auth?.user ? token?.admin === true : false;
-  if (email && (isOwnerEmail(email) || mintedForAdmin)) {
-    return NextResponse.next();
-  }
+  if (email && mintedForAdmin) return NextResponse.next();
 
   if (pathname.startsWith("/api/")) {
     return NextResponse.json(

@@ -22,7 +22,6 @@ interface Director {
   name: string;
   addedBy: string;
   createdAt: string | null;
-  isOwner: boolean;
 }
 
 /** Initial, for the avatar disc. */
@@ -30,25 +29,10 @@ function Avatar({ person }: { person: Director }) {
   const letter = (person.name || person.email).trim().charAt(0).toUpperCase();
   return (
     <span
-      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-bold ${
-        person.isOwner
-          ? "bg-alloy/15 text-alloy-dark"
-          : "bg-laurel-light/50 text-olive-dark"
-      }`}
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-laurel-light/50 text-base font-bold text-olive-dark"
       aria-hidden="true"
     >
       {letter}
-    </span>
-  );
-}
-
-function OwnerBadge() {
-  return (
-    <span
-      title="Set in ADMIN_ALLOWED_EMAILS. Cannot be removed from here."
-      className="rounded-full bg-alloy/15 px-2.5 py-1 text-xs font-semibold text-alloy-dark"
-    >
-      Owner
     </span>
   );
 }
@@ -122,8 +106,6 @@ export function DirectorList({ currentEmail }: { currentEmail: string }) {
     load();
   }
 
-  const removable = rows.filter((r) => !r.isOwner);
-
   return (
     <div>
       <Section
@@ -171,7 +153,7 @@ export function DirectorList({ currentEmail }: { currentEmail: string }) {
         {!loading && rows.length === 0 && !error && (
           <EmptyState
             title="Nobody can sign in"
-            message="ADMIN_ALLOWED_EMAILS is not set and there are no directors, so the panel is locked. Set that variable in Vercel to get back in."
+            message="There are no directors, so the panel is locked to everyone. Create the first one from a terminal: npm run directors -- add you@gmail.com"
           />
         )}
 
@@ -186,30 +168,23 @@ export function DirectorList({ currentEmail }: { currentEmail: string }) {
                   title={person.name || person.email}
                   subtitle={person.name ? person.email : undefined}
                   badges={
-                    <>
-                      {person.isOwner && <OwnerBadge />}
-                      {person.email === currentEmail && (
-                        <span className="rounded-full bg-meringue px-2.5 py-1 text-xs font-semibold text-russet-dark/70">
-                          You
-                        </span>
-                      )}
-                    </>
+                    person.email === currentEmail ? (
+                      <span className="rounded-full bg-meringue px-2.5 py-1 text-xs font-semibold text-russet-dark/70">
+                        You
+                      </span>
+                    ) : undefined
                   }
-                  meta={
-                    person.isOwner
-                      ? "Set in the environment"
-                      : [
-                          person.createdAt
-                            ? `Added ${formatShortDate(person.createdAt)}`
-                            : "",
-                          person.addedBy ? `by ${person.addedBy}` : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")
-                  }
+                  meta={[
+                    person.createdAt
+                      ? `Added ${formatShortDate(person.createdAt)}`
+                      : "",
+                    person.addedBy ? `by ${person.addedBy}` : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                   onDelete={() => setPending(person)}
                   label={person.email}
-                  removable={!person.isOwner && person.email !== currentEmail}
+                  removable={person.email !== currentEmail && rows.length > 1}
                 />
               ))}
             </ul>
@@ -243,7 +218,6 @@ export function DirectorList({ currentEmail }: { currentEmail: string }) {
                                     You
                                   </span>
                                 )}
-                                {person.isOwner && <OwnerBadge />}
                               </p>
                               {person.name && (
                                 <p className="truncate text-xs text-russet-dark/55">
@@ -254,28 +228,25 @@ export function DirectorList({ currentEmail }: { currentEmail: string }) {
                           </div>
                         </td>
                         <td className="px-5 py-3.5 text-xs text-russet-dark/65">
-                          {person.isOwner ? (
-                            "Set in the environment"
-                          ) : (
-                            <>
-                              {person.createdAt
-                                ? formatShortDate(person.createdAt)
-                                : "—"}
-                              {person.addedBy && ` · by ${person.addedBy}`}
-                            </>
-                          )}
+                          {person.createdAt
+                            ? formatShortDate(person.createdAt)
+                            : "—"}
+                          {person.addedBy && ` · by ${person.addedBy}`}
                         </td>
                         <td className="px-5 py-3.5 text-right">
-                          {person.isOwner ? (
-                            <span className="text-xs text-russet-dark/45">
-                              Permanent
-                            </span>
-                          ) : person.email === currentEmail ? (
+                          {person.email === currentEmail ? (
                             <span
                               title="Removing your own access would lock you out of this page."
                               className="text-xs text-russet-dark/45"
                             >
-                              Cannot remove yourself
+                              This is you
+                            </span>
+                          ) : rows.length <= 1 ? (
+                            <span
+                              title="Removing the only director would lock everyone out."
+                              className="text-xs text-russet-dark/45"
+                            >
+                              Only director
                             </span>
                           ) : (
                             <Button
@@ -295,13 +266,10 @@ export function DirectorList({ currentEmail }: { currentEmail: string }) {
           </>
         )}
 
-        {removable.length === 0 && rows.length > 0 && (
+        {rows.length === 1 && (
           <p className="mt-4 text-sm text-russet-dark/55">
-            Everyone listed is a permanent owner from{" "}
-            <code className="rounded bg-meringue px-1.5 py-0.5">
-              ADMIN_ALLOWED_EMAILS
-            </code>
-            . Add a director above to manage access from here instead.
+            You are the only director, so there is nobody to remove. Add
+            someone above first — an empty list would lock everyone out.
           </p>
         )}
       </div>

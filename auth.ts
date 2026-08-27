@@ -6,9 +6,9 @@ import { isAuthorisedEmail } from "@/lib/auth/directors";
  * Admin authentication — Google sign-in only.
  *
  * There is no registration and no password anywhere in this app. Who may get
- * in is decided by ADMIN_ALLOWED_EMAILS (permanent owners) plus the Director
- * collection, which the directors manage themselves at /admin/directors.
- * See lib/auth/allowlist.ts and lib/auth/directors.ts.
+ * in is the Director collection, which the directors manage themselves at
+ * /admin/directors — see lib/auth/directors.ts. The first one is created from
+ * a terminal with `npm run directors -- add`.
  *
  * Sessions are JWTs in a cookie signed with AUTH_SECRET. Google identifies
  * the director once, at sign-in; every request afterwards is authenticated by
@@ -29,8 +29,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Google marks unverified addresses; treating one as a director would
       // mean trusting an address its owner never proved they control.
       if (profile && profile.email_verified === false) return false;
-      // Owners from the environment, plus directors from the database. This
-      // runs in the Node runtime, so the lookup is available here.
+      // The Director collection. This runs in the Node runtime, so the
+      // database lookup is available here.
       return isAuthorisedEmail(email);
     },
   },

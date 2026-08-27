@@ -14,8 +14,8 @@ import { isAuthorisedEmail } from "@/lib/auth/directors";
  *
  * Authentication and authorisation are separate questions here. Having a
  * valid session only proves Google vouched for the address; whether that
- * address may touch this data is the allowlist's call, and it is asked again
- * on every request rather than trusted from sign-in time.
+ * address may touch this data is the Director collection's call, and it is
+ * asked again on every request rather than trusted from sign-in time.
  */
 export async function requireAdmin(): Promise<NextResponse | null> {
   let session;
@@ -41,7 +41,7 @@ export async function requireAdmin(): Promise<NextResponse | null> {
   }
   if (!(await isAuthorisedEmail(email))) {
     // Deliberately does not echo the address back or say why.
-    console.warn("[admin api] rejected a signed-in account not on the allowlist");
+    console.warn("[admin api] rejected a signed-in account that is not a director");
     return NextResponse.json({ error: "Not authorised" }, { status: 403 });
   }
   return null;
