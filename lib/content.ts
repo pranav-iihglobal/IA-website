@@ -105,6 +105,17 @@ export const NAV: { href: string; label: Bi }[] = [
   { href: "/contact", label: { en: "Contact", gu: "સંપર્ક" } },
 ];
 
+/**
+ * The nav label for a path, in both languages.
+ *
+ * Breadcrumbs name the same sections the nav does, and used to spell them out
+ * as English string literals — which put "Products" in the Gujarati pages'
+ * structured data. Reading them from NAV keeps the two in step.
+ */
+export function navLabel(href: string): Bi {
+  return NAV.find((item) => item.href === href)?.label ?? { en: "", gu: "" };
+}
+
 /* ========================================================================== */
 /* 3. SHARED / UI STRINGS                                                     */
 /* ========================================================================== */

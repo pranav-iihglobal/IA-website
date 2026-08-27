@@ -1,25 +1,34 @@
 "use client";
 
 import Link from "next/link";
+import { LocaleLink } from "@/components/LocaleLink";
 import Image from "next/image";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { NAV, SITE } from "@/lib/content";
 import { useLanguage } from "./LanguageProvider";
+import { localePath, stripLocale } from "@/lib/i18n";
 
 export function Header() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const { lang, setLang, t } = useLanguage();
+  const { lang, t } = useLanguage();
 
-  const toggleLang = () => setLang(lang === "en" ? "gu" : "en");
+  /*
+    Switching language is a navigation now, not a state change. That is the
+    whole point of the locale routes: the other language has its own URL, so
+    it can be linked, shared, bookmarked and — the reason for all of this —
+    crawled. `stripLocale` gives the path without a prefix, which is the same
+    page in either language.
+  */
+  const twin = localePath(stripLocale(pathname), lang === "en" ? "gu" : "en");
 
   return (
     <header className="sticky top-0 z-40 border-b border-olive-dark bg-olive/95 backdrop-blur">
       {/* gap-2 below sm: at 320px the language pill and the menu button were
           almost touching the logo. */}
       <div className="container-page flex items-center justify-between gap-2 py-3 sm:gap-4">
-        <Link
+        <LocaleLink
           href="/"
           className="flex items-center gap-2"
           onClick={() => setOpen(false)}
@@ -41,44 +50,54 @@ export function Header() {
               Agritech
             </span>
           </span>
-        </Link>
+        </LocaleLink>
 
         {/* gap-4 + px-2 rather than gap-6: same rhythm, but each link is its
             own 44px-tall target with a bit of width — "હોમ" is 21px of text. */}
-        <nav className="hidden items-center gap-4 md:flex" aria-label="Main">
+        {/*
+          lg, not md: the English nav needs 599px and at 768px there are only
+          ~536px between the logo and the language pill, so the bar overflowed
+          the viewport by 63px. It never showed while the site rendered
+          Gujarati by default — the Gujarati labels are shorter — and surfaced
+          the moment English became the default locale.
+        */}
+        <nav className="hidden items-center gap-4 lg:flex" aria-label="Main">
           {NAV.map((item) => (
-            <Link
+            <LocaleLink
               key={item.href}
               href={item.href}
               // min-h-11: a tablet is a touch device too, and these were 20px
               // tall targets. The header is already taller than 44px, so this
               // costs nothing visually.
               className={`flex min-h-11 items-center rounded-md px-2 text-sm font-medium transition-colors hover:text-alloy-light ${
-                pathname === item.href
+                stripLocale(pathname) === item.href
                   ? "text-alloy-light"
                   : "text-cornsilk/90"
               }`}
             >
               {t(item.label)}
-            </Link>
+            </LocaleLink>
           ))}
         </nav>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={toggleLang}
+          <Link
+            href={twin}
+            // hreflang tells a crawler what is on the other end, and this is
+            // the one link on the page that points across languages.
+            hrefLang={lang === "en" ? "gu" : "en"}
+            onClick={() => setOpen(false)}
             className="flex min-h-11 items-center rounded-full border border-camel bg-meringue-light px-3 text-sm font-medium text-russet transition-colors hover:bg-meringue sm:px-4"
             aria-label={
               lang === "en" ? "Switch to Gujarati" : "Switch to English"
             }
           >
             {lang === "en" ? "ગુજરાતી" : "English"}
-          </button>
+          </Link>
 
           <button
             type="button"
-            className="flex h-11 w-11 items-center justify-center rounded-md text-cornsilk-light md:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-cornsilk-light lg:hidden"
             onClick={() => setOpen(!open)}
             aria-expanded={open}
             aria-controls="mobile-nav"
@@ -113,23 +132,23 @@ export function Header() {
       {open && (
         <nav
           id="mobile-nav"
-          className="border-t border-olive-dark bg-olive md:hidden"
+          className="border-t border-olive-dark bg-olive lg:hidden"
           aria-label="Mobile"
         >
           <ul className="container-page py-2">
             {NAV.map((item) => (
               <li key={item.href}>
-                <Link
+                <LocaleLink
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={`block border-b border-olive-dark/60 py-3 text-base font-medium last:border-b-0 ${
-                    pathname === item.href
+                    stripLocale(pathname) === item.href
                       ? "text-alloy-light"
                       : "text-cornsilk/90"
                   }`}
                 >
                   {t(item.label)}
-                </Link>
+                </LocaleLink>
               </li>
             ))}
           </ul>

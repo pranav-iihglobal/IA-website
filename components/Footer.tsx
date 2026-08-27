@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { LocaleLink as Link } from "@/components/LocaleLink";
 import Image from "next/image";
 import { NAV, SITE, UI } from "@/lib/content";
 import { T } from "./T";

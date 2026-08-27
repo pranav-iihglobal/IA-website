@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { LocaleLink as Link } from "@/components/LocaleLink";
 import { notFound } from "next/navigation";
-import { MISC, SITE, UI, HOME, resolveText } from "@/lib/content";
+import { MISC, SITE, UI, HOME, navLabel, resolveText, type Lang } from "@/lib/content";
 import { CLD, cldUrl } from "@/lib/images";
 import { getDisplayPost, getDisplayPostSlugs } from "@/lib/posts-source";
 import { T } from "@/components/T";
@@ -13,7 +13,8 @@ import { BiImage } from "@/components/BiImage";
 import { formatArticleDate } from "@/lib/format";
 import { postCategoryLabel } from "@/lib/content";
 import { BreadcrumbJsonLd } from "@/components/Breadcrumbs";
-import { ogImages } from "@/lib/seo";
+import { LocaleJsonLd } from "@/components/LocaleJsonLd";
+import { postMetadata } from "@/lib/page-metadata";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -29,30 +30,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const article = await getDisplayPost(slug);
-  if (!article) return {};
-
-  // Meta fields fall back to the title/excerpt when left blank in the admin.
-  const title =
-    resolveText(article.metaTitle, "gu") || resolveText(article.title, "gu");
-  const description =
-    resolveText(article.metaDescription, "gu") ||
-    resolveText(article.excerpt, "gu");
-  const cover = cldUrl(article.coverImage?.url, CLD.blogCover);
-
-  return {
-    title,
-    description,
-    alternates: { canonical: `/learn/${article.slug}` },
-    openGraph: {
-      type: "article",
-      title,
-      description,
-      url: `/learn/${article.slug}`,
-      // The cover when there is one, the site card otherwise.
-      images: ogImages(cover ? [{ url: cover }] : null),
-    },
-  };
+  return postMetadata(slug, "en");
 }
 
 export default async function ArticlePage({
@@ -66,29 +44,35 @@ export default async function ArticlePage({
 
   const cover = cldUrl(article.coverImage?.url, CLD.blogCover);
 
-  const articleJsonLd = {
+  /*
+    Per language: this component serves /learn/x and /gu/learn/x, and an
+    Article whose headline is in one language while mainEntityOfPage points at
+    the other tells Google two contradictory things about the same page.
+    LocaleJsonLd picks the variant and rewrites the URL.
+  */
+  const articleJsonLdFor = (lang: Lang) => ({
     "@context": "https://schema.org",
     "@type": "Article",
-    headline: article.title.en || article.title.gu,
-    description: article.excerpt.en,
+    headline: resolveText(article.title, lang),
+    description: resolveText(article.excerpt, lang),
     datePublished: article.publishedAt ?? undefined,
-    inLanguage: ["gu", "en"],
+    inLanguage: lang,
     image: cover ? [cover] : undefined,
     author: { "@type": "Organization", name: SITE.name, url: SITE.url },
     publisher: { "@type": "Organization", name: SITE.name, url: SITE.url },
     mainEntityOfPage: `${SITE.url}/learn/${article.slug}`,
-  };
+  });
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-12">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      <LocaleJsonLd
+        data={articleJsonLdFor("en")}
+        gu={articleJsonLdFor("gu")}
       />
       <BreadcrumbJsonLd
         trail={[
-          { name: "Learn", path: "/learn" },
-          { name: article.title.en, path: `/learn/${article.slug}` },
+          { name: navLabel("/learn"), path: "/learn" },
+          { name: article.title, path: `/learn/${article.slug}` },
         ]}
       />
 

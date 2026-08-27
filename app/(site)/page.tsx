@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { staticPageMetadata } from "@/lib/page-metadata";
+import { LocaleLink as Link } from "@/components/LocaleLink";
 import Image from "next/image";
 import { HOME, SITE, UI, DEALERS } from "@/lib/content";
 import { getDisplayProducts } from "@/lib/products-source";
@@ -11,18 +12,8 @@ import { WaveDivider } from "@/components/Illustrations";
 import { Hero3D } from "@/components/Hero3D";
 import { Reveal } from "@/components/Reveal";
 import { CropsMarquee, FloatingLeaves } from "@/components/Decor";
-import { OG_IMAGE } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  alternates: { canonical: "/" },
-  openGraph: {
-    title: `${SITE.shortName} — Biofertilizers from North Gujarat`,
-    description:
-      "Roots to riches. Built for the soil that has been worked too hard.",
-    url: "/",
-    images: [OG_IMAGE],
-  },
-};
+export const metadata: Metadata = staticPageMetadata("/", "en");
 
 export const revalidate = 3600;
 

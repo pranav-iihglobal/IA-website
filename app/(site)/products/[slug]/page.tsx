@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { LocaleLink as Link } from "@/components/LocaleLink";
 import { notFound } from "next/navigation";
-import { MISC, SITE, UI, resolveText } from "@/lib/content";
+import { MISC, SITE, UI, navLabel, resolveText, type Lang } from "@/lib/content";
 import { CLD, cldUrl } from "@/lib/images";
 import {
   getDisplayProduct,
@@ -23,7 +23,8 @@ import { ProductStrip } from "@/components/product/ProductStrip";
 import { AvailabilityBadge } from "@/components/product/Availability";
 import { joinPlace } from "@/lib/testimonials-source";
 import { BreadcrumbJsonLd } from "@/components/Breadcrumbs";
-import { ogImages } from "@/lib/seo";
+import { LocaleJsonLd } from "@/components/LocaleJsonLd";
+import { productMetadata } from "@/lib/page-metadata";
 
 export const revalidate = 3600;
 /** Products added in the admin after build render on first request. */
@@ -40,27 +41,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getDisplayProduct(slug);
-  if (!product) return {};
-  const name = resolveText(product.name, "en");
-  return {
-    title: `${name} — ${product.categoryLabel.en}`,
-    description: product.tagline.en,
-    alternates: { canonical: `/products/${product.slug}` },
-    openGraph: {
-      title: `${name} | ${SITE.shortName}`,
-      description: product.tagline.en,
-      url: `/products/${product.slug}`,
-      // Its own photos when it has them, the site card when it does not —
-      // a product with no pack shot yet still previews as something.
-      images: ogImages(
-        product.images
-          .map((i) => cldUrl(i.url, CLD.productDetail))
-          .filter(Boolean)
-          .map((url) => ({ url: url as string })),
-      ),
-    },
-  };
+  return productMetadata(slug, "en");
 }
 
 export default async function ProductPage({
@@ -87,12 +68,18 @@ export default async function ProductPage({
     .map((pack) => pack.mrp)
     .filter((mrp): mrp is number => typeof mrp === "number" && mrp > 0);
 
-  const productJsonLd = {
+  /*
+    Built per language rather than once in English. The same component serves
+    /products/floramax and /gu/products/floramax, so a single English object
+    would describe the Gujarati page in the wrong language — and a rich result
+    is quoted verbatim in search, where that is very visible.
+  */
+  const productJsonLdFor = (lang: Lang) => ({
     "@context": "https://schema.org",
     "@type": "Product",
-    name,
-    description: product.description.en,
-    category: product.categoryLabel.en,
+    name: resolveText(product.name, lang),
+    description: resolveText(product.description, lang),
+    category: resolveText(product.categoryLabel, lang),
     brand: { "@type": "Brand", name: "IKSARVA" },
     manufacturer: {
       "@type": "Organization",
@@ -130,49 +117,42 @@ export default async function ProductPage({
             : "https://schema.org/InStock",
           url: `${SITE.url}/products/${product.slug}`,
         },
-  };
+  });
 
-  /**
-   * FAQPage structured data.
-   *
-   * Emitted server-side into an ISR-cached page, so it cannot follow the
-   * client-side language toggle. Gujarati is the primary language — the same
-   * choice generateMetadata already makes — with English as the fallback.
-   */
-  const faqJsonLd =
+  /** FAQPage structured data, in whichever language the page is being read. */
+  const faqJsonLdFor = (lang: Lang) =>
     product.faqs.length > 0
       ? {
           "@context": "https://schema.org",
           "@type": "FAQPage",
-          inLanguage: ["gu", "en"],
+          inLanguage: lang,
           mainEntity: product.faqs.map((faq) => ({
             "@type": "Question",
-            name: resolveText(faq.question, "gu"),
+            name: resolveText(faq.question, lang),
             acceptedAnswer: {
               "@type": "Answer",
-              text: resolveText(faq.answer, "gu"),
+              text: resolveText(faq.answer, lang),
             },
           })),
         }
       : null;
 
+  const faqJsonLd = faqJsonLdFor("en");
+
   return (
     <article className="container-page py-12">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      <LocaleJsonLd
+        data={productJsonLdFor("en")}
+        gu={productJsonLdFor("gu")}
       />
       {faqJsonLd && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-        />
+        <LocaleJsonLd data={faqJsonLd} gu={faqJsonLdFor("gu")} />
       )}
 
       <BreadcrumbJsonLd
         trail={[
-          { name: "Products", path: "/products" },
-          { name, path: `/products/${product.slug}` },
+          { name: navLabel("/products"), path: "/products" },
+          { name: product.name, path: `/products/${product.slug}` },
         ]}
       />
 

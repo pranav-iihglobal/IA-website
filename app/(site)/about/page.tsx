@@ -1,20 +1,10 @@
 import type { Metadata } from "next";
+import { staticPageMetadata } from "@/lib/page-metadata";
 import { ABOUT, SITE } from "@/lib/content";
 import { T } from "@/components/T";
 import { FounderDoodle, WaveDivider } from "@/components/Illustrations";
-import { OG_IMAGE } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "About",
-  description:
-    "IKSARVA Agritech is a biofertilizer company from North Gujarat helping farmers reduce chemical inputs and rebuild living soil.",
-  alternates: { canonical: "/about" },
-  openGraph: {
-    title: "About IKSARVA Agritech",
-    url: "/about",
-    images: [OG_IMAGE],
-  },
-};
+export const metadata: Metadata = staticPageMetadata("/about", "en");
 
 export default function AboutPage() {
   return (

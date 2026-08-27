@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { LocaleLink as Link } from "@/components/LocaleLink";
 import Image from "next/image";
 import type { Bi } from "@/lib/content";
 import { UI } from "@/lib/content";

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { staticPageMetadata } from "@/lib/page-metadata";
 import { SOCIALS, TESTIMONIALS_PAGE } from "@/lib/content";
 import { getDisplayTestimonials } from "@/lib/testimonials-source";
 import { Suspense } from "react";
@@ -7,22 +8,11 @@ import { Reveal } from "@/components/Reveal";
 import { TestimonialsBrowser } from "@/components/TestimonialsBrowser";
 import { ShareResultCta } from "@/components/ShareResultCta";
 import { FloatingLeaves } from "@/components/Decor";
-import { OG_IMAGE } from "@/lib/seo";
 
 /** Rebuilt hourly, and immediately when an admin saves a testimonial. */
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  title: "Testimonials",
-  description:
-    "ખેડૂતોના અનુભવ — what farmers across North Gujarat say about IKSARVA biofertilizers.",
-  alternates: { canonical: "/testimonials" },
-  openGraph: {
-    title: "Farmers' experiences | IKSARVA",
-    url: "/testimonials",
-    images: [OG_IMAGE],
-  },
-};
+export const metadata: Metadata = staticPageMetadata("/testimonials", "en");
 
 const FACEBOOK_PAGE = SOCIALS.find((s) => s.icon === "facebook")?.href;
 

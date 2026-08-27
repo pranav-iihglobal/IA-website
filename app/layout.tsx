@@ -79,12 +79,12 @@ export const metadata: Metadata = {
     type: "website",
     siteName: SITE.shortName,
     /*
-      The pages are Gujarati by default with an English toggle, so gu_IN is
-      the honest primary and en_IN the alternate. Facebook and WhatsApp use
-      this to pick a locale for the preview card.
+      English is the unprefixed default and Gujarati lives under /gu, so en_IN
+      is the primary here and each /gu page overrides it with gu_IN. Facebook
+      and WhatsApp use this to pick a locale for the preview card.
     */
-    locale: "gu_IN",
-    alternateLocale: ["en_IN"],
+    locale: "en_IN",
+    alternateLocale: ["gu_IN"],
     url: SITE.url,
     /*
       Every link shared anywhere previewed with no picture before this — on
@@ -161,9 +161,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  /*
+    English is the default locale and lives at the unprefixed paths, so the
+    document language is en. The /gu subtree overrides it on a wrapper — see
+    app/(site)/gu/layout.tsx — because <html> belongs to this layout and
+    cannot know which locale is being served.
+  */
   return (
     <html
-      lang="gu"
+      lang="en"
       className={`${laviossa.variable} ${anekGujarati.variable} ${montserrat.variable} ${notoSansGujarati.variable}`}
     >
       <body className="flex min-h-screen flex-col">

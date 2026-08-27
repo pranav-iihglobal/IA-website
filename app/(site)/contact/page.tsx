@@ -1,21 +1,11 @@
 import type { Metadata } from "next";
+import { staticPageMetadata } from "@/lib/page-metadata";
 import { CONTACT, SITE, UI } from "@/lib/content";
 import { T } from "@/components/T";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { SocialLinks } from "@/components/SocialLinks";
-import { OG_IMAGE } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Contact",
-  description:
-    "Reach IKSARVA Agritech on WhatsApp, phone or email. Based in Mehsana, North Gujarat, India.",
-  alternates: { canonical: "/contact" },
-  openGraph: {
-    title: "Contact IKSARVA Agritech",
-    url: "/contact",
-    images: [OG_IMAGE],
-  },
-};
+export const metadata: Metadata = staticPageMetadata("/contact", "en");
 
 export default function ContactPage() {
   return (

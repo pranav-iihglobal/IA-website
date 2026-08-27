@@ -1,4 +1,5 @@
-import { SITE } from "@/lib/content";
+import { SITE, resolveText, type Bi, type Lang } from "@/lib/content";
+import { LocaleJsonLd } from "./LocaleJsonLd";
 
 /**
  * BreadcrumbList structured data.
@@ -11,28 +12,28 @@ import { SITE } from "@/lib/content";
  *
  * Markup only, no visual output: the visible breadcrumb already exists, and
  * duplicating it would be worse for readers, not better.
+ *
+ * Names are bilingual and paths are relative, because each page has an
+ * English and a Gujarati address. LocaleJsonLd picks the variant and rewrites
+ * the URLs, so the trail always agrees with the canonical of the page it is
+ * on rather than pointing back at the other language.
  */
 export function BreadcrumbJsonLd({
   trail,
 }: {
   /** Ordered from the site root inward. Paths are relative, e.g. "/products". */
-  trail: { name: string; path: string }[];
+  trail: { name: Bi; path: string }[];
 }) {
-  const json = {
+  const build = (lang: Lang) => ({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: trail.map((crumb, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      name: crumb.name,
+      name: resolveText(crumb.name, lang),
       item: `${SITE.url}${crumb.path}`,
     })),
-  };
+  });
 
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(json) }}
-    />
-  );
+  return <LocaleJsonLd data={build("en")} gu={build("gu")} />;
 }

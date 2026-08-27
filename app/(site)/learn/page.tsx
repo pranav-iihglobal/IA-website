@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { staticPageMetadata } from "@/lib/page-metadata";
+import { LocaleLink as Link } from "@/components/LocaleLink";
 import { LEARN, UI } from "@/lib/content";
 import { CLD, cldUrl } from "@/lib/images";
 import { getDisplayPosts } from "@/lib/posts-source";
@@ -8,21 +9,10 @@ import { Reveal } from "@/components/Reveal";
 import { BiImage } from "@/components/BiImage";
 import { formatArticleDate } from "@/lib/format";
 import { postCategoryLabel } from "@/lib/content";
-import { OG_IMAGE } from "@/lib/seo";
 
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  title: "Learn",
-  description:
-    "જમીનની તંદુરસ્તી, માયકોરાઇઝા અને કેમિકલ ઘટાડવા વિશે સાદી ભાષામાં માર્ગદર્શન — plain-language guides on soil health from IKSARVA Agritech.",
-  alternates: { canonical: "/learn" },
-  openGraph: {
-    title: "Knowledge for your field | IKSARVA",
-    url: "/learn",
-    images: [OG_IMAGE],
-  },
-};
+export const metadata: Metadata = staticPageMetadata("/learn", "en");
 
 export default async function LearnPage() {
   const articles = await getDisplayPosts();

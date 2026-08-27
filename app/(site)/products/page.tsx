@@ -1,25 +1,15 @@
 import type { Metadata } from "next";
+import { staticPageMetadata } from "@/lib/page-metadata";
 import { HOME } from "@/lib/content";
 import { T } from "@/components/T";
 import { ProductCard } from "@/components/ProductCard";
 import { Reveal } from "@/components/Reveal";
 import { getDisplayProducts } from "@/lib/products-source";
-import { OG_IMAGE } from "@/lib/seo";
 
 /** Rebuilt hourly, and immediately whenever an admin saves a product. */
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  title: "Products",
-  description:
-    "FloraMax flowering bio-stimulant, Mycorrhizal Bio-Fertilizer, and NPK Consortia Bio-Fertilizer — biofertilizers made for North Gujarat's crops.",
-  alternates: { canonical: "/products" },
-  openGraph: {
-    title: "IKSARVA Products — Biofertilizers for North Gujarat",
-    url: "/products",
-    images: [OG_IMAGE],
-  },
-};
+export const metadata: Metadata = staticPageMetadata("/products", "en");
 
 export default async function ProductsPage() {
   const products = await getDisplayProducts();
