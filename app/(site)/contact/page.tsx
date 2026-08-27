@@ -40,7 +40,7 @@ export default function ContactPage() {
 
       <section className="container-page py-12">
         <div className="grid gap-6 sm:grid-cols-3">
-          <div className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-6">
+          <div className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-4 sm:p-6">
             <h2 className="font-display text-lg font-bold text-russet">
               <T text={CONTACT.phoneLabel} />
             </h2>
@@ -53,7 +53,7 @@ export default function ContactPage() {
               </a>
             </p>
           </div>
-          <div className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-6">
+          <div className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-4 sm:p-6">
             <h2 className="font-display text-lg font-bold text-russet">
               <T text={CONTACT.emailLabel} />
             </h2>
@@ -66,7 +66,7 @@ export default function ContactPage() {
               </a>
             </p>
           </div>
-          <div className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-6">
+          <div className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-4 sm:p-6">
             <h2 className="font-display text-lg font-bold text-russet">
               <T text={CONTACT.locationLabel} />
             </h2>

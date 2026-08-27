@@ -214,7 +214,7 @@ export default async function ProductPage({
       )}
 
       <section className="mt-10 grid gap-6 sm:grid-cols-2">
-        <div className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-6">
+        <div className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-4 sm:p-6">
           <h2 className="font-display text-xl font-bold text-russet">
             <T text={UI.dosage} />
           </h2>
@@ -235,7 +235,7 @@ export default async function ProductPage({
             </p>
           )}
         </div>
-        <div className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-6">
+        <div className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-4 sm:p-6">
           <h2 className="font-display text-xl font-bold text-russet">
             <T text={UI.application} />
           </h2>
@@ -245,7 +245,7 @@ export default async function ProductPage({
         </div>
       </section>
 
-      <section className="mt-6 rounded-2xl border border-cornsilk-dark bg-cornsilk p-6">
+      <section className="mt-6 rounded-2xl border border-cornsilk-dark bg-cornsilk p-4 sm:p-6">
         <h2 className="font-display text-xl font-bold text-russet">
           <T text={UI.crops} />
         </h2>

@@ -856,6 +856,52 @@ select.admin-input {
 }
 
 /* ==========================================================================
+   Mobile card geometry
+   ========================================================================== */
+
+/*
+ * On a phone a card should be a section of the screen, not a shrunken
+ * desktop box.
+ *
+ * The panel used to charge for its padding twice: a 20px page gutter and then
+ * a 24px card gutter inside it, so 44px of every 390px screen was spent on
+ * chrome before a single character of content. That is what makes a layout
+ * read as "resized for mobile" — the proportions are the desktop's, just
+ * smaller.
+ *
+ * So: the page gutter drops to 16px, and cards cancel it. A card spans the
+ * full width, loses its side borders and its corner radius, and keeps one
+ * 16px gutter of its own. Chrome per side goes 44px -> 16px, and the content
+ * column gains 56px — a seventh of the screen.
+ *
+ * Everything here is scoped below sm. From 640px up the cards are the inset,
+ * rounded, bordered boxes they always were.
+ */
+:root {
+  --admin-gutter: 1rem;
+}
+
+@media (max-width: 639px) {
+  .admin-bleed {
+    margin-inline: calc(var(--admin-gutter) * -1);
+    border-radius: 0;
+    border-inline-width: 0;
+  }
+
+  /*
+   * A run of bleeding cards reads as one list rather than a stack of separate
+   * slabs: no gap between them, and the shared edge drawn once instead of
+   * twice. This is the native list pattern on both phone platforms.
+   */
+  .admin-rows {
+    gap: 0;
+  }
+  .admin-rows > * + * {
+    border-top-width: 0;
+  }
+}
+
+/* ==========================================================================
    Overrides that must beat Tailwind utilities
    ========================================================================== */
 

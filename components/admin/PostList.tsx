@@ -181,7 +181,7 @@ export function PostList() {
         <div className="mt-6">
           {/* Cards below lg, table from lg up. A five-column table cannot be
               read on a phone; a card fits every field the table shows. */}
-          <ul className="grid gap-3 sm:grid-cols-2 lg:hidden">
+          <ul className="admin-rows grid gap-3 sm:grid-cols-2 lg:hidden">
             {rows.map((row) => (
               <RecordCard
                 key={row.id}

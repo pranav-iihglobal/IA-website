@@ -25,7 +25,7 @@ export function ShareResultCta({
 
   if (variant === "inline") {
     return (
-      <section className="mt-10 rounded-2xl border border-laurel bg-laurel-light/30 p-6 text-center">
+      <section className="mt-10 rounded-2xl border border-laurel bg-laurel-light/30 p-4 sm:p-6 text-center">
         <p className="font-display text-xl font-bold text-russet">
           {t(TESTIMONIALS_PAGE.shareHeading)}
         </p>

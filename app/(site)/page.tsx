@@ -101,7 +101,7 @@ export default async function HomePage() {
 
         <Reveal delay={120}>
         <div className="mt-8 overflow-hidden rounded-3xl bg-olive text-cornsilk-light shadow-md">
-          <div className="grid items-center gap-8 p-8 md:grid-cols-[1fr_auto] md:p-12">
+          <div className="grid items-center gap-8 p-5 sm:p-8 md:grid-cols-[1fr_auto] md:p-12">
             <div>
               <span className="rounded-full bg-alloy px-3 py-1 text-xs font-semibold uppercase tracking-wide">
                 <T text={UI.flagship} />
@@ -206,7 +206,7 @@ export default async function HomePage() {
           <div className="mt-8 grid gap-6 sm:grid-cols-3">
             {HOME.regions.map((r, i) => (
               <Reveal key={i} delay={i * 140}>
-                <div className="h-full rounded-2xl border border-cornsilk-dark bg-cornsilk-light p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg">
+                <div className="h-full rounded-2xl border border-cornsilk-dark bg-cornsilk-light p-4 sm:p-6 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg">
                   <h3 className="font-display text-xl font-bold text-russet">
                     <T text={r.district} />
                   </h3>

@@ -316,7 +316,7 @@ export function UserList({
         {rows.length > 0 && (
           <>
             {/* Cards below lg, table from lg up — same shape as the other lists. */}
-            <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:hidden">
+            <ul className="mt-6 admin-rows grid gap-3 sm:grid-cols-2 lg:hidden">
               {rows.map((person) => {
                 const locked = lockedReason(person);
                 return (

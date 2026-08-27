@@ -33,7 +33,7 @@ export default function DealersPage() {
           {DEALERS.points.map((p, i) => (
             <div
               key={i}
-              className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-6"
+              className="rounded-2xl border border-cornsilk-dark bg-cornsilk p-4 sm:p-6"
             >
               <h2 className="font-display text-xl font-bold text-russet">
                 <T text={p.title} />

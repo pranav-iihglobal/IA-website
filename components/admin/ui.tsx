@@ -180,8 +180,8 @@ export function Section({
   aside?: ReactNode;
 }) {
   return (
-    <section className="admin-card overflow-hidden">
-      <header className="admin-section-head flex items-start justify-between gap-4 px-6 py-4">
+    <section className="admin-card admin-bleed overflow-hidden">
+      <header className="admin-section-head flex items-start justify-between gap-4 px-4 py-4 sm:px-6">
         <div>
           <h2 className="font-display text-lg font-bold text-russet">{title}</h2>
           {description && (
@@ -190,7 +190,7 @@ export function Section({
         </div>
         {aside}
       </header>
-      <div className="space-y-5 px-6 py-5">{children}</div>
+      <div className="space-y-5 px-4 py-5 sm:px-6">{children}</div>
     </section>
   );
 }
@@ -951,7 +951,7 @@ export function RecordCard({
       inside a 350px grid on a phone: every admin list scrolled sideways, and
       truncation never kicked in because the box just grew instead.
     */
-    <li className="admin-card-item group relative min-w-0 rounded-2xl border border-camel-light/60 bg-cornsilk-light p-4 shadow-[0_1px_2px_rgba(95,47,20,0.05)] transition-shadow focus-within:shadow-[0_4px_14px_-6px_rgba(95,47,20,0.28)]">
+    <li className="admin-card-item admin-bleed group relative min-w-0 rounded-2xl border border-camel-light/60 bg-cornsilk-light p-4 shadow-[0_1px_2px_rgba(95,47,20,0.05)] transition-shadow focus-within:shadow-[0_4px_14px_-6px_rgba(95,47,20,0.28)]">
       <div className="flex items-start gap-3">
         {thumb}
         <div className="min-w-0 flex-1">
@@ -985,14 +985,15 @@ export function RecordCard({
       )}
 
       {/*
-        Stacked on a phone, side by side from sm up. "Last edited 20 Aug ·
-        someone@gmail.com" and a Delete button competing for 350px left the
-        meta line truncated to almost nothing — the date was visible and who
-        edited it never was.
+        One row again. This was stacked when the card had 302px to work with
+        and "Last edited 20 Aug · someone@gmail.com" truncated to almost
+        nothing beside the button. Bleeding to the screen edge bought 56px,
+        which is enough for the whole line — so the button no longer costs a
+        row of its own, and the card is ~52px shorter.
       */}
-      <div className="mt-3 flex flex-col gap-2 border-t border-camel-light/40 pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-camel-light/40 pt-3">
         {meta ? (
-          <p className="min-w-0 text-[11px] leading-relaxed text-russet-dark/50 sm:truncate">
+          <p className="min-w-0 truncate text-[11px] text-russet-dark/50">
             {meta}
           </p>
         ) : (
@@ -1008,7 +1009,7 @@ export function RecordCard({
           type="button"
           onClick={onDelete}
           aria-label={`Delete ${label}`}
-          className="admin-btn admin-btn-danger admin-tap relative z-10 shrink-0 self-end px-4 text-xs sm:self-auto"
+          className="admin-btn admin-btn-danger admin-tap relative z-10 shrink-0 px-4 text-xs"
         >
           <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
             <path d="M8 2h4a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-.4l-.7 9.1A2 2 0 0 1 12.9 17H7.1a2 2 0 0 1-2-1.9L4.4 6H4a1 1 0 0 1 0-2h3V3a1 1 0 0 1 1-1Zm1 2h2V4H9Zm-2.6 2 .7 8.9a.5.5 0 0 0 .5.4h5.8a.5.5 0 0 0 .5-.4l.7-8.9H6.4Z" />
@@ -1144,11 +1145,11 @@ export function TableSkeleton({ rows = 4 }: { rows?: number }) {
     */
     <div className="mt-6" aria-hidden="true">
       {/* Cards, below lg */}
-      <ul className="grid gap-3 sm:grid-cols-2 lg:hidden">
+      <ul className="admin-rows grid gap-3 sm:grid-cols-2 lg:hidden">
         {Array.from({ length: rows }).map((_, i) => (
           <li
             key={i}
-            className="rounded-2xl border border-camel-light/60 bg-cornsilk-light p-4"
+            className="admin-bleed rounded-2xl border border-camel-light/60 bg-cornsilk-light p-4"
           >
             <div className="flex items-start gap-3">
               <div className="admin-skeleton h-12 w-12 shrink-0 rounded-xl" />

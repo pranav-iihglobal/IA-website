@@ -107,7 +107,7 @@ export function TestimonialCard({
   return (
     <figure
       className={`flex h-full flex-col rounded-2xl border border-cornsilk-dark bg-cornsilk-light shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
-        compact ? "p-5" : "p-6"
+        compact ? "p-4 sm:p-5" : "p-4 sm:p-6"
       }`}
     >
       {t.sample && (

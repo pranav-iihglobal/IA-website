@@ -178,7 +178,7 @@ export default async function ArticlePage({
         </section>
       )}
 
-      <div className="mt-12 rounded-2xl bg-meringue p-6 text-center">
+      <div className="mt-12 rounded-2xl bg-meringue p-4 sm:p-6 text-center">
         <p className="font-display text-lg font-bold text-russet">
           <T text={MISC.learnCta} />
         </p>

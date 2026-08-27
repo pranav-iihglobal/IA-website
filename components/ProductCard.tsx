@@ -77,7 +77,7 @@ export function ProductCard({
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         ) : (
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <ProductArt
               art={product.artFallback}
               className="mx-auto h-40 w-40 transition-transform duration-500 ease-out group-hover:-rotate-2 group-hover:scale-110"
@@ -90,7 +90,7 @@ export function ProductCard({
           </span>
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-2 p-6">
+      <div className="flex flex-1 flex-col gap-2 p-4 sm:p-6">
         <p className="text-xs font-semibold uppercase tracking-widest text-olive">
           <T text={product.categoryLabel} />
         </p>
