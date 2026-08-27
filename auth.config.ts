@@ -4,7 +4,7 @@ import type { NextAuthConfig } from "next-auth";
 /**
  * The edge-safe half of the auth setup.
  *
- * middleware.ts runs on the edge runtime, where Mongoose cannot run at all —
+ * proxy.ts runs on the edge runtime, where Mongoose cannot run at all —
  * importing it there fails the build. So the configuration is split: this
  * file holds everything that is pure JavaScript over the request and the
  * token, and auth.ts adds the `signIn` callback that queries the database.
@@ -46,13 +46,13 @@ export const authConfig: NextAuthConfig = {
         /*
           Reaching here means the signIn callback in auth.ts returned true, so
           this account was authorised at the moment the token was minted.
-          middleware.ts reads this flag on the edge, where it cannot ask the
+          proxy.ts reads this flag on the edge, where it cannot ask the
           database.
 
           It is a fast path, not the authority: access can be revoked after
-          the token exists, so the Node-runtime layers behind middleware — the
+          the token exists, so the Node-runtime layers behind the proxy — the
           dashboard layout and requireAdmin() — re-check against the database
-          on every request. A revoked director gets past middleware and is
+          on every request. A revoked director gets past the proxy and is
           stopped immediately after.
         */
         token.admin = true;

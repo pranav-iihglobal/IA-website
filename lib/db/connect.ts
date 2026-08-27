@@ -25,7 +25,8 @@ interface MongooseCache {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
+  // `var` is not a style choice here — it is the only declaration form that
+  // adds a property to globalThis, which is what the cache below reads.
   var _mongooseCache: MongooseCache | undefined;
 }
 

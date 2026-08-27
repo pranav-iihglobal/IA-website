@@ -10,7 +10,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /** Save on ⌘/Ctrl+S instead of hunting for the button in a long form. */
 export function useSaveShortcut(onSave: () => void, enabled = true) {
   const handler = useRef(onSave);
-  handler.current = onSave;
+  // Written in an effect, not during render: a render can be thrown away or
+  // replayed under concurrent rendering, and mutating a ref there would let a
+  // discarded render leave its callback behind. The keydown listener only
+  // reads this after commit, so a commit-time write is soon enough.
+  useEffect(() => {
+    handler.current = onSave;
+  }, [onSave]);
 
   useEffect(() => {
     if (!enabled) return;

@@ -9,7 +9,7 @@ import { isAuthorisedEmail } from "@/lib/auth/directors";
 /**
  * Authenticated admin area.
  *
- * Access is enforced in middleware.ts; the check here is a second, redundant
+ * Access is enforced in proxy.ts; the check here is a second, redundant
  * one, and the session read that follows is only to show who is signed in.
  */
 export default async function DashboardLayout({
@@ -18,7 +18,7 @@ export default async function DashboardLayout({
   const session = await auth();
 
   /*
-    Last line of defence. middleware.ts already enforces this, but a matcher
+    Last line of defence. proxy.ts already enforces this, but a matcher
     change or an edge-runtime failure must never be the only thing standing
     between a stranger's Google account and the panel.
   */

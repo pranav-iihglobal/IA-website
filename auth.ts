@@ -14,8 +14,8 @@ import { isAuthorisedEmail } from "@/lib/auth/directors";
  * the director once, at sign-in; every request afterwards is authenticated by
  * our own cookie, which is exactly what AUTH_SECRET protects.
  *
- * This module reaches MongoDB, so it must NEVER be imported by middleware.ts
- * — the edge runtime cannot load Mongoose. Middleware uses auth.config.ts
+ * This module reaches MongoDB, so it must NEVER be imported by proxy.ts
+ * — the edge runtime cannot load Mongoose. The proxy uses auth.config.ts
  * instead; see the note there.
  */
 export const { handlers, auth, signIn, signOut } = NextAuth({

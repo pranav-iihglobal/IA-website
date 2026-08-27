@@ -33,7 +33,7 @@ npm run dev                    # http://localhost:3000  ·  admin at /admin
 
 ## Admin panel
 
-Sign in at **/admin** with **Google**. There is no password anywhere in this app, no user collection and no registration — see [Authentication](#authentication) below. `middleware.ts` guards every `/admin/*` page and `/api/admin/*` route, and `/admin` is excluded from search engines.
+Sign in at **/admin** with **Google**. There is no password anywhere in this app, no user collection and no registration — see [Authentication](#authentication) below. `proxy.ts` guards every `/admin/*` page and `/api/admin/*` route, and `/admin` is excluded from search engines.
 
 ### Authentication
 
@@ -58,11 +58,11 @@ It **fails closed**: no directors means nobody signs in. Enforced in four places
 | Where | Runtime | Checks |
 |---|---|---|
 | `signIn` callback (`auth.ts`) | Node | The database. Refuses to mint a session at all |
-| `middleware.ts` | Edge | That the token was minted for an authorised account |
+| `proxy.ts` | Edge | That the token was minted for an authorised account |
 | `requireAdmin()` (`lib/admin/api.ts`) | Node | The database, on every API call |
 | Dashboard layout | Node | The database, on every admin page |
 
-Middleware runs on the edge, where Mongoose cannot run, so it does the cheap half and the two Node layers behind it do the authoritative lookup on every request. That is also why the config is split across `auth.config.ts` (edge-safe) and `auth.ts` (reaches the database) — importing `auth.ts` from middleware fails the build.
+The proxy runs on the edge, where Mongoose cannot run, so it does the cheap half and the two Node layers behind it do the authoritative lookup on every request. That is also why the config is split across `auth.config.ts` (edge-safe) and `auth.ts` (reaches the database) — importing `auth.ts` from the proxy fails the build.
 
 > ⚠️ **Google's "test users" list is not access control.** It only restricts anything while the OAuth consent screen is in **Testing** status. Publishing the app — or making it **Internal** in a Workspace — opens sign-in to every Google account, with no warning and no visible change here. The Director collection is what actually protects the panel.
 
@@ -268,7 +268,7 @@ lib/
   cloudinary.ts images.ts sanitize.ts auth/ admin/
 content/learn/*.md        Original articles — kept as a fallback after seeding
 scripts/                  seed, check-seed, check-connection
-middleware.ts             Guards /admin and /api/admin
+proxy.ts                  Guards /admin and /api/admin
 ```
 
 ## Notes

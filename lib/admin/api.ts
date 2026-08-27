@@ -8,7 +8,7 @@ import { isAuthorisedEmail } from "@/lib/auth/directors";
  */
 
 /**
- * Defence in depth: middleware already blocks unauthorised requests to
+ * Defence in depth: the proxy already blocks unauthorised requests to
  * /api/admin/*, but every handler re-checks so a future matcher change can
  * never silently expose a mutation endpoint.
  *

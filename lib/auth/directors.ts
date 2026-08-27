@@ -14,7 +14,7 @@ import { Director } from "@/lib/db/models/Director";
  * and how you get back in if the collection is ever emptied.
  *
  * Node runtime only: Mongoose cannot run on the edge, which is why
- * middleware.ts trusts the session token instead and the authoritative checks
+ * proxy.ts trusts the session token instead and the authoritative checks
  * live in the dashboard layout and requireAdmin(). Those run on every
  * request, so removing someone takes effect immediately rather than when
  * their token expires.

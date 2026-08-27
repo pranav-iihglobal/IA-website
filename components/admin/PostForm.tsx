@@ -185,7 +185,12 @@ export function PostForm({
     enabled: !postId,
     dirty,
   });
-  clearDraft.current = draft.clear;
+  // save() is declared above the draft it has to clear, so it reaches the
+  // clear function through a ref. Written after commit rather than during
+  // render — a render can be discarded, and this ref outlives it.
+  useEffect(() => {
+    clearDraft.current = draft.clear;
+  }, [draft.clear]);
 
   const hasContent = Boolean(
     values.content.en?.trim() || values.content.gu?.trim(),
