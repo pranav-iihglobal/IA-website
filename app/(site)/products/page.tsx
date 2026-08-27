@@ -33,8 +33,10 @@ export default async function ProductsPage() {
       {/* 280px, not 300px: .container-page is 288px wide on a 320px screen,
           and a 300px track overhangs its own right gutter there. */}
       <div className="mt-10 grid gap-6 grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
+        {/* immediate on the first card: it is above the fold and must not
+            wait for JS to become visible. */}
         {products.map((p, i) => (
-          <Reveal key={p.slug} delay={i * 130}>
+          <Reveal key={p.slug} delay={i * 130} immediate={i === 0}>
             <ProductCard
               product={{
                 slug: p.slug,

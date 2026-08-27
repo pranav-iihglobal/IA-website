@@ -38,7 +38,8 @@ export default async function LearnPage() {
         {articles.map((a, i) => {
           const cover = cldUrl(a.coverImage?.url, CLD.blogCover);
           return (
-            <Reveal key={a.slug} delay={i * 110}>
+            // The first card is above the fold; it should not wait for JS.
+            <Reveal key={a.slug} delay={i * 110} immediate={i === 0}>
               {/*
                 One link, not three. The card used to wrap the cover, the
                 title and "Read article" in separate anchors to the same page —

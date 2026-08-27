@@ -47,7 +47,8 @@ export default async function HomePage() {
         <FloatingLeaves />
         <div className="container-page relative grid items-center gap-10 py-14 md:grid-cols-2 md:py-20">
           <div>
-            <Reveal>
+            {/* immediate: this block holds the h1, which is the page's LCP element. */}
+            <Reveal immediate>
               {/* The pill shows the tagline in the OTHER language, pairing with the headline */}
               <p className="mb-3 inline-block rounded-full bg-laurel-light px-4 py-1 text-sm font-medium text-olive-dark">
                 <T text={{ en: SITE.taglineGu, gu: SITE.tagline }} />
@@ -56,12 +57,12 @@ export default async function HomePage() {
                 <T text={HOME.heroIntro1} />
               </h1>
             </Reveal>
-            <Reveal delay={150}>
+            <Reveal immediate>
               <p className="mt-5 max-w-xl text-lg leading-relaxed text-olive-dark">
                 <T text={HOME.heroIntro2} />
               </p>
             </Reveal>
-            <Reveal delay={300}>
+            <Reveal immediate>
               <div className="mt-8 flex flex-wrap items-center gap-4">
                 <WhatsAppButton
                   message={HOME.heroCtaMessage}
@@ -76,7 +77,7 @@ export default async function HomePage() {
               </div>
             </Reveal>
           </div>
-          <Reveal direction="right" delay={200}>
+          <Reveal immediate>
             <Hero3D />
           </Reveal>
         </div>
