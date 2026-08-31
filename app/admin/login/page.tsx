@@ -36,9 +36,9 @@ export default async function AdminLoginPage({
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="w-full max-w-sm rounded-2xl border border-camel-light bg-cornsilk-light p-8 shadow-sm">
+      <div className="w-full max-w-sm rounded-2xl border border-line-soft bg-surface p-8 shadow-sm">
         <div className="flex flex-col items-center text-center">
-          <span className="flex h-20 w-20 items-center justify-center rounded-2xl bg-meringue-light ring-1 ring-camel-light">
+          <span className="flex h-20 w-20 items-center justify-center rounded-2xl bg-surface-muted ring-1 ring-line-soft">
             <Image
               src="/logo.svg"
               alt="IKSARVA"
@@ -49,10 +49,10 @@ export default async function AdminLoginPage({
               className="h-14 w-auto"
             />
           </span>
-          <h1 className="mt-4 font-display text-2xl font-bold text-russet">
+          <h1 className="mt-4 font-display text-2xl font-bold text-ink-strong">
             IKSARVA Backoffice
           </h1>
-          <p className="mt-1 text-sm text-olive-dark">
+          <p className="mt-1 text-sm text-ink-muted">
             Sign in with your director Google account.
           </p>
         </div>
@@ -61,7 +61,7 @@ export default async function AdminLoginPage({
           <GoogleSignInButton redirectTo={redirectTo} />
         </div>
 
-        <p className="mt-6 text-center text-xs leading-relaxed text-russet-dark/55">
+        <p className="mt-6 text-center text-xs leading-relaxed text-ink-soft">
           Access is limited to the IKSARVA team. If your account is not
           approved, Google will refuse the sign-in.
         </p>
@@ -69,7 +69,7 @@ export default async function AdminLoginPage({
         <p className="mt-4 text-center">
           <Link
             href="/"
-            className="text-xs font-semibold text-olive-dark hover:underline"
+            className="text-xs font-semibold text-ink-muted hover:underline"
           >
             ← Back to {SITE.shortName}
           </Link>

@@ -34,7 +34,7 @@ interface Row {
 /** Cover thumbnail, or a page glyph when the post has none. */
 function Cover({ cover }: { cover: string | null }) {
   return (
-    <div className="flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-meringue-light ring-1 ring-camel-light/50">
+    <div className="flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-muted ring-1 ring-line-soft/50">
       {cover ? (
         <Image
           src={cldUrl(cover, CLD.thumb) ?? cover}
@@ -45,7 +45,7 @@ function Cover({ cover }: { cover: string | null }) {
           className="h-12 w-16 object-cover"
         />
       ) : (
-        <span className="text-base text-camel">📄</span>
+        <span className="text-base text-ink-faint">📄</span>
       )}
     </div>
   );
@@ -145,7 +145,7 @@ export function PostList() {
             { value: "draft", label: "Draft" },
           ]}
         />
-        <span className="text-sm text-russet-dark/55">
+        <span className="text-sm text-ink-soft">
           {loading ? "Loading…" : `${total} post${total === 1 ? "" : "s"}`}
         </span>
       </div>
@@ -162,7 +162,7 @@ export function PostList() {
               "Try a different search term or clear the status filter."
             ) : (
               <>
-                Run <code className="rounded bg-meringue px-1.5 py-0.5">npm run seed</code>{" "}
+                Run <code className="rounded bg-surface-subtle px-1.5 py-0.5">npm run seed</code>{" "}
                 to import the three existing articles, or write a new one.
               </>
             )
@@ -192,12 +192,12 @@ export function PostList() {
                   <>
                     <StatusPill status={row.status} />
                     {row.category && (
-                      <span className="rounded-full bg-meringue px-2.5 py-1 text-xs font-semibold capitalize text-russet-dark/70">
+                      <span className="rounded-full bg-surface-subtle px-2.5 py-1 text-xs font-semibold capitalize text-ink-muted">
                         {row.category.replace("-", " ")}
                       </span>
                     )}
                     {row.publishAt && (
-                      <span className="rounded-full bg-meringue px-2.5 py-1 text-xs font-semibold text-russet-dark/70">
+                      <span className="rounded-full bg-surface-subtle px-2.5 py-1 text-xs font-semibold text-ink-muted">
                         {formatLongDate(row.publishAt)}
                       </span>
                     )}
@@ -213,7 +213,7 @@ export function PostList() {
           <div className="admin-card hidden overflow-hidden lg:block">
             <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="admin-section-head text-[11px] uppercase tracking-[0.12em] text-olive">
+              <thead className="admin-section-head text-[11px] uppercase tracking-[0.12em] text-accent">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Post</th>
                   <th className="px-5 py-3 font-semibold">Category</th>
@@ -226,25 +226,25 @@ export function PostList() {
                 {rows.map((row) => (
                   <tr
                     key={row.id}
-                    className="admin-row border-t border-camel-light/25"
+                    className="admin-row border-t border-line-soft/25"
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <Cover cover={row.cover} />
                         <div className="min-w-0">
-                          <p className="truncate font-semibold text-russet">
+                          <p className="truncate font-semibold text-ink-strong">
                             {row.title.en}
                           </p>
-                          <p className="truncate text-xs text-russet-dark/55">
+                          <p className="truncate text-xs text-ink-soft">
                             /{row.slug} · {row.readingTime} min read
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 capitalize text-russet-dark/75">
+                    <td className="px-5 py-3.5 capitalize text-ink">
                       {row.category?.replace("-", " ")}
                     </td>
-                    <td className="px-5 py-3.5 text-xs text-russet-dark/65">
+                    <td className="px-5 py-3.5 text-xs text-ink-muted">
                       {row.publishAt ? formatLongDate(row.publishAt) : "—"}
                     </td>
                     <td className="px-5 py-3.5">

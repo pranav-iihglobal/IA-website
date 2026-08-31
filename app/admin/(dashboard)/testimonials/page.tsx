@@ -17,8 +17,8 @@ export default async function AdminTestimonialsPage() {
       */}
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold text-russet sm:text-3xl">Testimonials</h1>
-          <p className="mt-1 text-sm text-olive-dark">
+          <h1 className="font-display text-2xl font-bold text-ink-strong sm:text-3xl">Testimonials</h1>
+          <p className="mt-1 text-sm text-ink-muted">
             Farmer stories shown on /testimonials.
           </p>
         </div>

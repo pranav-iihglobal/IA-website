@@ -277,7 +277,7 @@ export function PostForm({
           <div
             role="group"
             aria-label="Content language"
-            className="inline-flex rounded-full bg-meringue-light p-1 ring-1 ring-camel-light/70"
+            className="inline-flex rounded-full bg-surface-muted p-1 ring-1 ring-line-soft/70"
           >
             {(["en", "gu"] as const).map((code) => {
               const active = lang === code;
@@ -290,8 +290,8 @@ export function PostForm({
                   onClick={() => setLang(code)}
                   className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
                     active
-                      ? "bg-white text-russet shadow-sm"
-                      : "text-russet-dark/60 hover:text-russet"
+                      ? "bg-raised text-ink-strong shadow-sm"
+                      : "text-ink-muted hover:text-ink-strong"
                   }`}
                 >
                   <span

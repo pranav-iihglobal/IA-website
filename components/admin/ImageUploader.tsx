@@ -132,14 +132,14 @@ export function ImageUploader({
         }}
         className={`flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-colors ${
           dropActive
-            ? "border-olive bg-laurel-light/30"
-            : "border-camel bg-meringue-light/45 hover:border-olive hover:bg-laurel-light/20"
+            ? "border-olive bg-accent-soft/30"
+            : "border-line bg-surface-muted/45 hover:border-olive hover:bg-accent-soft/20"
         } ${full || busy ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
       >
         {busy ? (
           <>
             <Spinner />
-            <span className="text-sm font-semibold text-russet">
+            <span className="text-sm font-semibold text-ink-strong">
               Uploading {progress ? `${progress.done + 1} of ${progress.total}` : "…"}
             </span>
           </>
@@ -147,7 +147,7 @@ export function ImageUploader({
           <>
             <svg
               viewBox="0 0 24 24"
-              className="h-8 w-8 text-olive"
+              className="h-8 w-8 text-accent"
               fill="none"
               stroke="currentColor"
               strokeWidth={1.6}
@@ -157,7 +157,7 @@ export function ImageUploader({
             >
               <path d="M12 16V4m0 0L8 8m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
             </svg>
-            <span className="text-sm font-semibold text-russet">
+            <span className="text-sm font-semibold text-ink-strong">
               {full
                 ? max === 1
                   ? "Image added — remove it to swap"
@@ -166,7 +166,7 @@ export function ImageUploader({
                   ? "Click or drop an image here"
                   : "Click or drop images here"}
             </span>
-            <span className="text-xs text-russet-dark/55">
+            <span className="text-xs text-ink-soft">
               {images.length}/{max} uploaded · JPG or PNG
               {max > 1 && " · drag thumbnails to reorder"}
             </span>
@@ -175,7 +175,7 @@ export function ImageUploader({
       </button>
 
       {busy && progress && (
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-meringue-dark/40">
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-strong/40">
           <div
             className="h-full rounded-full bg-olive transition-[width] duration-300"
             style={{ width: `${(progress.done / progress.total) * 100}%` }}
@@ -198,13 +198,13 @@ export function ImageUploader({
                 setDragIndex(null);
               }}
               onDragEnd={() => setDragIndex(null)}
-              className={`group overflow-hidden rounded-xl border bg-white transition-all ${
+              className={`group overflow-hidden rounded-xl border bg-raised transition-all ${
                 img.isPrimary
                   ? "border-alloy ring-2 ring-alloy/20"
-                  : "border-camel-light/70"
+                  : "border-line-soft/70"
               } ${dragIndex === index ? "scale-[0.97] opacity-60" : ""}`}
             >
-              <div className="relative aspect-4/3 bg-meringue-light">
+              <div className="relative aspect-4/3 bg-surface-muted">
                 <Image
                   src={cldUrl(img.url, CLD.thumb) ?? img.url}
                   alt={img.alt.en || "Product image"}
@@ -221,7 +221,7 @@ export function ImageUploader({
                   type="button"
                   onClick={() => remove(index)}
                   aria-label="Remove image"
-                  className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-russet-dark/60 opacity-0 shadow-sm transition-opacity hover:text-alloy-dark focus-visible:opacity-100 group-hover:opacity-100"
+                  className="absolute right-2 top-2 rounded-full bg-raised/90 p-1.5 text-ink-muted opacity-0 shadow-sm transition-opacity hover:text-cta focus-visible:opacity-100 group-hover:opacity-100"
                 >
                   <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
                     <path d="M6.3 5A1 1 0 0 0 5 6.3L8.6 10 5 13.7A1 1 0 1 0 6.3 15L10 11.4l3.7 3.6a1 1 0 0 0 1.3-1.3L11.4 10 15 6.3A1 1 0 0 0 13.7 5L10 8.6 6.3 5Z" />
@@ -261,7 +261,7 @@ export function ImageUploader({
                   <button
                     type="button"
                     onClick={() => makePrimary(index)}
-                    className="w-full rounded-lg py-1 text-xs font-semibold text-olive-dark transition-colors hover:bg-laurel-light/40"
+                    className="w-full rounded-lg py-1 text-xs font-semibold text-ink-muted transition-colors hover:bg-accent-soft/40"
                   >
                     Make primary
                   </button>

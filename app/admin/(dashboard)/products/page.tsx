@@ -17,8 +17,8 @@ export default async function AdminProductsPage() {
       */}
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold text-russet sm:text-3xl">Products</h1>
-          <p className="mt-1 text-sm text-olive-dark">
+          <h1 className="font-display text-2xl font-bold text-ink-strong sm:text-3xl">Products</h1>
+          <p className="mt-1 text-sm text-ink-muted">
             Everything shown on /products and the home page highlight.
           </p>
         </div>

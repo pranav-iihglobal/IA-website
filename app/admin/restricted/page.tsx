@@ -64,8 +64,8 @@ export default async function RestrictedPage({
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="w-full max-w-md rounded-2xl border border-camel-light bg-cornsilk-light p-8 text-center shadow-sm">
-        <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-meringue-light ring-1 ring-camel-light">
+      <div className="w-full max-w-md rounded-2xl border border-line-soft bg-surface p-8 text-center shadow-sm">
+        <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-surface-muted ring-1 ring-line-soft">
           <Image
             src="/logo.svg"
             alt="IKSARVA"
@@ -76,10 +76,10 @@ export default async function RestrictedPage({
           />
         </span>
 
-        <h1 className="mt-5 font-display text-2xl font-bold text-russet">
+        <h1 className="mt-5 font-display text-2xl font-bold text-ink-strong">
           {heading}
         </h1>
-        <p className="mt-2 text-sm leading-relaxed text-russet-dark/80">{body}</p>
+        <p className="mt-2 text-sm leading-relaxed text-ink">{body}</p>
 
         <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
           {/*
@@ -94,7 +94,7 @@ export default async function RestrictedPage({
           >
             <button
               type="submit"
-              className="admin-tap w-full rounded-full border border-camel px-5 py-2.5 text-sm font-semibold text-russet transition-colors hover:border-olive hover:bg-meringue sm:w-auto"
+              className="admin-tap w-full rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-ink-strong transition-colors hover:border-olive hover:bg-surface-subtle sm:w-auto"
             >
               Try a different account
             </button>

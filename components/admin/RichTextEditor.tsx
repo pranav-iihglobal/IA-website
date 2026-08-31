@@ -39,7 +39,7 @@ function ToolbarButton({
       className={`flex h-8 min-w-8 items-center justify-center gap-1 rounded-lg px-2 text-sm font-semibold transition-colors disabled:opacity-35 ${
         active
           ? "bg-olive text-cornsilk-light"
-          : "text-russet-dark/80 hover:bg-meringue hover:text-russet"
+          : "text-ink hover:bg-surface-subtle hover:text-ink-strong"
       }`}
     >
       {children}
@@ -48,7 +48,7 @@ function ToolbarButton({
 }
 
 function Divider() {
-  return <span className="mx-1 h-5 w-px bg-camel-light/70" />;
+  return <span className="mx-1 h-5 w-px bg-surface-strong/70" />;
 }
 
 export function RichTextEditor({
@@ -75,7 +75,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "prose-article min-h-[300px] rounded-b-xl border border-t-0 border-camel-light/70 bg-white px-4 py-3 outline-none focus:border-olive",
+          "prose-article min-h-[300px] rounded-b-xl border border-t-0 border-line-soft/70 bg-raised px-4 py-3 outline-none focus:border-olive",
       },
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
@@ -148,7 +148,7 @@ export function RichTextEditor({
   return (
     <div>
       {/* Sticky so the toolbar stays reachable in a long article. */}
-      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 rounded-t-xl border border-camel-light/70 bg-meringue-light/95 px-2 py-1.5 backdrop-blur">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 rounded-t-xl border border-line-soft/70 bg-surface-muted/95 px-2 py-1.5 backdrop-blur">
         <ToolbarButton
           title="Undo"
           disabled={!editor.can().undo()}
@@ -264,7 +264,7 @@ export function RichTextEditor({
           </svg>
         </ToolbarButton>
 
-        <span className="ml-auto pr-1 text-[11px] font-medium text-russet-dark/50">
+        <span className="ml-auto pr-1 text-[11px] font-medium text-ink-soft">
           {words} word{words === 1 ? "" : "s"}
         </span>
       </div>
@@ -282,7 +282,7 @@ export function RichTextEditor({
 
       <EditorContent editor={editor} />
       {placeholder && editor.isEmpty && (
-        <p className="mt-1 text-xs text-russet-dark/50">{placeholder}</p>
+        <p className="mt-1 text-xs text-ink-soft">{placeholder}</p>
       )}
     </div>
   );

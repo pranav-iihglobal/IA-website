@@ -71,7 +71,7 @@ function StatCard({
         </span>
         <svg
           viewBox="0 0 20 20"
-          className="h-5 w-5 -translate-x-1 text-camel opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
+          className="h-5 w-5 -translate-x-1 text-ink-faint opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
           fill="currentColor"
           aria-hidden="true"
         >
@@ -79,18 +79,18 @@ function StatCard({
         </svg>
       </div>
 
-      <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-olive">
+      <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-accent">
         {title}
       </p>
-      <p className="mt-1 font-display text-3xl font-bold leading-none text-russet sm:text-4xl">
+      <p className="mt-1 font-display text-3xl font-bold leading-none text-ink-strong sm:text-4xl">
         {published}
       </p>
-      <p className="mt-2 text-sm text-russet-dark/65">
+      <p className="mt-2 text-sm text-ink-muted">
         published
         {drafts > 0 && (
           <>
             {" · "}
-            <span className="font-semibold text-alloy-dark">
+            <span className="font-semibold text-cta">
               {drafts} {draftLabel}
             </span>
           </>
@@ -112,13 +112,13 @@ function Notice({
   const styles =
     tone === "error"
       ? "border-alloy/45 bg-alloy/8"
-      : "border-camel-light bg-meringue-light";
+      : "border-line-soft bg-surface-muted";
   return (
     <div className={`max-w-2xl rounded-2xl border p-6 ${styles}`}>
-      <h2 className="font-display text-xl font-bold text-russet">{title}</h2>
+      <h2 className="font-display text-xl font-bold text-ink-strong">{title}</h2>
       {/* break-words: a database error carries a bare URL, which was long
           enough to push the whole dashboard sideways on a 320px screen. */}
-      <div className="mt-2 space-y-2 break-words text-sm leading-relaxed text-russet-dark/85">
+      <div className="mt-2 space-y-2 break-words text-sm leading-relaxed text-ink">
         {children}
       </div>
     </div>
@@ -127,7 +127,7 @@ function Notice({
 
 function Code({ children }: { children: ReactNode }) {
   return (
-    <code className="rounded bg-white px-1.5 py-0.5 text-[0.8em] ring-1 ring-camel-light">
+    <code className="rounded bg-raised px-1.5 py-0.5 text-[0.8em] ring-1 ring-line-soft">
       {children}
     </code>
   );
@@ -189,7 +189,7 @@ async function Tiles({
           href="/admin/products"
           published={counts.products}
           drafts={counts.productDrafts}
-          accent="bg-laurel-light/50 text-olive-dark"
+          accent="bg-accent-soft/50 text-ink-muted"
           icon={
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 7.5 12 3 4 7.5m16 0L12 12M20 7.5v9L12 21m0-9L4 7.5M12 12v9m-8-4.5v-9" />
@@ -203,7 +203,7 @@ async function Tiles({
           href="/admin/testimonials"
           published={counts.testimonials}
           drafts={counts.testimonialDrafts}
-          accent="bg-camel-light/45 text-russet"
+          accent="bg-surface-strong/45 text-ink-strong"
           icon={
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12Z" />
@@ -218,7 +218,7 @@ async function Tiles({
           published={counts.posts}
           drafts={counts.postDrafts}
           draftLabel="draft/scheduled"
-          accent="bg-alloy/12 text-alloy-dark"
+          accent="bg-alloy/12 text-cta"
           icon={
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 4h9l5 5v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm9 0v5h5M8 13h8M8 17h5" />
@@ -275,10 +275,10 @@ export default async function AdminDashboardPage() {
     <>
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold text-russet sm:text-3xl">
+          <h1 className="font-display text-2xl font-bold text-ink-strong sm:text-3xl">
             Dashboard
           </h1>
-          <p className="mt-1 text-sm text-olive-dark">{subtitle}</p>
+          <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>
         </div>
         {can(me, "products:write") && (
           <Link

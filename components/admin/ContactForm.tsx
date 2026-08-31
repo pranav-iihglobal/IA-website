@@ -317,7 +317,7 @@ export function ContactForm({
       <div className="admin-field">
         <label
           htmlFor="contact-remarks"
-          className="mb-1.5 block text-sm font-semibold text-russet"
+          className="mb-1.5 block text-sm font-semibold text-ink-strong"
         >
           Notes
         </label>

@@ -133,7 +133,7 @@ function InfoTip({
           without moving anything around it — the same minimum every other
           control in this panel holds to.
         */
-        className="admin-infotip relative ml-1 inline-flex h-4 w-4 shrink-0 translate-y-[1px] items-center justify-center rounded-full text-camel transition-colors after:absolute after:-inset-3.5 after:content-[''] hover:text-olive"
+        className="admin-infotip relative ml-1 inline-flex h-4 w-4 shrink-0 translate-y-[1px] items-center justify-center rounded-full text-ink-faint transition-colors after:absolute after:-inset-3.5 after:content-[''] hover:text-accent"
       >
         <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor">
           <path
@@ -183,9 +183,9 @@ export function Section({
     <section className="admin-card admin-bleed overflow-hidden">
       <header className="admin-section-head flex items-start justify-between gap-4 px-4 py-4 sm:px-6">
         <div>
-          <h2 className="font-display text-lg font-bold text-russet">{title}</h2>
+          <h2 className="font-display text-lg font-bold text-ink-strong">{title}</h2>
           {description && (
-            <p className="mt-0.5 text-sm text-russet-dark/65">{description}</p>
+            <p className="mt-0.5 text-sm text-ink-muted">{description}</p>
           )}
         </div>
         {aside}
@@ -198,7 +198,7 @@ export function Section({
 export function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-alloy-dark">
+    <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-cta">
       <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" fill="currentColor" aria-hidden="true">
         <path
           fillRule="evenodd"
@@ -221,7 +221,7 @@ export function FieldError({ message }: { message?: string }) {
 export function FieldSuccess({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-olive">
+    <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-accent">
       <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" fill="currentColor" aria-hidden="true">
         <path
           fillRule="evenodd"
@@ -264,12 +264,12 @@ function Label({
   return htmlFor ? (
     <label
       htmlFor={htmlFor}
-      className="admin-label inline-flex items-center text-sm font-semibold text-russet"
+      className="admin-label inline-flex items-center text-sm font-semibold text-ink-strong"
     >
       {content}
     </label>
   ) : (
-    <span className="admin-label inline-flex items-center text-sm font-semibold text-russet">
+    <span className="admin-label inline-flex items-center text-sm font-semibold text-ink-strong">
       {content}
     </span>
   );
@@ -315,7 +315,7 @@ export function TextField({
       </Label>
       <div className="relative mt-1.5">
         {prefix && (
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-russet-dark/50">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-soft">
             {prefix}
           </span>
         )}
@@ -379,7 +379,7 @@ export function SelectField({
         </select>
         <svg
           viewBox="0 0 20 20"
-          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-russet-dark/45"
+          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-soft"
           fill="currentColor"
           aria-hidden="true"
         >
@@ -415,17 +415,17 @@ export function Toggle({
         aria-describedby={hint ? hintId : undefined}
         onClick={() => onChange(!checked)}
         className={`mt-0.5 flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive/40 ${
-          checked ? "bg-olive" : "bg-camel-light/60"
+          checked ? "bg-olive" : "bg-surface-strong/60"
         }`}
       >
         <span
-          className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+          className={`h-5 w-5 rounded-full bg-raised shadow-sm transition-transform duration-200 ${
             checked ? "translate-x-5" : "translate-x-0"
           }`}
         />
       </button>
       <span onClick={() => onChange(!checked)} className="inline-flex items-center">
-        <span className="text-sm font-semibold text-russet">{label}</span>
+        <span className="text-sm font-semibold text-ink-strong">{label}</span>
         {hint && <InfoTip text={hint} label={label} describedById={hintId} />}
       </span>
     </label>
@@ -474,8 +474,8 @@ export function BiField({
           }
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors ${
             guFilled
-              ? "bg-laurel-light/55 text-olive-dark"
-              : "bg-meringue-dark/40 text-russet-dark/55"
+              ? "bg-accent-soft/55 text-ink-muted"
+              : "bg-surface-strong/40 text-ink-soft"
           }`}
         >
           <span
@@ -498,7 +498,7 @@ export function BiField({
         unmounting it keeps what you typed when you switch, and keeps the
         field's value in one place.
       */}
-      <div className="mt-1.5 flex gap-1 rounded-full bg-meringue-dark/30 p-1 sm:hidden">
+      <div className="mt-1.5 flex gap-1 rounded-full bg-surface-strong/30 p-1 sm:hidden">
         {(["en", "gu"] as const).map((code) => {
           const isEn = code === "en";
           const active = tab === code;
@@ -511,8 +511,8 @@ export function BiField({
               aria-pressed={active}
               className={`admin-tap flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors ${
                 active
-                  ? "bg-cornsilk-light text-russet shadow-sm"
-                  : "text-russet-dark/60"
+                  ? "bg-surface text-ink-strong shadow-sm"
+                  : "text-ink-muted"
               }`}
             >
               {isEn ? "English" : "ગુજરાતી"}
@@ -540,10 +540,10 @@ export function BiField({
               className={tab === code ? "" : "hidden sm:block"}
             >
               {/* The toggle already names the language on a phone. */}
-              <span className="mb-1 hidden text-xs font-semibold uppercase tracking-wide text-olive sm:block">
+              <span className="mb-1 hidden text-xs font-semibold uppercase tracking-wide text-accent sm:block">
                 {isEn ? "English" : "ગુજરાતી"}
                 {!isEn && (
-                  <span className="ml-1 normal-case tracking-normal text-russet-dark/45">
+                  <span className="ml-1 normal-case tracking-normal text-ink-soft">
                     optional
                   </span>
                 )}
@@ -605,10 +605,10 @@ export function Button({
   const styles = {
     primary: "admin-btn-primary",
     secondary:
-      "border border-camel bg-white/70 text-russet-dark hover:border-olive hover:bg-meringue-light",
+      "border border-line bg-raised/70 text-ink hover:border-olive hover:bg-surface-muted",
     // Was russet — the same brown as every heading, which read as ordinary.
     danger: "admin-btn-danger",
-    ghost: "text-russet-dark/70 hover:bg-meringue hover:text-russet",
+    ghost: "text-ink-muted hover:bg-surface-subtle hover:text-ink-strong",
   }[variant];
   return (
     <button
@@ -627,9 +627,9 @@ export function Button({
 
 export function StatusPill({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    published: "bg-laurel-light/60 text-olive-dark ring-laurel",
-    draft: "bg-meringue-dark/40 text-russet-dark/75 ring-camel-light",
-    scheduled: "bg-camel-light/35 text-russet ring-camel",
+    published: "bg-accent-soft/60 text-ink-muted ring-laurel",
+    draft: "bg-surface-strong/40 text-ink ring-line-soft",
+    scheduled: "bg-surface-strong/35 text-ink-strong ring-line",
   };
   const dot: Record<string, string> = {
     published: "bg-olive",
@@ -661,7 +661,7 @@ export function FieldGroup({
   return (
     <div>
       <div className="flex items-baseline justify-between gap-3">
-        <span className="inline-flex items-center text-sm font-semibold text-russet">
+        <span className="inline-flex items-center text-sm font-semibold text-ink-strong">
           {label}
           {hint && <InfoTip text={hint} label={label} describedById={hintId} />}
         </span>
@@ -689,7 +689,7 @@ export function FormActions({
   onCancel: () => void;
 }) {
   return (
-    <div className="sticky bottom-0 z-20 -mx-1 mt-2 flex flex-wrap items-center gap-3 rounded-t-2xl border-t border-camel-light/50 bg-[var(--admin-surface)]/92 px-4 py-3.5 backdrop-blur">
+    <div className="sticky bottom-0 z-20 -mx-1 mt-2 flex flex-wrap items-center gap-3 rounded-t-2xl border-t border-line-soft/50 bg-[var(--admin-surface)]/92 px-4 py-3.5 backdrop-blur">
       <Button type="submit" disabled={saving}>
         {saving && <Spinner />}
         {saving ? savingLabel : submitLabel}
@@ -701,12 +701,12 @@ export function FormActions({
         {dirty ? (
           <>
             <span className="h-1.5 w-1.5 rounded-full bg-alloy" />
-            <span className="text-alloy-dark">Unsaved changes</span>
+            <span className="text-cta">Unsaved changes</span>
           </>
         ) : (
           <>
-            <span className="h-1.5 w-1.5 rounded-full bg-laurel" />
-            <span className="text-russet-dark/55">All changes saved</span>
+            <span className="h-1.5 w-1.5 rounded-full bg-accent-mid" />
+            <span className="text-ink-soft">All changes saved</span>
           </>
         )}
       </span>
@@ -742,17 +742,17 @@ export function RepeatableList({
   return (
     <div className="space-y-3">
       {items.length === 0 && emptyLabel && (
-        <p className="rounded-xl border border-dashed border-camel-light bg-meringue-light/40 px-4 py-3 text-sm text-russet-dark/60">
+        <p className="rounded-xl border border-dashed border-line-soft bg-surface-muted/40 px-4 py-3 text-sm text-ink-muted">
           {emptyLabel}
         </p>
       )}
       {items.map((_, index) => (
         <div
           key={index}
-          className="group/item relative rounded-xl border border-camel-light/60 bg-meringue-light/35 p-4 transition-colors hover:border-camel-light"
+          className="group/item relative rounded-xl border border-line-soft/60 bg-surface-muted/35 p-4 transition-colors hover:border-line-soft"
         >
           <div className="flex items-start gap-3">
-            <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-semibold text-olive-dark ring-1 ring-camel-light">
+            <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-raised text-xs font-semibold text-ink-muted ring-1 ring-line-soft">
               {index + 1}
             </span>
             <div className="min-w-0 flex-1">{renderItem(index)}</div>
@@ -760,7 +760,7 @@ export function RepeatableList({
               type="button"
               onClick={() => onRemove(index)}
               aria-label={`Remove item ${index + 1}`}
-              className="mt-0.5 shrink-0 rounded-lg p-1.5 text-russet-dark/40 opacity-0 transition-all hover:bg-alloy/10 hover:text-alloy-dark focus-visible:opacity-100 group-hover/item:opacity-100"
+              className="mt-0.5 shrink-0 rounded-lg p-1.5 text-ink-soft opacity-0 transition-all hover:bg-alloy/10 hover:text-cta focus-visible:opacity-100 group-hover/item:opacity-100"
             >
               <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
                 <path d="M8 2h4a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-.4l-.7 9.1A2 2 0 0 1 12.9 17H7.1a2 2 0 0 1-2-1.9L4.4 6H4a1 1 0 0 1 0-2h3V3a1 1 0 0 1 1-1Zm1 2h2V4H9Zm-2.6 2 .7 8.9a.5.5 0 0 0 .5.4h5.8a.5.5 0 0 0 .5-.4l.7-8.9H6.4Z" />
@@ -772,7 +772,7 @@ export function RepeatableList({
       <button
         type="button"
         onClick={onAdd}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-camel py-2.5 text-sm font-semibold text-olive-dark transition-colors hover:border-olive hover:bg-laurel-light/25"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-2.5 text-sm font-semibold text-ink-muted transition-colors hover:border-olive hover:bg-accent-soft/25"
       >
         <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
           <path d="M10 4a1 1 0 0 1 1 1v4h4a1 1 0 1 1 0 2h-4v4a1 1 0 1 1-2 0v-4H5a1 1 0 1 1 0-2h4V5a1 1 0 0 1 1-1Z" />
@@ -801,7 +801,7 @@ export function SearchInput({
     <div className="admin-field relative min-w-0 basis-full sm:basis-auto sm:max-w-xs sm:flex-1">
       <svg
         viewBox="0 0 20 20"
-        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-russet-dark/40"
+        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-soft"
         fill="currentColor"
         aria-hidden="true"
       >
@@ -823,7 +823,7 @@ export function SearchInput({
           type="button"
           onClick={() => onChange("")}
           aria-label="Clear search"
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-russet-dark/40 transition-colors hover:bg-meringue hover:text-russet"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink-strong"
         >
           <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
             <path d="M6.3 5A1 1 0 0 0 5 6.3L8.6 10 5 13.7A1 1 0 1 0 6.3 15L10 11.4l3.7 3.6a1 1 0 0 0 1.3-1.3L11.4 10 15 6.3A1 1 0 0 0 13.7 5L10 8.6 6.3 5Z" />
@@ -850,7 +850,7 @@ export function FilterTabs({
     <div
       role="group"
       aria-label="Filter by status"
-      className="inline-flex shrink-0 rounded-full bg-meringue-light p-1 ring-1 ring-camel-light/70"
+      className="inline-flex shrink-0 rounded-full bg-surface-muted p-1 ring-1 ring-line-soft/70"
     >
       {options.map((option) => {
         const active = value === option.value;
@@ -862,8 +862,8 @@ export function FilterTabs({
             onClick={() => onChange(option.value)}
             className={`admin-tap inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
               active
-                ? "bg-white text-russet shadow-sm"
-                : "text-russet-dark/60 hover:text-russet"
+                ? "bg-raised text-ink-strong shadow-sm"
+                : "text-ink-muted hover:text-ink-strong"
             }`}
           >
             {option.label}
@@ -904,11 +904,11 @@ export function FormPageHeader({
   return (
     <>
       <BackLink href={backHref} label={backLabel} />
-      <h1 className="font-display text-xl font-bold leading-tight text-russet sm:text-3xl">
+      <h1 className="font-display text-xl font-bold leading-tight text-ink-strong sm:text-3xl">
         {title}
       </h1>
       {description && (
-        <p className="mt-1 text-sm text-olive-dark sm:text-base">{description}</p>
+        <p className="mt-1 text-sm text-ink-muted sm:text-base">{description}</p>
       )}
     </>
   );
@@ -951,7 +951,7 @@ export function RecordCard({
       inside a 350px grid on a phone: every admin list scrolled sideways, and
       truncation never kicked in because the box just grew instead.
     */
-    <li className="admin-card-item admin-bleed group relative min-w-0 rounded-2xl border border-camel-light/60 bg-cornsilk-light p-4 shadow-[0_1px_2px_rgba(95,47,20,0.05)] transition-shadow focus-within:shadow-[0_4px_14px_-6px_rgba(95,47,20,0.28)]">
+    <li className="admin-card-item admin-bleed group relative min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4 shadow-[0_1px_2px_rgba(95,47,20,0.05)] transition-shadow focus-within:shadow-[0_4px_14px_-6px_rgba(95,47,20,0.28)]">
       <div className="flex items-start gap-3">
         {thumb}
         <div className="min-w-0 flex-1">
@@ -960,11 +960,11 @@ export function RecordCard({
             tap anywhere works. The delete button below lifts above it with
             `relative z-10` so it stays its own target.
           */}
-          <h3 className="font-semibold leading-snug text-russet">
+          <h3 className="font-semibold leading-snug text-ink-strong">
             {editHref ? (
               <Link
                 href={editHref}
-                className="after:absolute after:inset-0 after:rounded-2xl group-hover:text-alloy-dark"
+                className="after:absolute after:inset-0 after:rounded-2xl group-hover:text-cta"
               >
                 {title}
               </Link>
@@ -973,7 +973,7 @@ export function RecordCard({
             )}
           </h3>
           {subtitle && (
-            <p className="mt-0.5 truncate text-xs text-russet-dark/55">
+            <p className="mt-0.5 truncate text-xs text-ink-soft">
               {subtitle}
             </p>
           )}
@@ -991,9 +991,9 @@ export function RecordCard({
         which is enough for the whole line — so the button no longer costs a
         row of its own, and the card is ~52px shorter.
       */}
-      <div className="mt-3 flex items-center justify-between gap-3 border-t border-camel-light/40 pt-3">
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-line-soft/40 pt-3">
         {meta ? (
-          <p className="min-w-0 truncate text-[11px] text-russet-dark/50">
+          <p className="min-w-0 truncate text-[11px] text-ink-soft">
             {meta}
           </p>
         ) : (
@@ -1033,7 +1033,7 @@ export function BackLink({ href, label }: { href: string; label: string }) {
     <nav className="mb-5">
       <Link
         href={href}
-        className="admin-tap -ml-2.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-semibold text-olive-dark transition-colors hover:bg-meringue hover:text-russet"
+        className="admin-tap -ml-2.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-semibold text-ink-muted transition-colors hover:bg-surface-subtle hover:text-ink-strong"
       >
         <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
           <path d="M12.7 4.3a1 1 0 0 1 0 1.4L8.4 10l4.3 4.3a1 1 0 0 1-1.4 1.4l-5-5a1 1 0 0 1 0-1.4l5-5a1 1 0 0 1 1.4 0Z" />
@@ -1050,7 +1050,7 @@ export function ErrorBanner({ message }: { message?: string | null }) {
   return (
     <p
       role="alert"
-      className="mt-4 flex items-start gap-2 rounded-xl border border-alloy/45 bg-alloy/10 px-4 py-3 text-sm font-medium text-russet"
+      className="mt-4 flex items-start gap-2 rounded-xl border border-alloy/45 bg-alloy/10 px-4 py-3 text-sm font-medium text-ink-strong"
     >
       <svg viewBox="0 0 20 20" className="mt-px h-4 w-4 shrink-0" fill="currentColor" aria-hidden="true">
         <path
@@ -1081,7 +1081,7 @@ export function RowActions({
     <div className="admin-row-actions flex items-center justify-end gap-1.5">
       <Link
         href={editHref}
-        className="admin-tap inline-flex items-center rounded-full border border-camel px-3.5 py-1.5 text-xs font-semibold text-olive-dark transition-colors hover:border-olive hover:bg-laurel-light/35"
+        className="admin-tap inline-flex items-center rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-ink-muted transition-colors hover:border-olive hover:bg-accent-soft/35"
       >
         Edit
       </Link>
@@ -1092,7 +1092,7 @@ export function RowActions({
         title="Delete"
         // Red, not the alloy CTA colour: the destructive action must never
         // look like the primary one.
-        className="admin-tap-square inline-flex items-center justify-center rounded-full p-2 text-russet-dark/45 transition-colors hover:bg-danger/12 hover:text-danger focus-visible:bg-danger/12 focus-visible:text-danger"
+        className="admin-tap-square inline-flex items-center justify-center rounded-full p-2 text-ink-soft transition-colors hover:bg-danger/12 hover:text-danger focus-visible:bg-danger/12 focus-visible:text-danger"
       >
         <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
           <path d="M8 2h4a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-.4l-.7 9.1A2 2 0 0 1 12.9 17H7.1a2 2 0 0 1-2-1.9L4.4 6H4a1 1 0 0 1 0-2h3V3a1 1 0 0 1 1-1Zm1 2h2V4H9Zm-2.6 2 .7 8.9a.5.5 0 0 0 .5.4h5.8a.5.5 0 0 0 .5-.4l.7-8.9H6.4Z" />
@@ -1121,8 +1121,8 @@ export function Pagination({
       >
         ← Previous
       </Button>
-      <span className="text-sm text-russet-dark/70">
-        Page <strong className="text-russet">{page}</strong> of {pages}
+      <span className="text-sm text-ink-muted">
+        Page <strong className="text-ink-strong">{page}</strong> of {pages}
       </span>
       <Button
         variant="secondary"
@@ -1149,7 +1149,7 @@ export function TableSkeleton({ rows = 4 }: { rows?: number }) {
         {Array.from({ length: rows }).map((_, i) => (
           <li
             key={i}
-            className="admin-bleed rounded-2xl border border-camel-light/60 bg-cornsilk-light p-4"
+            className="admin-bleed rounded-2xl border border-line-soft/60 bg-surface p-4"
           >
             <div className="flex items-start gap-3">
               <div className="admin-skeleton h-12 w-12 shrink-0 rounded-xl" />
@@ -1162,7 +1162,7 @@ export function TableSkeleton({ rows = 4 }: { rows?: number }) {
               <div className="admin-skeleton h-6 w-24 rounded-full" />
               <div className="admin-skeleton h-6 w-20 rounded-full" />
             </div>
-            <div className="mt-3 flex items-center justify-between border-t border-camel-light/40 pt-3">
+            <div className="mt-3 flex items-center justify-between border-t border-line-soft/40 pt-3">
               <div className="admin-skeleton h-3 w-28 rounded" />
               <div className="admin-skeleton h-11 w-24 rounded-full" />
             </div>
@@ -1172,11 +1172,11 @@ export function TableSkeleton({ rows = 4 }: { rows?: number }) {
 
       {/* Table, from lg up */}
       <div className="admin-card hidden overflow-hidden lg:block">
-        <div className="admin-section-head h-11 border-b border-camel-light/25" />
+        <div className="admin-section-head h-11 border-b border-line-soft/25" />
         {Array.from({ length: rows }).map((_, i) => (
           <div
             key={i}
-            className="flex items-center gap-4 border-b border-camel-light/25 px-5 py-4 last:border-0"
+            className="flex items-center gap-4 border-b border-line-soft/25 px-5 py-4 last:border-0"
           >
             <div className="admin-skeleton h-12 w-12 shrink-0 rounded-xl" />
             <div className="flex-1 space-y-2">
@@ -1297,7 +1297,7 @@ export function EmptyState({
 }) {
   return (
     <div className="admin-card mt-6 flex flex-col items-center px-6 py-14 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-meringue text-olive">
+      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-subtle text-accent">
         <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={1.6}>
           <path
             strokeLinecap="round"
@@ -1306,8 +1306,8 @@ export function EmptyState({
           />
         </svg>
       </span>
-      <h3 className="mt-4 font-display text-lg font-bold text-russet">{title}</h3>
-      <p className="mt-1.5 max-w-md text-sm leading-relaxed text-russet-dark/65">
+      <h3 className="mt-4 font-display text-lg font-bold text-ink-strong">{title}</h3>
+      <p className="mt-1.5 max-w-md text-sm leading-relaxed text-ink-muted">
         {message}
       </p>
       {action && <div className="mt-5">{action}</div>}

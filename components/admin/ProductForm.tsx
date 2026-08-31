@@ -606,7 +606,7 @@ export function ProductForm({
                         />
                       </div>
                       {errors[`fieldResults.${i}.beforeImage.url`] && (
-                        <p className="text-xs font-semibold text-alloy-dark">
+                        <p className="text-xs font-semibold text-cta">
                           {errors[`fieldResults.${i}.beforeImage.url`]}
                         </p>
                       )}
@@ -1093,14 +1093,14 @@ export function ProductForm({
           /* Live preview — the real public ProductCard, not a lookalike. */
           <aside className="lg:sticky lg:top-8 lg:self-start">
             <div className="admin-card p-4">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-olive">
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
                 <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-laurel opacity-75" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-mid opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-olive" />
                 </span>
                 Live preview
               </p>
-              <p className="mt-1 text-xs text-russet-dark/60">
+              <p className="mt-1 text-xs text-ink-muted">
                 Exactly how this card appears on the site.
               </p>
               <div className="mt-3">

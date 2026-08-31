@@ -109,8 +109,8 @@ function StepMarker({
     : active
       ? "bg-olive text-cornsilk-light"
       : complete
-        ? "bg-laurel text-olive-dark"
-        : "bg-meringue-dark/50 text-russet-dark/60";
+        ? "bg-accent-mid text-ink-muted"
+        : "bg-surface-strong/50 text-ink-muted";
   return (
     <span
       className={`flex shrink-0 items-center justify-center rounded-full font-bold transition-colors ${box} ${tone}`}
@@ -225,16 +225,16 @@ export function FormWizard({
         >
           <div className="admin-card overflow-hidden p-2">
             <div className="px-3 pb-2 pt-2.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-olive">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
                 {completed} of {total} done
               </p>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-meringue">
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-subtle">
                 <div
                   className="h-full rounded-full bg-olive transition-[width] duration-300"
                   style={{ width: `${(completed / total) * 100}%` }}
                 />
               </div>
-              <p className="mt-2 text-[11px] text-russet-dark/55">
+              <p className="mt-2 text-[11px] text-ink-soft">
                 {requiredLeft === 0
                   ? "All required steps filled in"
                   : `${requiredLeft} required step${requiredLeft === 1 ? "" : "s"} left`}
@@ -251,7 +251,7 @@ export function FormWizard({
                     {index < total - 1 && (
                       <span
                         aria-hidden="true"
-                        className="absolute left-[1.4rem] top-9 h-[calc(100%-1.5rem)] w-px bg-camel-light/60"
+                        className="absolute left-[1.4rem] top-9 h-[calc(100%-1.5rem)] w-px bg-surface-strong/60"
                       />
                     )}
                     <button
@@ -260,8 +260,8 @@ export function FormWizard({
                       aria-current={active ? "step" : undefined}
                       className={`relative flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
                         active
-                          ? "bg-meringue-light"
-                          : "hover:bg-meringue-light/60"
+                          ? "bg-surface-muted"
+                          : "hover:bg-surface-muted/60"
                       }`}
                     >
                       <StepMarker
@@ -274,24 +274,24 @@ export function FormWizard({
                       <span className="min-w-0 flex-1 pt-0.5">
                         <span
                           className={`flex items-center gap-1.5 text-sm font-semibold ${
-                            active ? "text-russet" : "text-russet-dark/80"
+                            active ? "text-ink-strong" : "text-ink"
                           }`}
                         >
                           <span className="truncate">{s.title}</span>
                           {s.count !== undefined && s.count > 0 && (
-                            <span className="shrink-0 rounded-full bg-meringue-dark/50 px-1.5 text-[10px] font-bold text-russet-dark/60">
+                            <span className="shrink-0 rounded-full bg-surface-strong/50 px-1.5 text-[10px] font-bold text-ink-muted">
                               {s.count}
                             </span>
                           )}
                         </span>
                         {failures > 0 ? (
-                          <span className="mt-0.5 block text-[11px] font-semibold text-alloy-dark">
+                          <span className="mt-0.5 block text-[11px] font-semibold text-cta">
                             {failures} field{failures === 1 ? "" : "s"} need
                             fixing
                           </span>
                         ) : (
                           s.description && (
-                            <span className="mt-0.5 block text-[11px] leading-snug text-russet-dark/50">
+                            <span className="mt-0.5 block text-[11px] leading-snug text-ink-soft">
                               {s.description}
                               {s.optional && !s.complete && " · optional"}
                             </span>
@@ -305,13 +305,13 @@ export function FormWizard({
             </ol>
           </div>
 
-          <p className="mt-3 px-2 text-[11px] leading-relaxed text-russet-dark/45">
+          <p className="mt-3 px-2 text-[11px] leading-relaxed text-ink-soft">
             Save from any step — nothing is lost by stopping partway.
             <br />
-            <kbd className="rounded bg-meringue px-1 font-sans">⌘/Ctrl</kbd>+
-            <kbd className="rounded bg-meringue px-1 font-sans">S</kbd> saves,{" "}
-            <kbd className="rounded bg-meringue px-1 font-sans">Alt</kbd>+
-            <kbd className="rounded bg-meringue px-1 font-sans">←→</kbd> moves.
+            <kbd className="rounded bg-surface-subtle px-1 font-sans">⌘/Ctrl</kbd>+
+            <kbd className="rounded bg-surface-subtle px-1 font-sans">S</kbd> saves,{" "}
+            <kbd className="rounded bg-surface-subtle px-1 font-sans">Alt</kbd>+
+            <kbd className="rounded bg-surface-subtle px-1 font-sans">←→</kbd> moves.
           </p>
         </nav>
 
@@ -334,13 +334,13 @@ export function FormWizard({
             hidden, so the desktop layout is exactly what it was.
           */}
           <div className="mb-4 flex items-center gap-3 xl:hidden">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-meringue">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-subtle">
               <div
                 className="h-full rounded-full bg-olive transition-[width] duration-300"
                 style={{ width: `${(steps.filter((s) => s.complete).length / total) * 100}%` }}
               />
             </div>
-            <span className="shrink-0 text-xs font-semibold text-russet-dark/60">
+            <span className="shrink-0 text-xs font-semibold text-ink-muted">
               {steps.filter((s) => s.complete).length}/{total} done
             </span>
           </div>
@@ -372,25 +372,25 @@ export function FormWizard({
                       ? "border-olive bg-olive text-cornsilk-light"
                       : failures > 0
                         ? "border-alloy/40 bg-alloy/10"
-                        : "border-camel-light/60 bg-cornsilk-light"
+                        : "border-line-soft/60 bg-surface"
                   }`}
                 >
                   <span
                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                       active
-                        ? "bg-cornsilk-light/25 text-cornsilk-light"
+                        ? "bg-surface/25 text-cornsilk-light"
                         : failures > 0
                           ? "bg-alloy text-cornsilk-light"
                           : s.complete
-                            ? "bg-laurel text-olive-dark"
-                            : "bg-meringue-dark/50 text-russet-dark/60"
+                            ? "bg-accent-mid text-ink-muted"
+                            : "bg-surface-strong/50 text-ink-muted"
                     }`}
                   >
                     {failures > 0 ? <AlertIcon /> : s.complete ? <CheckIcon /> : index + 1}
                   </span>
 
                   <span className="min-w-0 flex-1">
-                    <span className={`block truncate font-semibold ${active ? "" : "text-russet"}`}>
+                    <span className={`block truncate font-semibold ${active ? "" : "text-ink-strong"}`}>
                       {s.title}
                     </span>
                     <span
@@ -398,8 +398,8 @@ export function FormWizard({
                         active
                           ? "text-cornsilk/75"
                           : failures > 0
-                            ? "font-semibold text-alloy-dark"
-                            : "text-russet-dark/50"
+                            ? "font-semibold text-cta"
+                            : "text-ink-soft"
                       }`}
                     >
                       {failures > 0
@@ -411,7 +411,7 @@ export function FormWizard({
                   <span
                     aria-hidden="true"
                     className={`shrink-0 text-lg leading-none transition-transform ${
-                      active ? "rotate-180" : "text-camel"
+                      active ? "rotate-180" : "text-ink-faint"
                     }`}
                   >
                     ⌃
@@ -431,18 +431,18 @@ export function FormWizard({
                 counter is desktop-only now — below xl the accordion header
                 directly above already says which step this is. */}
               <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-olive xl:inline">
+                <span className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-accent xl:inline">
                   Step {safeCurrent + 1} of {total}
                 </span>
                 {step.optional && (
-                  <span className="rounded-full bg-meringue px-2 py-0.5 text-[11px] font-semibold text-russet-dark/55">
+                  <span className="rounded-full bg-surface-subtle px-2 py-0.5 text-[11px] font-semibold text-ink-soft">
                     Optional — nothing here is required to publish
                   </span>
                 )}
               </div>
 
               {totalErrors > 0 && (
-                <p className="mb-4 flex items-center gap-2 text-sm font-semibold text-alloy-dark">
+                <p className="mb-4 flex items-center gap-2 text-sm font-semibold text-cta">
                   <AlertIcon className="h-4 w-4" />
                   {totalErrors} field{totalErrors === 1 ? "" : "s"} need fixing
                   across {steps.filter((s) => errorCount(s, errors) > 0).length}{" "}
@@ -467,7 +467,7 @@ export function FormWizard({
                 already leaves, and a destructive-ish action does not deserve
                 a third of a phone's toolbar.
               */}
-              <div className="sticky bottom-0 z-10 mt-6 flex items-center gap-2 rounded-t-2xl border-t border-camel-light/50 bg-[var(--admin-surface)]/92 px-3 py-3 backdrop-blur sm:flex-wrap sm:gap-3 sm:px-4 sm:py-3.5">
+              <div className="sticky bottom-0 z-10 mt-6 flex items-center gap-2 rounded-t-2xl border-t border-line-soft/50 bg-[var(--admin-surface)]/92 px-3 py-3 backdrop-blur sm:flex-wrap sm:gap-3 sm:px-4 sm:py-3.5">
                 <Button
                   variant="secondary"
                   disabled={safeCurrent === 0}
@@ -503,12 +503,12 @@ export function FormWizard({
                     {dirty ? (
                       <>
                         <span className="h-1.5 w-1.5 rounded-full bg-alloy" />
-                        <span className="text-alloy-dark">Unsaved changes</span>
+                        <span className="text-cta">Unsaved changes</span>
                       </>
                     ) : (
                       <>
-                        <span className="h-1.5 w-1.5 rounded-full bg-laurel" />
-                        <span className="text-russet-dark/55">
+                        <span className="h-1.5 w-1.5 rounded-full bg-accent-mid" />
+                        <span className="text-ink-soft">
                           All changes saved
                         </span>
                       </>
@@ -540,7 +540,7 @@ export function FormWizard({
                 </div>
               </div>
 
-              <p className="mt-2 px-4 text-xs text-russet-dark/45 xl:hidden">
+              <p className="mt-2 px-4 text-xs text-ink-soft xl:hidden">
                 You can save from any step — nothing is lost by stopping
                 partway.
               </p>

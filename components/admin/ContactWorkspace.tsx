@@ -246,14 +246,14 @@ export function ContactWorkspace({ scope }: { scope: Scope }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-2xl font-bold text-russet">
+          <h1 className="font-display text-2xl font-bold text-ink-strong">
             {config.title}
-            <span className="ml-2 align-middle text-sm font-semibold text-russet-dark/55">
+            <span className="ml-2 align-middle text-sm font-semibold text-ink-soft">
               {total}
             </span>
           </h1>
           {sampleCount > 0 && (
-            <p className="mt-0.5 text-xs font-semibold text-camel-dark">
+            <p className="mt-0.5 text-xs font-semibold text-ink-faint">
               {sampleCount === total
                 ? "All sample data — not the real list yet"
                 : `${sampleCount} of these are sample records`}
@@ -290,7 +290,7 @@ export function ContactWorkspace({ scope }: { scope: Scope }) {
       ) : (
         <>
           {dueCount > 0 && filter !== "due" && (
-            <p className="text-sm font-semibold text-alloy-dark">
+            <p className="text-sm font-semibold text-cta">
               {dueCount} on this page {dueCount === 1 ? "is" : "are"} due for follow-up.
             </p>
           )}
@@ -302,7 +302,7 @@ export function ContactWorkspace({ scope }: { scope: Scope }) {
                 editHref={`${pathname}?edit=${row.id}`}
                 onDelete={() => setDeleting(row)}
                 thumb={
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-laurel-light font-display text-base font-bold text-olive-dark">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft font-display text-base font-bold text-ink">
                     {initialOf(row)}
                   </span>
                 }
@@ -310,7 +310,7 @@ export function ContactWorkspace({ scope }: { scope: Scope }) {
                   <>
                     {row.businessName || row.name}
                     {row.businessName && (
-                      <span className="ml-2 text-sm font-normal text-russet-dark/60">
+                      <span className="ml-2 text-sm font-normal text-ink-muted">
                         {row.name}
                       </span>
                     )}
@@ -324,22 +324,22 @@ export function ContactWorkspace({ scope }: { scope: Scope }) {
                 badges={
                   <>
                     {row.isSample && (
-                      <span className="rounded-full bg-meringue px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-camel-dark">
+                      <span className="rounded-full bg-surface-subtle px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-ink-faint">
                         Sample
                       </span>
                     )}
                     {row.kind === "customer" && (
-                      <span className="rounded-full bg-laurel-light/70 px-2 py-0.5 text-[11px] font-semibold text-olive-dark">
+                      <span className="rounded-full bg-accent-soft/70 px-2 py-0.5 text-[11px] font-semibold text-ink-muted">
                         {STATUS_LABELS[row.status]}
                       </span>
                     )}
                     {row.overdue && (
-                      <span className="rounded-full bg-alloy/15 px-2 py-0.5 text-[11px] font-bold text-alloy-dark">
+                      <span className="rounded-full bg-alloy/15 px-2 py-0.5 text-[11px] font-bold text-cta">
                         Follow up
                       </span>
                     )}
                     {row.crop && (
-                      <span className="rounded-full bg-cornsilk px-2 py-0.5 text-[11px] font-medium text-russet-dark/75">
+                      <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] font-medium text-ink">
                         {row.crop}
                       </span>
                     )}

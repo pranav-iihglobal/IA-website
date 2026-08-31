@@ -51,8 +51,8 @@ function Avatar({ person }: { person: Person }) {
     <span
       className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-bold ${
         person.status === "suspended"
-          ? "bg-camel-light/40 text-russet-dark/40"
-          : "bg-laurel-light/50 text-olive-dark"
+          ? "bg-surface-strong/40 text-ink-soft"
+          : "bg-accent-soft/50 text-ink-muted"
       }`}
       aria-hidden="true"
     >
@@ -66,9 +66,9 @@ function RoleBadge({ role }: { role: Role }) {
   // without reading every word.
   const tone: Record<Role, string> = {
     owner: "bg-alloy text-cornsilk-light",
-    admin: "bg-laurel-light/70 text-olive-dark",
-    editor: "bg-meringue text-russet-dark/80",
-    viewer: "bg-camel-light/30 text-russet-dark/60",
+    admin: "bg-accent-soft/70 text-ink-muted",
+    editor: "bg-surface-subtle text-ink",
+    viewer: "bg-surface-strong/30 text-ink-muted",
   };
   return (
     <span
@@ -109,7 +109,7 @@ function ModuleAccess({
         const effective = levelIn(person, module);
         return (
           <label key={module} className="block">
-            <span className="block text-[10px] font-semibold uppercase tracking-wide text-olive">
+            <span className="block text-[10px] font-semibold uppercase tracking-wide text-accent">
               {MODULE_LABELS[module]}
             </span>
             <select
@@ -121,7 +121,7 @@ function ModuleAccess({
                 onChange(module, e.target.value === "" ? null : (e.target.value as Level))
               }
               className={`admin-input mt-0.5 h-9 w-32 appearance-none py-0 text-xs disabled:opacity-50 ${
-                effective === "none" ? "text-russet-dark/45" : ""
+                effective === "none" ? "text-ink-soft" : ""
               }`}
             >
               <option value="">
@@ -293,10 +293,10 @@ export function UserList({
       )}
 
       <div className={canManage ? "mt-8" : ""}>
-        <h2 className="font-display text-xl font-bold text-russet">
+        <h2 className="font-display text-xl font-bold text-ink-strong">
           Who can sign in
         </h2>
-        <p className="mt-1 text-sm text-olive-dark">
+        <p className="mt-1 text-sm text-ink-muted">
           {loading
             ? "Loading…"
             : `${rows.length} ${rows.length === 1 ? "person" : "people"} — anyone not listed here is refused, whatever Google says.`}
@@ -334,7 +334,7 @@ export function UserList({
                           </span>
                         )}
                         {person.email === currentEmail && (
-                          <span className="rounded-full bg-meringue px-2.5 py-1 text-xs font-semibold text-russet-dark/70">
+                          <span className="rounded-full bg-surface-subtle px-2.5 py-1 text-xs font-semibold text-ink-muted">
                             You
                           </span>
                         )}
@@ -364,7 +364,7 @@ export function UserList({
             <div className="admin-card mt-6 hidden overflow-hidden lg:block">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[1080px] text-left text-sm">
-                  <thead className="admin-section-head text-[11px] uppercase tracking-[0.12em] text-olive">
+                  <thead className="admin-section-head text-[11px] uppercase tracking-[0.12em] text-accent">
                     <tr>
                       <th className="px-5 py-3 font-semibold">Person</th>
                       <th className="px-5 py-3 font-semibold">Role</th>
@@ -380,18 +380,18 @@ export function UserList({
                       return (
                         <tr
                           key={person.id}
-                          className="admin-row border-t border-camel-light/25"
+                          className="admin-row border-t border-line-soft/25"
                         >
                           <td className="px-5 py-3.5">
                             <div className="flex items-center gap-3">
                               <Avatar person={person} />
                               <div className="min-w-0">
-                                <p className="flex items-center gap-2 font-semibold text-russet">
+                                <p className="flex items-center gap-2 font-semibold text-ink-strong">
                                   <span className="truncate">
                                     {person.name || person.email}
                                   </span>
                                   {person.email === currentEmail && (
-                                    <span className="shrink-0 rounded-full bg-meringue px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-russet-dark/70">
+                                    <span className="shrink-0 rounded-full bg-surface-subtle px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
                                       You
                                     </span>
                                   )}
@@ -402,7 +402,7 @@ export function UserList({
                                   )}
                                 </p>
                                 {person.name && (
-                                  <p className="truncate text-xs text-russet-dark/55">
+                                  <p className="truncate text-xs text-ink-soft">
                                     {person.email}
                                   </p>
                                 )}
@@ -438,7 +438,7 @@ export function UserList({
                           </td>
                           <td className="px-5 py-3.5">
                             {locked ? (
-                              <span className="text-xs text-russet-dark/45">
+                              <span className="text-xs text-ink-soft">
                                 {MODULES.map(
                                   (m) =>
                                     `${MODULE_LABELS[m]}: ${LEVEL_LABELS[levelIn(person, m)].label}`,
@@ -460,12 +460,12 @@ export function UserList({
                               />
                             )}
                           </td>
-                          <td className="px-5 py-3.5 text-xs text-russet-dark/65">
+                          <td className="px-5 py-3.5 text-xs text-ink-muted">
                             {person.lastSignInAt
                               ? formatShortDate(person.lastSignInAt)
                               : "Never"}
                             {person.addedBy && (
-                              <span className="block text-russet-dark/45">
+                              <span className="block text-ink-soft">
                                 added by {person.addedBy}
                               </span>
                             )}
@@ -481,7 +481,7 @@ export function UserList({
                                         ? "Removing the only owner would leave nobody able to manage access."
                                         : undefined
                                   }
-                                  className="text-xs text-russet-dark/45"
+                                  className="text-xs text-ink-soft"
                                 >
                                   {locked}
                                 </span>
@@ -531,7 +531,7 @@ export function UserList({
         )}
 
         {canManage && activeOwners <= 1 && rows.length > 0 && (
-          <p className="mt-4 text-sm text-russet-dark/55">
+          <p className="mt-4 text-sm text-ink-soft">
             You are the only owner. Nobody else can add or remove people, and
             your own access cannot be changed from here — make someone else an
             owner if you want a second pair of hands.
@@ -539,7 +539,7 @@ export function UserList({
         )}
 
         {!canManage && (
-          <p className="mt-4 text-sm text-russet-dark/55">
+          <p className="mt-4 text-sm text-ink-soft">
             You can see who has access, but only an owner can change it.
           </p>
         )}

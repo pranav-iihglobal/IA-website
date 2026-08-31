@@ -65,9 +65,9 @@ const ICONS: Record<ToastKind, ReactNode> = {
 };
 
 const STYLES: Record<ToastKind, string> = {
-  success: "border-laurel bg-laurel-light/40 text-olive-dark",
-  error: "border-alloy/50 bg-alloy/10 text-russet",
-  info: "border-camel-light bg-meringue-light text-russet-dark",
+  success: "border-laurel bg-accent-soft/40 text-ink-muted",
+  error: "border-alloy/50 bg-alloy/10 text-ink-strong",
+  info: "border-line-soft bg-surface-muted text-ink",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {

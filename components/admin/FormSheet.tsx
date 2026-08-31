@@ -103,19 +103,19 @@ export function FormSheet({
         {/* Drag handle — mobile only. Signals "this pulls down" without
             needing a hit target of its own. */}
         <div className="flex justify-center pt-2 sm:hidden" aria-hidden="true">
-          <span className="h-1 w-10 rounded-full bg-cornsilk-dark" />
+          <span className="h-1 w-10 rounded-full bg-surface-strong" />
         </div>
 
-        <div className="flex items-start gap-3 border-b border-cornsilk-dark px-4 py-3 sm:px-6 sm:py-4">
+        <div className="flex items-start gap-3 border-b border-line-soft px-4 py-3 sm:px-6 sm:py-4">
           <div className="min-w-0 flex-1">
             <h2
               id="form-sheet-title"
-              className="font-display text-lg font-bold text-russet"
+              className="font-display text-lg font-bold text-ink-strong"
             >
               {title}
             </h2>
             {description && (
-              <p className="mt-0.5 text-sm text-russet-dark/70">{description}</p>
+              <p className="mt-0.5 text-sm text-ink-muted">{description}</p>
             )}
           </div>
           <button
@@ -123,7 +123,7 @@ export function FormSheet({
             onClick={requestClose}
             disabled={busy}
             aria-label="Close"
-            className="-mr-1.5 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-russet-dark/60 transition-colors hover:bg-meringue hover:text-russet disabled:opacity-50"
+            className="-mr-1.5 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-surface-subtle hover:text-ink-strong disabled:opacity-50"
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
               <path d="m6 6 12 12M18 6 6 18" />
@@ -136,13 +136,13 @@ export function FormSheet({
         </div>
 
         {footer && (
-          <div className="border-t border-cornsilk-dark bg-cornsilk-light px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6">
+          <div className="border-t border-line-soft bg-surface px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6">
             {footer}
           </div>
         )}
 
         {busy && (
-          <div className="absolute inset-0 grid place-items-center bg-cornsilk-light/60">
+          <div className="absolute inset-0 grid place-items-center bg-surface/60">
             <Spinner />
           </div>
         )}
@@ -150,11 +150,11 @@ export function FormSheet({
 
       {confirmingDiscard && (
         <div className="absolute inset-0 grid place-items-end bg-russet-dark/40 sm:place-items-center">
-          <div className="w-full rounded-t-2xl bg-cornsilk-light p-5 sm:max-w-sm sm:rounded-2xl">
-            <p className="font-display text-base font-bold text-russet">
+          <div className="w-full rounded-t-2xl bg-surface p-5 sm:max-w-sm sm:rounded-2xl">
+            <p className="font-display text-base font-bold text-ink-strong">
               Discard your changes?
             </p>
-            <p className="mt-1 text-sm text-russet-dark/75">
+            <p className="mt-1 text-sm text-ink">
               This form has edits that have not been saved.
             </p>
             <div className="mt-4 flex gap-2">
@@ -162,7 +162,7 @@ export function FormSheet({
                 type="button"
                 autoFocus
                 onClick={() => setConfirmingDiscard(false)}
-                className="min-h-11 flex-1 rounded-xl border-2 border-olive px-4 text-sm font-semibold text-olive-dark"
+                className="min-h-11 flex-1 rounded-xl border-2 border-olive px-4 text-sm font-semibold text-ink-muted"
               >
                 Keep editing
               </button>

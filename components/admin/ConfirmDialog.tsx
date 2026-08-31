@@ -80,7 +80,7 @@ export function ConfirmDialog({
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-title"
-        className="admin-dialog w-full max-w-md rounded-2xl border border-camel-light bg-cornsilk-light p-6"
+        className="admin-dialog w-full max-w-md rounded-2xl border border-line-soft bg-surface p-6"
       >
         <div className="flex items-start gap-3">
           {/* Red, not the alloy CTA colour — this dialog only ever asks about
@@ -97,11 +97,11 @@ export function ConfirmDialog({
           <div className="min-w-0">
             <h2
               id="confirm-title"
-              className="font-display text-lg font-bold text-russet"
+              className="font-display text-lg font-bold text-ink-strong"
             >
               {title}
             </h2>
-            <p className="mt-1 text-sm leading-relaxed text-russet-dark/80">
+            <p className="mt-1 text-sm leading-relaxed text-ink">
               {message}
             </p>
           </div>
@@ -113,7 +113,7 @@ export function ConfirmDialog({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="admin-btn border border-camel text-russet-dark hover:bg-meringue"
+            className="admin-btn border border-line text-ink hover:bg-surface-subtle"
           >
             {cancelLabel}
           </button>

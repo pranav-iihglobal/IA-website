@@ -33,17 +33,17 @@ export function SlugField({
   return (
     <label className="admin-field block">
       <div className="flex items-center justify-between gap-3">
-        <span className="admin-label text-sm font-semibold text-russet">
+        <span className="admin-label text-sm font-semibold text-ink-strong">
           URL slug<span className="ml-0.5 text-alloy">*</span>
         </span>
         {state === "checking" && (
-          <span className="flex items-center gap-1.5 text-[11px] font-semibold text-russet-dark/50">
+          <span className="flex items-center gap-1.5 text-[11px] font-semibold text-ink-soft">
             <Spinner />
             Checking…
           </span>
         )}
         {state === "available" && (
-          <span className="flex items-center gap-1.5 text-[11px] font-semibold text-olive-dark">
+          <span className="flex items-center gap-1.5 text-[11px] font-semibold text-ink-muted">
             <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
               <path
                 fillRule="evenodd"
@@ -55,7 +55,7 @@ export function SlugField({
           </span>
         )}
         {taken && (
-          <span className="text-[11px] font-semibold text-alloy-dark">
+          <span className="text-[11px] font-semibold text-cta">
             Already in use
           </span>
         )}
@@ -69,7 +69,7 @@ export function SlugField({
       />
 
       {!error && !taken && (
-        <span className="mt-1.5 block text-xs text-russet-dark/55">
+        <span className="mt-1.5 block text-xs text-ink-soft">
           Public URL: {basePath}/{value || "…"}
         </span>
       )}

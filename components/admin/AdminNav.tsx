@@ -41,7 +41,7 @@ function BetaPill({ note }: { note: string }) {
   return (
     <span
       title={note}
-      className="ml-auto shrink-0 rounded-full bg-laurel-dark/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cornsilk-light"
+      className="ml-auto shrink-0 rounded-full bg-accent-mid/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cornsilk-light"
     >
       Beta
       <span className="sr-only"> — {note}</span>
@@ -301,7 +301,7 @@ export function AdminNav({ user }: { user: AdminUser }) {
                 className="h-8 w-8 shrink-0 rounded-full object-cover"
               />
             ) : (
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-laurel text-sm font-bold uppercase text-olive-dark">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-mid text-sm font-bold uppercase text-ink-muted">
                 {initial}
               </span>
             )}

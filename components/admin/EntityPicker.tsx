@@ -69,11 +69,11 @@ export function EntityPicker({
   return (
     <div className="admin-field">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="admin-label text-sm font-semibold text-russet">
+        <span className="admin-label text-sm font-semibold text-ink-strong">
           {label}
         </span>
         {max !== undefined && (
-          <span className="text-xs text-russet-dark/55">
+          <span className="text-xs text-ink-soft">
             {selected.length}/{max}
           </span>
         )}
@@ -87,14 +87,14 @@ export function EntityPicker({
             return (
               <li
                 key={id}
-                className="flex items-center gap-2 rounded-xl border border-camel-light/60 bg-meringue-light/35 px-3 py-2"
+                className="flex items-center gap-2 rounded-xl border border-line-soft/60 bg-surface-muted/35 px-3 py-2"
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-russet">
+                  <span className="block truncate text-sm font-semibold text-ink-strong">
                     {option?.label ?? "(deleted item)"}
                   </span>
                   {option?.hint && (
-                    <span className="block truncate text-xs text-russet-dark/55">
+                    <span className="block truncate text-xs text-ink-soft">
                       {option.hint}
                     </span>
                   )}
@@ -105,7 +105,7 @@ export function EntityPicker({
                     onChange(selected.filter((_, i) => i !== index))
                   }
                   aria-label={`Remove ${option?.label ?? "item"}`}
-                  className="shrink-0 rounded-lg p-1.5 text-russet-dark/40 transition-colors hover:bg-alloy/10 hover:text-alloy-dark"
+                  className="shrink-0 rounded-lg p-1.5 text-ink-soft transition-colors hover:bg-alloy/10 hover:text-cta"
                 >
                   <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
                     <path d="M6.3 5A1 1 0 0 0 5 6.3L8.6 10 5 13.7A1 1 0 1 0 6.3 15L10 11.4l3.7 3.6a1 1 0 0 0 1.3-1.3L11.4 10 15 6.3A1 1 0 0 0 13.7 5L10 8.6 6.3 5Z" />
@@ -116,7 +116,7 @@ export function EntityPicker({
           })}
         </ul>
       ) : (
-        <p className="mt-2 rounded-xl border border-dashed border-camel-light bg-meringue-light/40 px-4 py-3 text-sm text-russet-dark/60">
+        <p className="mt-2 rounded-xl border border-dashed border-line-soft bg-surface-muted/40 px-4 py-3 text-sm text-ink-muted">
           {emptyLabel}
         </p>
       )}
@@ -132,19 +132,19 @@ export function EntityPicker({
             className="admin-input"
           />
           {matches.length > 0 && (
-            <ul className="mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-camel-light/70 bg-white">
+            <ul className="mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-line-soft/70 bg-raised">
               {matches.map((option) => (
                 <li key={option.id}>
                   <button
                     type="button"
                     onClick={() => add(option.id)}
-                    className="flex w-full flex-col items-start px-3 py-2 text-left transition-colors hover:bg-meringue-light"
+                    className="flex w-full flex-col items-start px-3 py-2 text-left transition-colors hover:bg-surface-muted"
                   >
-                    <span className="text-sm font-semibold text-russet">
+                    <span className="text-sm font-semibold text-ink-strong">
                       {option.label}
                     </span>
                     {option.hint && (
-                      <span className="text-xs text-russet-dark/55">
+                      <span className="text-xs text-ink-soft">
                         {option.hint}
                       </span>
                     )}
@@ -154,7 +154,7 @@ export function EntityPicker({
             </ul>
           )}
           {query.trim() && matches.length === 0 && (
-            <p className="mt-1.5 text-xs text-russet-dark/55">
+            <p className="mt-1.5 text-xs text-ink-soft">
               Nothing matches &ldquo;{query.trim()}&rdquo;.
             </p>
           )}
@@ -162,7 +162,7 @@ export function EntityPicker({
       )}
 
       {error && (
-        <p className="mt-1.5 text-xs font-semibold text-alloy-dark">{error}</p>
+        <p className="mt-1.5 text-xs font-semibold text-cta">{error}</p>
       )}
     </div>
   );
@@ -184,7 +184,7 @@ export function EntitySelect({
 }) {
   return (
     <label className="admin-field block">
-      <span className="admin-label text-sm font-semibold text-russet">
+      <span className="admin-label text-sm font-semibold text-ink-strong">
         {label}
       </span>
       <div className="relative mt-1.5">
@@ -203,7 +203,7 @@ export function EntitySelect({
         </select>
         <svg
           viewBox="0 0 20 20"
-          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-russet-dark/45"
+          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-soft"
           fill="currentColor"
           aria-hidden="true"
         >
@@ -211,7 +211,7 @@ export function EntitySelect({
         </svg>
       </div>
       {error && (
-        <p className="mt-1.5 text-xs font-semibold text-alloy-dark">{error}</p>
+        <p className="mt-1.5 text-xs font-semibold text-cta">{error}</p>
       )}
     </label>
   );

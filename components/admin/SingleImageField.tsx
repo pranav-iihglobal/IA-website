@@ -57,7 +57,7 @@ export function SingleImageField({
 
   return (
     <div className="admin-field">
-      <span className="admin-label text-xs font-semibold uppercase tracking-wide text-olive">
+      <span className="admin-label text-xs font-semibold uppercase tracking-wide text-accent">
         {label}
       </span>
       <input
@@ -69,13 +69,13 @@ export function SingleImageField({
       />
 
       {thumb ? (
-        <div className="group relative mt-1.5 aspect-square overflow-hidden rounded-xl border border-camel-light/70 bg-meringue-light">
+        <div className="group relative mt-1.5 aspect-square overflow-hidden rounded-xl border border-line-soft/70 bg-surface-muted">
           <Image src={thumb} alt="" fill unoptimized className="object-cover" />
           <button
             type="button"
             onClick={() => onChange({ url: "", publicId: "" })}
             aria-label={`Remove ${label}`}
-            className="absolute right-1.5 top-1.5 rounded-full bg-white/90 p-1.5 text-russet-dark/60 opacity-0 shadow-sm transition-opacity hover:text-alloy-dark focus-visible:opacity-100 group-hover:opacity-100"
+            className="absolute right-1.5 top-1.5 rounded-full bg-raised/90 p-1.5 text-ink-muted opacity-0 shadow-sm transition-opacity hover:text-cta focus-visible:opacity-100 group-hover:opacity-100"
           >
             <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
               <path d="M6.3 5A1 1 0 0 0 5 6.3L8.6 10 5 13.7A1 1 0 1 0 6.3 15L10 11.4l3.7 3.6a1 1 0 0 0 1.3-1.3L11.4 10 15 6.3A1 1 0 0 0 13.7 5L10 8.6 6.3 5Z" />
@@ -95,7 +95,7 @@ export function SingleImageField({
           className={`mt-1.5 flex aspect-square w-full flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed text-center transition-colors ${
             error
               ? "border-alloy bg-alloy/5"
-              : "border-camel bg-meringue-light/45 hover:border-olive hover:bg-laurel-light/20"
+              : "border-line bg-surface-muted/45 hover:border-olive hover:bg-accent-soft/20"
           } ${busy ? "cursor-wait opacity-70" : "cursor-pointer"}`}
         >
           {busy ? (
@@ -103,7 +103,7 @@ export function SingleImageField({
           ) : (
             <svg
               viewBox="0 0 24 24"
-              className="h-6 w-6 text-olive"
+              className="h-6 w-6 text-accent"
               fill="none"
               stroke="currentColor"
               strokeWidth={1.6}
@@ -114,7 +114,7 @@ export function SingleImageField({
               <path d="M12 16V4m0 0L8 8m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
             </svg>
           )}
-          <span className="text-xs font-semibold text-russet-dark/70">
+          <span className="text-xs font-semibold text-ink-muted">
             {busy ? "Uploading…" : "Add photo"}
           </span>
         </button>

@@ -45,7 +45,7 @@ export function GoogleSignInButton({ redirectTo = "/admin" }: { redirectTo?: str
         setBusy(true);
         signIn("google", { redirectTo });
       }}
-      className="flex w-full items-center justify-center gap-3 rounded-full border border-camel bg-white px-6 py-3.5 text-base font-semibold text-russet shadow-sm transition-all hover:-translate-y-px hover:border-olive hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
+      className="flex w-full items-center justify-center gap-3 rounded-full border border-line bg-raised px-6 py-3.5 text-base font-semibold text-ink-strong shadow-sm transition-all hover:-translate-y-px hover:border-olive hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
     >
       {busy ? <Spinner /> : <GoogleMark />}
       {busy ? "Opening Google…" : "Sign in with Google"}

@@ -40,6 +40,47 @@
   --color-russet: #783e19;
   --color-russet-dark: #5f2f14;
 
+  /* ------------------------------------------------------------------------
+   * SEMANTIC TOKENS — used by the admin panel only.
+   *
+   * The brand palette above is named by COLOUR, which is fine for a marketing
+   * page that is always light but cannot express a theme: `text-cornsilk-light`
+   * is the light text on the olive header while `bg-cornsilk-light` is a page
+   * background, so there is no value you can give cornsilk that is right for
+   * both in the dark.
+   *
+   * These are named by ROLE instead. Their light values are the same colours
+   * the admin already used, so nothing changes in daylight; the dark theme
+   * redefines them under .admin-ui and every admin utility follows.
+   *
+   * Deliberately not used on the public site — that stays light, because it is
+   * read on phones in Gujarat sunlight where dark backgrounds lose.
+   * ---------------------------------------------------------------------- */
+
+  /* Text */
+  --color-ink-strong: #783e19;   /* headings */
+  --color-ink: #5f2f14;          /* body */
+  --color-ink-muted: #4a5a42;    /* secondary, labels */
+  --color-ink-soft: #7b7368;     /* de-emphasised body — 4.7:1 on a card */
+  --color-ink-faint: #706960;    /* hints and timestamps — 4.6:1 on a chip */
+  --color-accent: #5e7153;       /* olive — icons, quiet emphasis */
+  --color-cta: #a6531e;          /* alloy — links and actions on a surface */
+
+  /* Surfaces */
+  --color-surface: #fffff7;        /* cards, sheets */
+  --color-surface-sunken: #fcfce4; /* insets, table stripes */
+  --color-surface-muted: #faf2e0;  /* subtle fills */
+  --color-surface-subtle: #f9ecc9; /* chips, section heads */
+  --color-surface-strong: #e0d3b3; /* pressed, dividers */
+  --color-raised: #ffffff;         /* the step ABOVE a card: active pills,
+                                      dropdowns, toggle knobs, image tiles */
+  --color-accent-soft: #c2cba3;    /* laurel tint — badges */
+  --color-accent-mid: #a9b489;
+
+  /* Lines */
+  --color-line: #ba9470;
+  --color-line-soft: #cbaf8a;
+
   /*
    * Danger — destructive actions only.
    *
@@ -489,6 +530,11 @@ a:hover > .logo-wiggle {
     0 24px 48px -16px rgba(95, 47, 20, 0.14);
   --admin-ring: 0 0 0 3px color-mix(in srgb, var(--color-olive) 22%, transparent);
   background: var(--admin-bg);
+  /* The admin owns its inherited text colour. <body> sets russet-dark, which
+     is right on paper and invisible on the dark theme — anything that does
+     not set its own colour would stay dark brown on a dark surface. In light
+     --color-ink IS russet-dark, so this changes nothing in daylight. */
+  color: var(--color-ink);
 }
 
 /* --- Surfaces ------------------------------------------------------------ */
@@ -982,4 +1028,121 @@ dialog.form-sheet::backdrop {
 /* Someone who asked not to be moved should not be. */
 @media (prefers-reduced-motion: reduce) {
   dialog.form-sheet { animation: none; }
+}
+
+/* ==========================================================================
+   ADMIN — DARK THEME
+
+   Scoped to .admin-ui and driven by the device setting. The public site is
+   deliberately excluded: it is read on phones in Gujarat sunlight, where a
+   dark background is measurably harder to read, and the brand is warm and
+   sunlit by design.
+
+   Unlayered, like the rules above, so it beats both Tailwind's utilities and
+   the @layer components block that defines the light admin.
+
+   The greens and oranges are LIFTED rather than reused. A colour that reads
+   as mid-tone on paper reads as mud at 8% lightness; olive #5e7153 against a
+   near-black surface is barely 2:1. Every accent here was chosen against the
+   dark surface it actually sits on, not carried over.
+   ========================================================================== */
+@media (prefers-color-scheme: dark) {
+  .admin-ui {
+    /* Warm charcoal, not pure grey: the palette is earthy, and a neutral
+       grey next to russet and camel reads as a different product. */
+    --admin-bg: #1c1917;
+    --admin-surface: #262220;
+    --admin-line: color-mix(in srgb, #d8c9b4 22%, transparent);
+    --admin-line-soft: color-mix(in srgb, #d8c9b4 13%, transparent);
+
+    /* Shadows do almost nothing on a dark ground — depth comes from the
+       surface being lighter than the page. Kept, softened, for the lift on
+       hover rather than for separation. */
+    --admin-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --admin-shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5);
+    --admin-shadow-lg: 0 14px 32px -10px rgba(0, 0, 0, 0.6);
+    --admin-ring: 0 0 0 3px color-mix(in srgb, #a9b489 32%, transparent);
+
+    /* Text — off-white, never #fff. Pure white on near-black vibrates. */
+    --color-ink-strong: #f2ece2;
+    --color-ink: #ded5c8;
+    --color-ink-muted: #b3ab9c;
+    --color-ink-soft: #938a7d;   /* 4.6:1 on the dark card */
+    --color-ink-faint: #a3998b;  /* 4.7:1 on a dark chip */
+    --color-accent: #a9b489;  /* laurel, not olive: olive is invisible here */
+    --color-cta: #e08a4e;     /* lifted alloy — 5.6:1 on the surface */
+
+    /* Surfaces, each a step up from the page rather than down from white. */
+    --color-surface: #262220;
+    --color-surface-sunken: #1c1917;
+    --color-surface-muted: #2e2926;
+    --color-surface-subtle: #35302b;
+    --color-surface-strong: #423b35;
+    /* Plain `bg-white` was being used for the step above a card — an active
+       filter pill, a dropdown, the toggle knob. On dark that is a white blob
+       with off-white text on it, which is how the active tab became
+       unreadable. This is that step, in the dark. */
+    --color-raised: #332e2b;
+    --color-accent-soft: #3a4033;
+    --color-accent-mid: #4c5542;
+
+    --color-line: #4a423b;
+    --color-line-soft: #383230;
+
+    /* The light brick reads 2.37:1 on the dark card. Lifted to 5.1:1 — a
+       destructive action has to be legible before it can be alarming. */
+    --color-danger: #e0736a;
+    --color-danger-light: #ef8f86;
+    --color-danger-dark: #c2483c;
+
+    color-scheme: dark;
+  }
+
+  /* Inputs are the one place the surface must be DARKER than its card, or a
+     form reads as a wall of identical panels with no fields in it. */
+  .admin-ui .admin-input {
+    background: #1a1715;
+    color: var(--color-ink);
+  }
+  .admin-ui .admin-input::placeholder {
+    color: color-mix(in srgb, var(--color-ink) 42%, transparent);
+  }
+  .admin-ui .admin-input:hover:not(:focus):not(:disabled) {
+    border-color: color-mix(in srgb, #a9b489 45%, transparent);
+  }
+  .admin-ui .admin-input:focus {
+    border-color: #a9b489;
+  }
+
+  /* The section head gradient was a warm cream wash; on dark it has to be a
+     lift, not a stain. */
+  .admin-ui .admin-section-head {
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.05),
+      transparent
+    );
+  }
+
+  /* The nav is already dark olive in the light theme, so it needs deepening
+     rather than inverting — otherwise it becomes the brightest thing on a
+     dark page. */
+  .admin-ui aside,
+  .admin-ui .admin-ui-topbar {
+    background: #232b1f;
+  }
+
+  /* Cards sit ON the page, so their border does more work than their shadow. */
+  .admin-ui .admin-card {
+    border-color: var(--admin-line-soft);
+  }
+
+  /* The form sheet is a surface, not a page. */
+  dialog.form-sheet {
+    background: #262220;
+    color: var(--color-ink);
+  }
+  dialog.form-sheet::backdrop {
+    background: rgb(0 0 0 / 0.66);
+  }
 }
