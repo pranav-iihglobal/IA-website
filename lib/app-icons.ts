@@ -94,13 +94,25 @@ export function appleTouchIcon(): string | null {
   return firstOf("/icons/ios/180.png", "/icons/apple-touch-icon.png");
 }
 
-/** Small PNG favicons, for browsers that ignore the SVG one. */
+/**
+ * PNG favicons, for browsers and crawlers that ignore the SVG one.
+ *
+ * Multiples of 48, which is what Google asks for. These were 16 and 32 —
+ * below the recommended floor, and taken from the iOS set, which is the tall
+ * cream arch. Google requires a SQUARE favicon and showed a generic globe in
+ * the results instead of anything of ours.
+ *
+ * The purpose-built favicon-* files are checked FIRST. The iOS fallback is
+ * kept for sizes they do not cover, but it must never win where a real
+ * square favicon exists — /icons/ios/192.png does exist, and preferring it
+ * would quietly reinstate the icon this set replaces.
+ */
 export function faviconPngs(): { url: string; sizes: string }[] {
-  return [16, 32]
+  return [48, 96, 192]
     .map((size) => {
       const url = firstOf(
-        `/icons/ios/${size}.png`,
         `/icons/favicon-${size}.png`,
+        `/icons/ios/${size}.png`,
       );
       return url ? { url, sizes: `${size}x${size}` } : null;
     })

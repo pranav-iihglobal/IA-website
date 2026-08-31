@@ -13,9 +13,12 @@ const organizationJsonLd = {
   url: SITE.url,
   /*
     Google needs a raster logo for the knowledge panel; an SVG is not
-    accepted. This is the same 512px icon the PWA installs with.
+    accepted. Its own file rather than the PWA launcher icon, which is the
+    cream mark on transparency — fine on a home screen, but on Google's white
+    background the arch has no edge at all and half the logo disappears. This
+    one carries the full lockup, wordmark included, on the brand olive.
   */
-  logo: `${SITE.url}/icons/android/launchericon-512x512.png`,
+  logo: `${SITE.url}/icons/logo-square-512.png`,
   image: `${SITE.url}/og-image.png`,
   slogan: SITE.tagline,
   email: SITE.email,

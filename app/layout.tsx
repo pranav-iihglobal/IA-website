@@ -124,10 +124,18 @@ export const metadata: Metadata = {
   },
   // Resolved from whatever is actually in public/icons — see lib/app-icons.ts.
   icons: {
+    /*
+      /favicon.ico is listed first and exists on disk (app/favicon.ico).
+      Google fetches it by convention when the declared icons do not qualify,
+      and it used to 404 — so when the non-square SVG below was rejected there
+      was nothing left to fall back to, and the search result got a globe.
+    */
     icon: [
+      { url: "/favicon.ico", sizes: "48x48", type: "image/x-icon" },
       { url: "/icon.svg", type: "image/svg+xml" },
       ...faviconPngs().map((icon) => ({ ...icon, type: "image/png" })),
     ],
+    shortcut: "/favicon.ico",
     apple: appleTouchIcon()
       ? [{ url: appleTouchIcon() as string, sizes: "180x180" }]
       : undefined,
