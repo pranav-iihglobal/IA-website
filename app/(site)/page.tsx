@@ -11,6 +11,7 @@ import { CLD, cldUrl, isCloudinaryUrl } from "@/lib/images";
 import { WaveDivider } from "@/components/Illustrations";
 import { Hero3D } from "@/components/Hero3D";
 import { Reveal } from "@/components/Reveal";
+import { CtaLink } from "@/components/CtaLink";
 import { CropsMarquee, FloatingLeaves } from "@/components/Decor";
 
 export const metadata: Metadata = staticPageMetadata("/", "en");
@@ -42,8 +43,11 @@ export default async function HomePage() {
           <div>
             {/* immediate: this block holds the h1, which is the page's LCP element. */}
             <Reveal immediate>
-              {/* The pill shows the tagline in the OTHER language, pairing with the headline */}
-              <p className="mb-3 inline-block rounded-full bg-laurel-light px-4 py-1 text-sm font-medium text-olive-dark">
+              {/* The pill shows the tagline in the OTHER language, pairing with the headline.
+                  russet-dark rather than olive-dark: green on sage was 4.36,
+                  just under the 4.5 this size needs. Brown on sage clears it
+                  at 6.5 and is the pairing the rest of the page already uses. */}
+              <p className="mb-3 inline-block rounded-full bg-laurel-light px-4 py-1 text-sm font-medium text-russet-dark">
                 <T text={{ en: SITE.taglineGu, gu: SITE.tagline }} />
               </p>
               <h1 className="font-display text-4xl font-bold leading-tight text-russet sm:text-5xl">
@@ -124,12 +128,12 @@ export default async function HomePage() {
                   message={flagship.whatsappMessage}
                   label={UI.askOnWhatsApp}
                 />
-                <Link
+                <CtaLink
                   href={`/products/${flagship.slug}`}
+                  label={UI.learnMore}
+                  about={flagship.name}
                   className="inline-flex items-center rounded-full border-2 border-cornsilk/60 px-6 py-3 text-base font-semibold text-cornsilk-light transition-colors hover:bg-olive-dark"
-                >
-                  <T text={UI.learnMore} />
-                </Link>
+                />
               </div>
             </div>
             <Link
@@ -248,12 +252,12 @@ export default async function HomePage() {
               message={DEALERS.whatsappMessage}
               label={UI.becomeADealer}
             />
-            <Link
+            <CtaLink
               href="/dealers"
+              label={UI.learnMore}
+              about={HOME.dealerStripHeading}
               className="inline-flex items-center rounded-full border-2 border-russet px-6 py-3 text-base font-semibold text-russet transition-colors hover:bg-meringue-dark/50"
-            >
-              <T text={UI.learnMore} />
-            </Link>
+            />
           </div>
         </div>
       </section>

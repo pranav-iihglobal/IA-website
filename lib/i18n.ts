@@ -30,17 +30,38 @@ export function localePath(path: string, locale: Locale): string {
   return locale === DEFAULT_LOCALE ? clean || "/" : `${GU_PREFIX}${clean}`;
 }
 
+/**
+ * The clean route path, whatever the runtime handed us.
+ *
+ * usePathname() is not reliably the tidy path you would write in a link. On
+ * Vercel the prerendered home page came back as "/index" — the name of the
+ * static file, not the route — and the language toggle turned that into a
+ * link to /gu/index, a 404, on the busiest page of the site. It never
+ * reproduced under `next start`, which serves the same page as "/".
+ *
+ * Rather than trust the shape, normalise it once here: drop any query or
+ * hash, fold a trailing "/index" back to its directory, and drop trailing
+ * slashes. Everything that reads the pathname goes through this.
+ */
+export function normalizePath(pathname: string | null | undefined): string {
+  if (!pathname) return "/";
+  let path = pathname.split(/[?#]/)[0];
+  path = path.replace(/\/index$/, "/");
+  if (path.length > 1) path = path.replace(/\/+$/, "");
+  return path || "/";
+}
+
 /** Strip the locale prefix off a real pathname, for building its twin. */
 export function stripLocale(pathname: string): string {
-  if (pathname === GU_PREFIX) return "/";
-  if (pathname.startsWith(`${GU_PREFIX}/`)) return pathname.slice(GU_PREFIX.length);
-  return pathname;
+  const path = normalizePath(pathname);
+  if (path === GU_PREFIX) return "/";
+  if (path.startsWith(`${GU_PREFIX}/`)) return path.slice(GU_PREFIX.length);
+  return path;
 }
 
 export function localeOf(pathname: string): Locale {
-  return pathname === GU_PREFIX || pathname.startsWith(`${GU_PREFIX}/`)
-    ? "gu"
-    : "en";
+  const path = normalizePath(pathname);
+  return path === GU_PREFIX || path.startsWith(`${GU_PREFIX}/`) ? "gu" : "en";
 }
 
 /**

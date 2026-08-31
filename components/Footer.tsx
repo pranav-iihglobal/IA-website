@@ -92,7 +92,9 @@ export function Footer() {
           <Link
             href="/admin"
             rel="nofollow"
-            className="inline-flex min-h-11 items-center text-xs text-cornsilk/40 transition-colors hover:text-cornsilk/80"
+            /* /60, not /40: at 40% over russet-dark this was a contrast ratio
+               of 3.04. Quiet is fine, illegible is not. */
+            className="inline-flex min-h-11 items-center text-xs text-cornsilk/60 transition-colors hover:text-cornsilk/90"
           >
             <T text={UI.backoffice} />
           </Link>

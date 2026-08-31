@@ -46,7 +46,10 @@ export function Header() {
             <span className="font-display text-lg font-bold text-cornsilk-light">
               IKSARVA
             </span>
-            <span className="text-[11px] uppercase tracking-widest text-laurel-light">
+            {/* cornsilk, not laurel-light: at 11px on the olive bar that was
+                a contrast ratio of 2.8, well under the 4.5 small text needs.
+                The wide tracking is what makes this read as secondary. */}
+            <span className="text-[11px] uppercase tracking-widest text-cornsilk-light">
               Agritech
             </span>
           </span>
@@ -88,8 +91,16 @@ export function Header() {
             hrefLang={lang === "en" ? "gu" : "en"}
             onClick={() => setOpen(false)}
             className="flex min-h-11 items-center rounded-full border border-camel bg-meringue-light px-3 text-sm font-medium text-russet transition-colors hover:bg-meringue sm:px-4"
+            /*
+              The accessible name has to START WITH the visible text, or
+              speech-input users who say what they see cannot activate it —
+              WCAG 2.5.3 Label in Name. It read "Switch to Gujarati" over a
+              button labelled "ગુજરાતી", which shares not one character.
+            */
             aria-label={
-              lang === "en" ? "Switch to Gujarati" : "Switch to English"
+              lang === "en"
+                ? "ગુજરાતી — switch to Gujarati"
+                : "English — અંગ્રેજીમાં જુઓ"
             }
           >
             {lang === "en" ? "ગુજરાતી" : "English"}
