@@ -37,12 +37,48 @@ async function main() {
     console.log(`\n  Deleted ${deletedCount} sample contacts.`);
     const remaining = await Contact.countDocuments({});
     console.log(`  ${remaining} contacts remain (none of them sample).\n`);
-  } else if (command === "count") {
-    const [sample, real] = await Promise.all([
+  } else if (command === "count" || command === "doctor") {
+    /*
+      Answers "why is the list empty" without guessing: it reports what the
+      collection actually holds, broken down by the exact filters the three
+      admin screens use, and whether the text index search depends on exists.
+    */
+    const q: [string, Record<string, string>][] = [
+      ["Customers  (kind=customer, channel=b2c)", { kind: "customer", channel: "b2c" }],
+      ["Dealers    (kind=customer, channel=b2b)", { kind: "customer", channel: "b2b" }],
+      ["Leads      (kind=lead)", { kind: "lead" }],
+    ];
+    const [total, sample, real] = await Promise.all([
+      Contact.countDocuments({}),
       Contact.countDocuments({ isSample: true }),
       Contact.countDocuments({ isSample: { $ne: true } }),
     ]);
-    console.log(`\n  sample ${sample}\n  real   ${real}\n`);
+
+    console.log(`\n  Database : ${mongoose.connection.name}`);
+    console.log(`  Contacts : ${total}   (${sample} sample, ${real} real)\n`);
+
+    if (total === 0) {
+      console.log("  The collection is EMPTY — that is why every screen shows nothing.");
+      console.log("  Seed it with:  npm run crm-sample -- seed 500\n");
+    } else {
+      for (const [label, filter] of q) {
+        console.log(`  ${label.padEnd(42)} ${await Contact.countDocuments(filter)}`);
+      }
+      const stale = await Contact.countDocuments({ kind: "customer", channel: "" });
+      if (stale > 0) {
+        console.log(`\n  ${stale} customers have no channel set — those appear on NEITHER`);
+        console.log("  the Customers nor the Dealers screen. Set channel to b2c or b2b.");
+      }
+    }
+
+    // Search silently returns nothing if the text index was never built.
+    const indexes = await Contact.collection.indexes();
+    const hasText = indexes.some((i) => Object.values(i.key).includes("text"));
+    console.log(`\n  Text index: ${hasText ? "present" : "MISSING — search will return nothing"}`);
+    if (!hasText) {
+      console.log("  Mongoose builds it on first connect; restart the app once.");
+    }
+    console.log();
   } else if (command === "seed") {
     const total = Math.max(1, Number(arg) || 500);
     // Replaces the previous sample set rather than stacking on it, so running
@@ -64,7 +100,7 @@ async function main() {
       "\n  Usage:\n" +
         "    npm run crm-sample -- seed [count]   default 500\n" +
         "    npm run crm-sample -- wipe\n" +
-        "    npm run crm-sample -- count\n",
+        "    npm run crm-sample -- doctor      what is actually in the database\n",
     );
   }
 

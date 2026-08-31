@@ -47,10 +47,18 @@ const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000);
 export function buildContacts(total: number) {
   const docs = [];
 
-  // Roughly the real mix: a handful of customers and dealers against a very
-  // long tail of leads. Search and pagination have to survive that shape.
-  const dealerCount = Math.max(1, Math.round(total * 0.004));
-  const customerCount = Math.max(3, Math.round(total * 0.03));
+  /*
+    A long tail of leads against a smaller book of customers, which is the
+    real shape — but with FLOORS, so every screen has something on it.
+
+    The first cut used the true proportions (0.4% dealers, 3% customers) and
+    a default seed of 500 produced two dealers and fifteen customers. Those
+    screens then look broken rather than empty, and you cannot exercise
+    pagination or search on fifteen rows. Sample data exists to test the UI,
+    not to reproduce the ratios.
+  */
+  const dealerCount = Math.max(8, Math.round(total * 0.01));
+  const customerCount = Math.max(30, Math.round(total * 0.06));
 
   for (let i = 0; i < total; i += 1) {
     const place = pick(PLACES);
