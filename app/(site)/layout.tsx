@@ -14,9 +14,13 @@ const organizationJsonLd = {
   /*
     Google needs a raster logo for the knowledge panel; an SVG is not
     accepted. Its own file rather than the PWA launcher icon, which is the
-    cream mark on transparency — fine on a home screen, but on Google's white
-    background the arch has no edge at all and half the logo disappears. This
-    one carries the full lockup, wordmark included, on the brand olive.
+    mark on transparency — fine on a home screen, but a transparent logo is
+    composited onto whatever background the surface happens to use, and this
+    one is cream. Squared onto an explicit white ground so it renders the
+    same everywhere. Carries the full lockup, wordmark included, since a
+    knowledge panel shows it large enough to read.
+
+    Regenerated from public/logo.svg — see app/icon.svg for the favicon twin.
   */
   logo: `${SITE.url}/icons/logo-square-512.png`,
   image: `${SITE.url}/og-image.png`,
