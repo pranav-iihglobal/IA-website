@@ -5,7 +5,13 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useState, type ReactNode } from "react";
-import { can, type Access, type Permission } from "@/lib/auth/permissions";
+import {
+  betaNote,
+  can,
+  type Access,
+  type ModuleKey,
+  type Permission,
+} from "@/lib/auth/permissions";
 
 function Icon({ path }: { path: string }) {
   return (
@@ -24,6 +30,25 @@ function Icon({ path }: { path: string }) {
   );
 }
 
+/**
+ * Marks a module that is built but not finished.
+ *
+ * Deliberately quiet — this is a statement of fact, not a warning. The title
+ * carries the detail (usually that the data is seeded rather than real), so
+ * the pill itself stays two characters wide on a 320px screen.
+ */
+function BetaPill({ note }: { note: string }) {
+  return (
+    <span
+      title={note}
+      className="ml-auto shrink-0 rounded-full bg-laurel-dark/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cornsilk-light"
+    >
+      Beta
+      <span className="sr-only"> — {note}</span>
+    </span>
+  );
+}
+
 const LINKS: {
   href: string;
   label: string;
@@ -31,6 +56,8 @@ const LINKS: {
   icon: ReactNode;
   /** Hidden unless the signed-in role holds this. Omit for always-visible. */
   needs?: Permission;
+  /** Drives the Beta pill. Omit for links that are not a module. */
+  module?: ModuleKey;
 }[] = [
   {
     href: "/admin",
@@ -40,6 +67,7 @@ const LINKS: {
   },
   {
     href: "/admin/products",
+    module: "products",
     label: "Products",
     needs: "products:read",
     icon: (
@@ -48,16 +76,45 @@ const LINKS: {
   },
   {
     href: "/admin/testimonials",
+    module: "testimonials",
     label: "Testimonials",
     needs: "testimonials:read",
     icon: <Icon path="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12Z" />,
   },
   {
     href: "/admin/blog",
+    module: "posts",
     label: "Blog",
     needs: "posts:read",
     icon: (
       <Icon path="M5 4h9l5 5v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm9 0v5h5M8 13h8M8 17h5" />
+    ),
+  },
+  {
+    href: "/admin/customers",
+    label: "Customers",
+    needs: "crm:read",
+    module: "crm",
+    icon: (
+      <Icon path="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+    ),
+  },
+  {
+    href: "/admin/dealers",
+    label: "Dealers",
+    needs: "crm:read",
+    module: "crm",
+    icon: (
+      <Icon path="M3 9h18l-1.5 11a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1L3 9Zm3 0V6a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v3" />
+    ),
+  },
+  {
+    href: "/admin/leads",
+    label: "Leads",
+    needs: "crm:read",
+    module: "crm",
+    icon: (
+      <Icon path="M12 3v4m0 10v4M3 12h4m10 0h4M6.3 6.3l2.8 2.8m5.8 5.8 2.8 2.8m0-11.4-2.8 2.8m-5.8 5.8-2.8 2.8" />
     ),
   },
   {
@@ -141,6 +198,9 @@ export function AdminNav({ user }: { user: AdminUser }) {
             >
               {link.icon}
               {link.label}
+              {link.module && betaNote(link.module) && (
+                <BetaPill note={betaNote(link.module) as string} />
+              )}
             </Link>
           </li>
         );

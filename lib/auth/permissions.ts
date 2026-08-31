@@ -209,6 +209,28 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   crm: "Dealers & leads",
 };
 
+/**
+ * Modules that are built but not finished.
+ *
+ * A screen that looks complete but is not invites someone to rely on it — to
+ * enter a real customer into a half-built form, or read a number that is not
+ * trustworthy yet. The tag is the honest signal: usable, not yet complete.
+ *
+ * It lives beside MODULE_LABELS on purpose, so a module's name and its status
+ * cannot be updated independently of one another.
+ *
+ * REMOVING A MODULE FROM HERE IS THE LAST STEP OF FINISHING IT. A module is
+ * not done while its tag is still up.
+ */
+export const BETA_MODULES: Partial<Record<ModuleKey, string>> = {
+  crm: "Sample data — not the real customer list yet",
+};
+
+/** The beta note for a module, or null when it is finished. */
+export function betaNote(module: ModuleKey): string | null {
+  return BETA_MODULES[module] ?? null;
+}
+
 export const LEVEL_LABELS: Record<Level, { label: string; description: string }> = {
   none: { label: "No access", description: "The module is hidden entirely." },
   view: { label: "View", description: "Can read, cannot change anything." },

@@ -409,3 +409,173 @@ export const userUpdateSchema = z.object({
 
 export type UserCreateInput = z.infer<typeof userCreateSchema>;
 export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
+
+/* ========================================================================== */
+/* CRM — CONTACTS (leads, customers, dealers)                                 */
+/* ========================================================================== */
+
+/**
+ * One schema for all three kinds, because they are one collection — see
+ * lib/db/models/Contact.ts for why. The kind-specific groups are optional,
+ * so the dealer form does not have to send an empty lead object and vice
+ * versa.
+ *
+ * Dates arrive from `<input type="date">` as "" when cleared, which is not a
+ * valid date. `dateOrNull` turns that back into null rather than letting an
+ * Invalid Date reach Mongoose.
+ */
+const dateOrNull = z
+  .union([z.string(), z.date(), z.null()])
+  .optional()
+  .transform((v) => {
+    if (!v) return null;
+    const d = v instanceof Date ? v : new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d;
+  });
+
+/**
+ * Indian mobile number. Ten digits starting 6-9, after stripping spaces and
+ * a +91 or 0 prefix — the sheets carry all three shapes.
+ */
+export const phoneSchema = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/[\s-()]/g, "").replace(/^(\+?91|0)/, ""))
+  .refine((v) => v === "" || /^[6-9]\d{9}$/.test(v), "Enter a 10-digit mobile number");
+
+/** GSTIN: 2-digit state code, 10-char PAN, entity digit, Z, checksum. */
+export const gstinSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .refine(
+    (v) => v === "" || /^\d{2}[A-Z]{5}\d{4}[A-Z]\d[Z][A-Z\d]$/.test(v),
+    "That is not a valid GSTIN",
+  );
+
+export const contactSchema = z.object({
+  contactId: z.string().trim().default(""),
+  kind: z.enum(["lead", "customer"]).default("lead"),
+  channel: z.enum(["b2c", "b2b", ""]).default(""),
+
+  name: z.string().trim().min(1, "Name is required"),
+  nameGu: z.string().trim().default(""),
+  businessName: z.string().trim().default(""),
+  phone: phoneSchema.default(""),
+  altPhone: phoneSchema.default(""),
+  email: z.string().trim().toLowerCase().default(""),
+
+  village: z.string().trim().default(""),
+  taluka: z.string().trim().default(""),
+  district: z.string().trim().default(""),
+  region: z
+    .enum([
+      "North Gujarat",
+      "Saurashtra",
+      "Kachchh",
+      "South Gujarat",
+      "Central Gujarat",
+      "Other",
+      "",
+    ])
+    .default(""),
+  gjZone: z.string().trim().default(""),
+  pin: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || /^\d{6}$/.test(v), "PIN is six digits")
+    .default(""),
+  state: z.string().trim().default("Gujarat"),
+
+  crop: z.string().trim().default(""),
+  acres: z.coerce.number().min(0).nullable().optional(),
+
+  source: z
+    .enum([
+      "lead_named",
+      "lead_coldcall",
+      "sample_lead",
+      "progressive_farmer",
+      "institutional",
+      "website",
+      "whatsapp",
+      "referral",
+      "field_visit",
+      "other",
+    ])
+    .default("other"),
+  tags: z.array(z.string().trim()).default([]),
+  owner: z.string().trim().default(""),
+
+  lastContactAt: dateOrNull,
+  followUpAt: dateOrNull,
+
+  lead: z
+    .object({
+      productsSampled: z.string().trim().default(""),
+      sampleDate: dateOrNull,
+      sampleQuantity: z.string().trim().default(""),
+      reference: z.string().trim().default(""),
+      feedbackCollected: z.boolean().default(false),
+      feedbackNotes: z.string().trim().default(""),
+      followUpStatus: z
+        .enum(["not_contacted", "contacted", "interested", "not_interested", "converted"])
+        .default("not_contacted"),
+      nextAction: z.string().trim().default(""),
+    })
+    .optional(),
+
+  customer: z
+    .object({
+      subtype: z.string().trim().default(""),
+      discountTier: z.string().trim().default("Standard"),
+      firstOrderAt: dateOrNull,
+      lastOrderAt: dateOrNull,
+      lifetimeOrders: z.coerce.number().min(0).default(0),
+      /** Integer paise. The form sends rupees; the route converts. */
+      lifetimeRevenuePaise: z.coerce.number().int().min(0).default(0),
+    })
+    .optional(),
+
+  dealer: z
+    .object({
+      gstin: gstinSchema.default(""),
+      pan: z.string().trim().toUpperCase().default(""),
+      proprietor: z.string().trim().default(""),
+      tier: z.string().trim().default(""),
+      territory: z.string().trim().default(""),
+      creditLimitPaise: z.coerce.number().int().min(0).default(0),
+      creditDays: z.coerce.number().int().min(0).default(0),
+      outstandingPaise: z.coerce.number().int().default(0),
+      paymentTerms: z.string().trim().default(""),
+      marketingSupport: z.string().trim().default(""),
+      onboardingAt: dateOrNull,
+      nextVisitAt: dateOrNull,
+    })
+    .optional(),
+
+  remarks: z.string().trim().default(""),
+})
+  /*
+    A dealer without a GSTIN cannot be invoiced correctly later — the GSTIN is
+    what decides B2B treatment and whether the sale lands in the B2B or B2C
+    section of a GST return. Caught here rather than at invoice time, when it
+    would block someone mid-sale.
+  */
+  .refine(
+    (v) => v.kind !== "customer" || v.channel !== "b2b" || Boolean(v.dealer?.gstin),
+    { message: "A dealer needs a GSTIN", path: ["dealer", "gstin"] },
+  )
+  /* A customer must say which channel; a lead must not claim one. */
+  .refine((v) => v.kind !== "customer" || v.channel !== "", {
+    message: "Choose B2C or B2B",
+    path: ["channel"],
+  });
+
+export type ContactInput = z.input<typeof contactSchema>;
+export type ContactValues = z.output<typeof contactSchema>;
+
+/** A single dated note appended to a contact's log. */
+export const contactNoteSchema = z.object({
+  body: z.string().trim().min(1, "Write something first"),
+});
