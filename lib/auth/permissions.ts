@@ -30,8 +30,17 @@ export function rankOf(role: Role): number {
   return ROLES.indexOf(role);
 }
 
-/** The content areas access can be granted over, one per admin module. */
-export const MODULES = ["products", "testimonials", "posts"] as const;
+/**
+ * The areas access can be granted over, one per admin module.
+ *
+ * `crm` covers dealers and leads together — they are one job, and a lead
+ * becomes a dealer, so splitting them would mean granting half a workflow.
+ *
+ * Adding to this list is only half the change: the per-user overrides live in
+ * a CLOSED sub-schema on the User model, which has to gain the same key or
+ * the override silently will not persist. See lib/db/models/User.ts.
+ */
+export const MODULES = ["products", "testimonials", "posts", "crm"] as const;
 export type ModuleKey = (typeof MODULES)[number];
 
 /**
@@ -59,6 +68,10 @@ export const PERMISSIONS = [
   /** Separate from posts:write — an editor drafts, someone senior publishes. */
   "posts:publish",
   "posts:delete",
+  /** Dealers and leads. */
+  "crm:read",
+  "crm:write",
+  "crm:delete",
   /** Signing a Cloudinary upload. Anyone who can write anything needs it. */
   "media:upload",
   "users:read",
@@ -193,6 +206,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   products: "Products",
   testimonials: "Testimonials",
   posts: "Blog",
+  crm: "Dealers & leads",
 };
 
 export const LEVEL_LABELS: Record<Level, { label: string; description: string }> = {

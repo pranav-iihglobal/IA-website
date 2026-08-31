@@ -1,5 +1,24 @@
 import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
-import { LEVELS, ROLES } from "@/lib/auth/permissions";
+import { LEVELS, ROLES, type ModuleKey } from "@/lib/auth/permissions";
+
+/**
+ * One optional level field per module, for the per-user overrides below.
+ *
+ * `satisfies Record<ModuleKey, unknown>` is the point of writing it out here
+ * rather than inline: the sub-schema is a CLOSED list, so a module added to
+ * MODULES but missed here would accept an override and silently discard it.
+ * With this, that mistake stops compiling instead.
+ *
+ * Written literally rather than generated from MODULES because Mongoose needs
+ * the concrete keys to infer the document type.
+ */
+const MODULE_LEVEL_FIELDS = {
+  products: { type: String, enum: LEVELS },
+  testimonials: { type: String, enum: LEVELS },
+  posts: { type: String, enum: LEVELS },
+  /** Dealers and leads. */
+  crm: { type: String, enum: LEVELS },
+} satisfies Record<ModuleKey, unknown>;
 
 /**
  * Someone allowed into the admin panel.
@@ -50,14 +69,7 @@ const userSchema = new Schema(
       would silently fail to move the modules they never customised.
     */
     modules: {
-      type: new Schema(
-        {
-          products: { type: String, enum: LEVELS },
-          testimonials: { type: String, enum: LEVELS },
-          posts: { type: String, enum: LEVELS },
-        },
-        { _id: false },
-      ),
+      type: new Schema(MODULE_LEVEL_FIELDS, { _id: false }),
       default: () => ({}),
     },
     /** Email of whoever granted this access. Set server-side from the session. */
