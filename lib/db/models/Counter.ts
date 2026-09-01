@@ -42,7 +42,7 @@ export async function nextInSeries(series: string): Promise<number> {
   const doc = await Counter.findByIdAndUpdate(
     series,
     { $inc: { seq: 1 } },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
+    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
   ).lean();
   return doc!.seq;
 }
@@ -60,7 +60,7 @@ export async function raiseSeriesTo(series: string, value: number): Promise<numb
   const doc = await Counter.findByIdAndUpdate(
     series,
     { $max: { seq: value } },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
+    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
   ).lean();
   return doc!.seq;
 }

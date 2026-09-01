@@ -68,7 +68,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
           $push: { notes: { body: parsedNote.data.body, author, at: new Date() } },
           $set: { lastContactAt: new Date(), updatedBy: author },
         },
-        { new: true },
+        { returnDocument: "after" },
       ).lean();
       if (!updated) return badId();
       return NextResponse.json({ ok: true, notes: (updated as LeanDoc).notes ?? [] });
@@ -98,7 +98,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         isSample: false,
         updatedBy: await currentEditor(),
       },
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     );
     if (!updated) return badId();
 

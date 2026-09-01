@@ -100,7 +100,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const updated = await Product.findByIdAndUpdate(
       id,
       { ...parsed.data, updatedBy: await currentEditor() },
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     );
     if (!updated) return badId();
 

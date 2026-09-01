@@ -43,7 +43,7 @@ async function main() {
   for (const doc of productDocs) {
     await Product.findOneAndUpdate({ slug: doc.slug }, doc, {
       upsert: true,
-      new: true,
+      returnDocument: "after",
       setDefaultsOnInsert: true,
     });
   }
@@ -60,7 +60,7 @@ async function main() {
     await Testimonial.findOneAndUpdate(
       { "farmerName.en": doc.farmerName.en },
       doc,
-      { upsert: true, new: true, setDefaultsOnInsert: true },
+      { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
     );
   }
   console.log(
@@ -72,7 +72,7 @@ async function main() {
   for (const doc of postDocs) {
     await Post.findOneAndUpdate({ slug: doc.slug }, doc, {
       upsert: true,
-      new: true,
+      returnDocument: "after",
       setDefaultsOnInsert: true,
     });
   }

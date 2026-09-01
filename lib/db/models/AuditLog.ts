@@ -78,7 +78,16 @@ export async function recordAudit(entry: AuditEntry): Promise<void> {
   try {
     await AuditLog.create(entry);
   } catch (error) {
-    console.error("[audit] could not record", entry.entity, entry.entityId, error);
+    /*
+      One line, not a stack trace. This is reported, never rethrown, so it
+      will appear in the middle of otherwise-healthy runtime logs — and a wall
+      of stack in that position reads as a crash that did not happen. The
+      message identifies the record; the reason is what you act on.
+    */
+    const reason = error instanceof Error ? error.message : String(error);
+    console.error(
+      `[audit] not recorded: ${entry.action} ${entry.entity} ${entry.entityId} — ${reason}`,
+    );
   }
 }
 

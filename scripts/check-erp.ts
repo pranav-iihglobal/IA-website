@@ -125,7 +125,17 @@ async function main() {
     entries[0] !== undefined && !("updatedAt" in entries[0]),
   );
 
-  // A failed write must not block the change it describes.
+  /*
+    A failed audit write must not block the change it describes — refusing to
+    save an invoice because the log was unreachable would turn a bookkeeping
+    nicety into an outage.
+
+    Proving that means causing a real failure, and recordAudit is built to
+    shout about those. The error printed next is the point of the test, not a
+    problem with it, so say so first — an unannounced stack trace in the
+    middle of a passing run reads exactly like a failure.
+  */
+  console.log("    ↓ the next few lines are a DELIBERATE failure ↓");
   let threw = false;
   try {
     // @ts-expect-error deliberately invalid — actor is required.
@@ -133,6 +143,7 @@ async function main() {
   } catch {
     threw = true;
   }
+  console.log("    ↑ deliberate ↑");
   check("an invalid entry is logged, not thrown", !threw);
 
   console.log("\n  Cleaning up\n");
