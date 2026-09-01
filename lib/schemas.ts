@@ -693,3 +693,62 @@ export const invoicePaymentSchema = z.object({
 export const cancelInvoiceSchema = z.object({
   reason: z.string().trim().min(3, "Say why it is being cancelled"),
 });
+
+/* ========================================================================== */
+/* STOCK AND PURCHASES                                                        */
+/* ========================================================================== */
+
+export const stockItemSchema = z
+  .object({
+    name: z.string().trim().min(1, "Name is required"),
+    sku: z.string().trim().default(""),
+    kind: z.enum(["finished", "packaging", "raw"]).default("finished"),
+    unit: z.string().trim().default("unit"),
+    onHand: z.coerce.number().min(0, "Cannot be negative").default(0),
+    /** 0 means "no alert wanted" — see needsReorder() in the model. */
+    reorderLevel: z.coerce.number().min(0).default(0),
+    unitCost: rupeeField("Unit cost"),
+    supplier: z.string().trim().default(""),
+    location: z.string().trim().default(""),
+    notes: z.string().trim().default(""),
+  })
+  .transform(({ unitCost, ...rest }) => ({
+    ...rest,
+    unitCostPaise: unitCost ?? 0,
+    // Saving IS the count. Nobody edits a stock figure without having looked.
+    countedAt: new Date(),
+  }));
+
+export const purchaseSchema = z
+  .object({
+    supplier: z.string().trim().min(1, "Supplier is required"),
+    supplierGstin: z.string().trim().default(""),
+    billNo: z.string().trim().default(""),
+    billDate: z.coerce.date().nullable().default(null),
+    category: z
+      .enum(["raw_material", "packaging", "job_work", "freight", "marketing", "services", "other"])
+      .default("other"),
+    description: z.string().trim().default(""),
+    /*
+      Transcribed from the supplier's bill, not computed. Their arithmetic is
+      what was filed; re-deriving it here would misrepresent their document.
+    */
+    taxableValue: rupeeField("Taxable value"),
+    cgst: rupeeField("CGST"),
+    sgst: rupeeField("SGST"),
+    igst: rupeeField("IGST"),
+    total: rupeeField("Total"),
+    inputCreditEligible: z.boolean().default(true),
+    paymentStatus: z.enum(["unpaid", "partial", "paid"]).default("unpaid"),
+    paid: rupeeField("Paid"),
+    notes: z.string().trim().default(""),
+  })
+  .transform(({ taxableValue, cgst, sgst, igst, total, paid, ...rest }) => ({
+    ...rest,
+    taxableValuePaise: taxableValue ?? 0,
+    cgstPaise: cgst ?? 0,
+    sgstPaise: sgst ?? 0,
+    igstPaise: igst ?? 0,
+    totalPaise: total ?? 0,
+    paidPaise: paid ?? 0,
+  }));

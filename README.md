@@ -26,6 +26,7 @@ npm run dev                    # http://localhost:3000  ·  admin at /admin
 | `npm test` | Unit tests for the money, GST and query logic — no database needed |
 | `npm run check-erp` | Proves invoice numbering is atomic and the audit log is append-only — needs a real cluster |
 | `npm run migrate-product-money` | One-off: product prices → paise, GST → basis points. Dry run; add `-- --apply` to write |
+| `npm run erp-sample -- seed` | Seeds sample invoices, stock and purchases so the ERP screens have something to show. `wipe` and `doctor` too |
 | `npm run crm-sample -- doctor` | Reports what the contacts collection actually holds, and any leftover index |
 
 ## Money and GST

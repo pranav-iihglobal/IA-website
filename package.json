@@ -18,7 +18,8 @@
     "check-erp": "tsx scripts/check-erp.ts",
     "migrate-product-money": "tsx scripts/migrate-product-money.ts",
     "users": "tsx scripts/users.ts",
-    "crm-sample": "tsx scripts/crm-sample.ts"
+    "crm-sample": "tsx scripts/crm-sample.ts",
+    "erp-sample": "tsx scripts/erp-sample.ts"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",

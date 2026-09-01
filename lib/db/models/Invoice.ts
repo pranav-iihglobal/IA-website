@@ -153,6 +153,16 @@ const invoiceSchema = new Schema(
      */
     isHistorical: { type: Boolean, default: false, index: true },
 
+    /**
+     * Seeded test data, not a real sale.
+     *
+     * Sample invoices take their numbers from a SEPARATE series with its own
+     * prefix (see lib/erp/invoice-number.ts). Sharing the real counter would
+     * mean wiping them left permanent gaps in an issued GST sequence — the
+     * exact property the atomic counter exists to guarantee.
+     */
+    isSample: { type: Boolean, default: false, index: true },
+
     notes: { type: String, default: "", trim: true },
     /** Email of whoever raised it, from the session. */
     createdBy: { type: String, default: "", trim: true },

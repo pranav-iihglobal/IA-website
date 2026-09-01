@@ -6,6 +6,8 @@ import { Testimonial } from "@/lib/db/models/Testimonial";
 import { Post } from "@/lib/db/models/Post";
 import { currentActiveUser } from "@/lib/auth/current-user";
 import { can } from "@/lib/auth/permissions";
+import { dashboardFigures } from "@/lib/erp/reports";
+import { BusinessTiles } from "@/components/admin/BusinessTiles";
 
 export const dynamic = "force-dynamic";
 
@@ -246,6 +248,34 @@ function TilesSkeleton() {
   );
 }
 
+/**
+ * The trading figures, in their own Suspense boundary.
+ *
+ * Separate from the content tiles so a slow aggregation cannot hold up the
+ * rest of the page — and so a failure here degrades to a missing section
+ * rather than an error where the whole dashboard used to be.
+ */
+async function BusinessSection() {
+  /*
+    The await is inside the try, the JSX is not. React renders a component
+    lazily, so JSX constructed inside a try/catch is NOT protected by it — the
+    catch would only ever have caught the query, while reading as though it
+    covered the render too.
+  */
+  let figures;
+  try {
+    figures = await dashboardFigures();
+  } catch (error) {
+    console.error("[dashboard] could not read trading figures", error);
+    return (
+      <p className="admin-card px-4 py-3 text-sm text-ink-muted">
+        Trading figures are unavailable right now.
+      </p>
+    );
+  }
+  return <BusinessTiles figures={figures} />;
+}
+
 export default async function AdminDashboardPage() {
   /*
     The dashboard is the one page everyone with access can reach, so it is
@@ -295,7 +325,24 @@ export default async function AdminDashboardPage() {
         )}
       </header>
 
+      {/*
+        The business first, the content second. A director opens this to see
+        what the month looks like and who owes money, not to count blog posts
+        — and the ERP figures are gated on billing:read, so someone without it
+        simply does not see them.
+      */}
+      {can(me, "billing:read") && (
+        <div className="mt-8">
+          <Suspense fallback={<TilesSkeleton />}>
+            <BusinessSection />
+          </Suspense>
+        </div>
+      )}
+
       <div className="mt-8">
+        <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-ink-faint">
+          Content
+        </h2>
         {/* Everything above this streams before the database is asked. */}
         <Suspense fallback={<TilesSkeleton />}>
           <Tiles show={show} />

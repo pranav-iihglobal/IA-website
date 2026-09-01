@@ -85,3 +85,33 @@ export async function seedFromIssuedNumber(value: string): Promise<boolean> {
   await raiseSeriesTo(seriesKey(date), parsed.sequence);
   return true;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Sample invoices                                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Seeded invoices get their OWN series, and it is visible in the number.
+ *
+ * They cannot share the real counter. Wiping sample data would then leave
+ * permanent holes in an issued GST sequence — and a missing number is
+ * something the department asks about, which is the whole reason the counter
+ * is atomic in the first place.
+ *
+ * The `SMP` prefix is deliberate rather than cosmetic: a number that looked
+ * real would eventually be read out to somebody as if it were.
+ */
+export function sampleSeriesKey(date: Date): string {
+  return `sample-${seriesKey(date)}`;
+}
+
+export function formatSampleInvoiceNumber(date: Date, sequence: number): string {
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yy = String(date.getFullYear() % 100).padStart(2, "0");
+  return `SMP.${mm}.${yy}.${String(sequence).padStart(3, "0")}`;
+}
+
+/** True for a number this app issued as sample data. */
+export function isSampleInvoiceNumber(value: string): boolean {
+  return /^SMP\./.test(value.trim());
+}
