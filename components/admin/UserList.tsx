@@ -195,6 +195,16 @@ export function UserList({
   const [name, setName] = useState("");
   const [role, setRole] = useState<Role>("editor");
   const [adding, setAdding] = useState(false);
+  /*
+    Which access shape a new person gets, chosen BEFORE they exist.
+
+    A viewer defaults to `view` on every module, so adding someone and setting
+    their modules afterwards means they can read the customer list, the
+    products and the blog in the gap between the two actions — and the gap is
+    however long it takes to remember. The preset closes it by making access
+    part of creating the person rather than a follow-up.
+  */
+  const [preset, setPreset] = useState<string>("");
   const [fieldError, setFieldError] = useState<string | null>(null);
 
   const [pending, setPending] = useState<Person | null>(null);
@@ -224,18 +234,30 @@ export function UserList({
     event.preventDefault();
     setFieldError(null);
     setAdding(true);
+    const chosen = ACCESS_PRESETS.find((p) => p.id === preset);
     const result = await adminFetch("/api/admin/users", {
       method: "POST",
-      body: JSON.stringify({ email, name, role }),
+      body: JSON.stringify({
+        email,
+        name,
+        role: chosen?.role ?? role,
+        // Sent WITH the create, not after it.
+        modules: chosen?.modules,
+      }),
     });
     setAdding(false);
     if (!result.ok) {
       setFieldError(result.error ?? "Could not add that person");
       return;
     }
-    toast(`${email} can now sign in as ${ROLE_LABELS[role].label}`);
+    toast(
+      chosen
+        ? `${email} can now sign in — ${chosen.label}`
+        : `${email} can now sign in as ${ROLE_LABELS[role].label}`,
+    );
     setEmail("");
     setName("");
+    setPreset("");
     load();
   }
 
@@ -296,7 +318,7 @@ export function UserList({
           title="Give someone access"
           description="They sign in with Google using this address. Access starts immediately — they do not need to be invited anywhere else."
         >
-          <form onSubmit={add} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_10rem_auto] lg:items-end">
+          <form onSubmit={add} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_14rem_auto] lg:items-end">
             <TextField
               label="Google email"
               type="email"
@@ -314,14 +336,36 @@ export function UserList({
               hint="Optional — just a label for this list"
             />
             <SelectField
-              label="Role"
-              value={role}
-              onChange={(v) => setRole(v as Role)}
-              options={ROLE_OPTIONS.filter((o) =>
-                canAssignRole(currentRole, o.value),
-              )}
-              hint={ROLE_LABELS[role].description}
+              label="Access"
+              value={preset}
+              onChange={setPreset}
+              options={[
+                ...ACCESS_PRESETS.filter((p) =>
+                  canAssignRole(currentRole, p.role),
+                ).map((p) => ({ value: p.id, label: p.label })),
+                { value: "", label: "Choose a role instead…" },
+              ]}
+              hint={
+                ACCESS_PRESETS.find((p) => p.id === preset)?.description ??
+                "A role alone gives read access to every module. Pick a preset unless you mean that."
+              }
             />
+            {/*
+              Only when no preset is chosen. A role on its own is the sharp
+              edge — `viewer` means "can read everything" — so it is available
+              but not the default path.
+            */}
+            {!preset && (
+              <SelectField
+                label="Role"
+                value={role}
+                onChange={(v) => setRole(v as Role)}
+                options={ROLE_OPTIONS.filter((o) =>
+                  canAssignRole(currentRole, o.value),
+                )}
+                hint={ROLE_LABELS[role].description}
+              />
+            )}
             <Button type="submit" disabled={adding || !email.trim()}>
               {adding && <Spinner />}
               <span>{adding ? "Adding…" : "Add"}</span>
