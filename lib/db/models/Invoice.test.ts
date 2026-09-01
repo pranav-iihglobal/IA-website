@@ -65,7 +65,11 @@ describe("what may still change after issue", () => {
   });
 
   it("allows cancelling, which is how a mistake is undone", () => {
-    expect(illegalChanges(["status", "cancelledAt", "cancelledReason"], issued)).toEqual([]);
+    // Stated as previous → new, because "status" alone is ambiguous about
+    // which of the two it means, and that ambiguity was the bug.
+    expect(
+      illegalChanges(["status", "cancelledAt", "cancelledReason"], { status: "cancelled" }, "issued"),
+    ).toEqual([]);
   });
 
   it("still refuses the rest alongside an allowed one", () => {
@@ -90,5 +94,52 @@ describe("a cancelled invoice", () => {
   it("stays frozen — it keeps its number and its figures", () => {
     expect(illegalChanges(["lines"], cancelled)).toEqual(["lines"]);
     expect(illegalChanges(["number"], cancelled)).toEqual(["number"]);
+  });
+});
+
+describe("the status field cannot be used to unlock an invoice", () => {
+  /*
+    The bypass this suite exists to keep closed.
+
+    `frozen` is computed from the status being SAVED. So setting an issued
+    invoice back to "draft" made the hook see a draft, allow it, and save —
+    after which every line, total and party edit was permitted, because the
+    document really was a draft by then. One field, and the guarantee the
+    whole ERP rests on was gone.
+  */
+  it("refuses issued → draft", () => {
+    expect(illegalChanges(["status"], { status: "draft" }, "issued")).toEqual([
+      "status",
+    ]);
+  });
+
+  it("refuses cancelled → draft", () => {
+    expect(illegalChanges(["status"], { status: "draft" }, "cancelled")).toEqual([
+      "status",
+    ]);
+  });
+
+  it("refuses issued → issued being used to smuggle a line change", () => {
+    expect(
+      illegalChanges(["status", "lines"], { status: "draft" }, "issued"),
+    ).toEqual(["status", "lines"]);
+  });
+
+  it("still allows issued → cancelled, which is how a mistake is undone", () => {
+    expect(
+      illegalChanges(["status", "cancelledAt", "cancelledReason"], { status: "cancelled" }, "issued"),
+    ).toEqual([]);
+  });
+
+  it("still allows a draft to become issued", () => {
+    // Issuing happens on a new document, but a draft saved again must work.
+    expect(illegalChanges(["status"], { status: "issued" }, "draft")).toEqual([]);
+  });
+
+  it("refuses a historical invoice being cancelled", () => {
+    // The 53 already filed are frozen outright — see the historical rule.
+    expect(
+      illegalChanges(["status"], { status: "cancelled", isHistorical: true }, "issued"),
+    ).toEqual(["status"]);
   });
 });

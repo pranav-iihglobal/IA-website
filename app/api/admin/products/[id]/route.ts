@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isValidObjectId } from "mongoose";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Product } from "@/lib/db/models/Product";
+import { Invoice } from "@/lib/db/models/Invoice";
 import { productSchema } from "@/lib/schemas";
 import { deleteTypedAssets } from "@/lib/cloudinary";
 import type { LeanDoc } from "@/lib/db/lean";
@@ -134,6 +135,23 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     if (!isValidObjectId(id)) return badId();
 
     await connectToDatabase();
+    /*
+      Invoice lines snapshot the product, so a deleted product leaves working
+      invoices with a productId pointing at nothing — fine to print, useless
+      to report on. Refused, for the same reason a customer with history is.
+    */
+    const lineCount = await Invoice.countDocuments({ "lines.productId": id });
+    if (lineCount > 0) {
+      return NextResponse.json(
+        {
+          error:
+            `This product appears on ${lineCount} invoice${lineCount === 1 ? "" : "s"} ` +
+            `and cannot be deleted. Set it to draft instead so it stops being sold.`,
+        },
+        { status: 409 },
+      );
+    }
+
     const doc = await Product.findByIdAndDelete(id).lean();
     if (!doc) return badId();
 

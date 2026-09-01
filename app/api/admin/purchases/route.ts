@@ -31,7 +31,31 @@ export async function GET(request: NextRequest) {
 
     const items = await Purchase.find(filter).sort({ billDate: -1 }).limit(500).lean();
     return NextResponse.json({
-      items: (items as LeanDoc[]).map((d) => ({ ...d, id: String(d._id) })),
+      /*
+        Mapped field by field, not spread. A spread ships _id, __v and whatever
+        else the model grows next — every other list here is explicit, and this
+        was the one that would quietly expose a field added later.
+      */
+      items: (items as LeanDoc[]).map((d) => ({
+        id: String(d._id),
+        supplier: d.supplier ?? "",
+        supplierGstin: d.supplierGstin ?? "",
+        billNo: d.billNo ?? "",
+        billDate: d.billDate ? new Date(d.billDate).toISOString() : null,
+        category: d.category ?? "other",
+        description: d.description ?? "",
+        taxableValuePaise: d.taxableValuePaise ?? 0,
+        cgstPaise: d.cgstPaise ?? 0,
+        sgstPaise: d.sgstPaise ?? 0,
+        igstPaise: d.igstPaise ?? 0,
+        totalPaise: d.totalPaise ?? 0,
+        inputCreditEligible: Boolean(d.inputCreditEligible),
+        paidBy: d.paidBy ?? "company",
+        paidByName: d.paidByName ?? "",
+        paymentStatus: d.paymentStatus ?? "unpaid",
+        paidPaise: d.paidPaise ?? 0,
+        notes: d.notes ?? "",
+      })),
       total: items.length,
     });
   } catch (error) {

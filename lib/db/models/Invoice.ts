@@ -198,11 +198,24 @@ const MUTABLE_AFTER_ISSUE = new Set([
   "payment.referenceNo",
   "payment.paidAt",
   "notes",
-  "status",
   "cancelledAt",
   "cancelledReason",
   "updatedAt",
 ]);
+
+/*
+  `status` is NOT in that set, and its absence is the point.
+
+  It used to be, and that was a hole straight through the lock: `frozen` is
+  worked out from the status being saved, so setting an issued invoice back to
+  "draft" made the hook see a draft, permit it, and save. The document was then
+  genuinely a draft, and every line, total and party edit was allowed. One
+  field, and the guarantee this whole model exists to provide was gone.
+
+  So status is handled separately below, against the status the document had
+  when it was LOADED, and exactly one transition out of a frozen state is
+  allowed: to "cancelled".
+*/
 
 /**
  * The lock.
@@ -226,22 +239,50 @@ const MUTABLE_AFTER_ISSUE = new Set([
  */
 export function illegalChanges(
   modifiedPaths: string[],
+  /** The state being SAVED. */
   state: { isHistorical?: boolean; status?: string },
+  /**
+   * The status the document had when it was loaded.
+   *
+   * Defaults to the state being saved, which is right for a document whose
+   * status is not changing. Whether an invoice is frozen is a fact about what
+   * it WAS, never about what someone is trying to make it.
+   */
+  previousStatus: string = state.status ?? "draft",
 ): string[] {
-  const frozen = Boolean(state.isHistorical) || state.status !== "draft";
+  const frozen = Boolean(state.isHistorical) || previousStatus !== "draft";
   if (!frozen) return [];
-  return modifiedPaths.filter(
-    (path) => !MUTABLE_AFTER_ISSUE.has(path) && !path.startsWith("payment."),
-  );
+
+  return modifiedPaths.filter((path) => {
+    if (path === "status") {
+      /*
+        The one way out of a frozen state. A historical invoice has none —
+        those were filed and are not ours to cancel.
+      */
+      return Boolean(state.isHistorical) || state.status !== "cancelled";
+    }
+    return !MUTABLE_AFTER_ISSUE.has(path) && !path.startsWith("payment.");
+  });
 }
+
+/**
+ * Remember what the document was, so the hook can tell.
+ *
+ * `this.status` in a pre-save hook is the NEW value; without this there is no
+ * way to know an issued invoice is being turned into a draft.
+ */
+invoiceSchema.post("init", function () {
+  this.$locals.previousStatus = this.status;
+});
 
 invoiceSchema.pre("save", function () {
   if (this.isNew) return;
 
-  const illegal = illegalChanges(this.modifiedPaths(), {
-    isHistorical: this.isHistorical,
-    status: this.status,
-  });
+  const illegal = illegalChanges(
+    this.modifiedPaths(),
+    { isHistorical: this.isHistorical, status: this.status },
+    (this.$locals.previousStatus as string | undefined) ?? this.status,
+  );
   if (illegal.length === 0) return;
 
   // Thrown, not passed to next(): a zero-argument hook is treated as

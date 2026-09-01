@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requirePageAccess } from "@/lib/admin/page-guard";
-import { outstandingInvoices } from "@/lib/erp/reports";
+import { outstandingInvoices, outstandingTotal } from "@/lib/erp/reports";
 import { formatINR, formatRupees } from "@/lib/money";
 import { EmptyState } from "@/components/admin/ui";
 
@@ -15,19 +15,29 @@ export const dynamic = "force-dynamic";
  */
 export default async function OutstandingPage() {
   await requirePageAccess("billing:read");
-  const rows = await outstandingInvoices();
-
-  const total = rows.reduce((t, r) => t + r.owedPaise, 0);
+  /*
+    The total comes from an aggregation over EVERY unpaid invoice, not from
+    summing the rows below — those are capped for the screen, and a capped sum
+    would be quietly low.
+  */
+  const [rows, total] = await Promise.all([
+    outstandingInvoices(),
+    outstandingTotal(),
+  ]);
   const overdue = rows.filter((r) => r.daysOld > 30);
+  const capped = total.count > rows.length;
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="font-display text-2xl font-bold text-ink-strong">Outstanding</h1>
         <p className="mt-0.5 text-sm text-ink-muted">
-          {rows.length} invoice{rows.length === 1 ? "" : "s"} unpaid,{" "}
-          <strong className={total > 0 ? "text-danger" : ""}>{formatRupees(total)}</strong>{" "}
+          {total.count} invoice{total.count === 1 ? "" : "s"} unpaid,{" "}
+          <strong className={total.owedPaise > 0 ? "text-danger" : ""}>
+            {formatRupees(total.owedPaise)}
+          </strong>{" "}
           owed. Oldest first.
+          {capped && ` Showing the oldest ${rows.length}.`}
         </p>
       </div>
 

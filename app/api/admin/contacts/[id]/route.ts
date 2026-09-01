@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isValidObjectId } from "mongoose";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Contact } from "@/lib/db/models/Contact";
+import { Invoice } from "@/lib/db/models/Invoice";
 import { contactNoteSchema, contactSchema } from "@/lib/schemas";
 import type { LeanDoc } from "@/lib/db/lean";
 import {
@@ -116,6 +117,27 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     const { id } = await params;
     if (!isValidObjectId(id)) return badId();
     await connectToDatabase();
+    /*
+      An invoice snapshots its party, so deleting the contact would not break
+      the document — which is exactly what makes it dangerous. It would leave
+      a dangling contactId, a dead link from the invoice, and a customer whose
+      trading history has nowhere to be read.
+
+      Refused rather than cascaded. A customer with history should be kept, the
+      same way the User model suspends rather than deletes.
+    */
+    const invoiceCount = await Invoice.countDocuments({ contactId: id });
+    if (invoiceCount > 0) {
+      return NextResponse.json(
+        {
+          error:
+            `This customer has ${invoiceCount} invoice${invoiceCount === 1 ? "" : "s"} ` +
+            `against them and cannot be deleted. Their history would be orphaned.`,
+        },
+        { status: 409 },
+      );
+    }
+
     const doc = await Contact.findByIdAndDelete(id).lean();
     if (!doc) return badId();
     return NextResponse.json({ ok: true });

@@ -24,7 +24,7 @@ export function monthRange(year: number, month: number): { from: Date; to: Date 
   };
 }
 
-/** Every invoice in a month, shaped for buildGstReturn(). */
+/** Every REAL invoice in a month, shaped for buildGstReturn(). */
 export async function invoicesForPeriod(
   year: number,
   month: number,
@@ -35,6 +35,14 @@ export async function invoicesForPeriod(
   const docs = await Invoice.find({
     issuedAt: { $gte: from, $lt: to },
     status: { $ne: "draft" },
+    /*
+      Sample invoices must NEVER reach the CA.
+
+      Every other safeguard in this project keeps seeded data in; this is the
+      one path where data leaves the building, on a document with statutory
+      weight. A fabricated sale in a GSTR-1 filing is not a display bug.
+    */
+    isSample: { $ne: true },
   })
     .select("number issuedAt status placeOfSupplyStateCode supplyType party grandTotalPaise lines")
     .sort({ issuedAt: 1, number: 1 })
@@ -62,6 +70,20 @@ export async function invoicesForPeriod(
   }));
 }
 
+/** How many seeded invoices this period holds, so the page can say so. */
+export async function sampleInvoicesInPeriod(
+  year: number,
+  month: number,
+): Promise<number> {
+  await connectToDatabase();
+  const { from, to } = monthRange(year, month);
+  return Invoice.countDocuments({
+    issuedAt: { $gte: from, $lt: to },
+    status: { $ne: "draft" },
+    isSample: true,
+  });
+}
+
 export interface OutstandingRow {
   invoiceId: string;
   number: string;
@@ -81,6 +103,35 @@ export interface OutstandingRow {
  * different problem from a big one raised last week, and it is the one that
  * needs the call.
  */
+/** Rows shown on screen are capped; this is not. See outstandingTotal(). */
+const OUTSTANDING_ROW_CAP = 500;
+
+/**
+ * What is owed in total, across every unpaid invoice.
+ *
+ * Separate from the list on purpose. The list is capped for the screen, and
+ * summing a capped list gave a total that was quietly LOW past the cap — the
+ * failure direction nobody investigates, because a smaller debt does not
+ * prompt anyone to look.
+ */
+export async function outstandingTotal(): Promise<{ owedPaise: number; count: number }> {
+  await connectToDatabase();
+  const [row] = await Invoice.aggregate<{ owed: number; count: number }>([
+    { $match: { status: "issued", "payment.status": { $ne: "paid" } } },
+    {
+      $project: {
+        owed: {
+          $subtract: ["$grandTotalPaise", { $ifNull: ["$payment.paidPaise", 0] }],
+        },
+      },
+    },
+    // A rounding overpayment leaves a negative; it is not a debt.
+    { $match: { owed: { $gt: 0 } } },
+    { $group: { _id: null, owed: { $sum: "$owed" }, count: { $sum: 1 } } },
+  ]);
+  return { owedPaise: row?.owed ?? 0, count: row?.count ?? 0 };
+}
+
 export async function outstandingInvoices(): Promise<OutstandingRow[]> {
   await connectToDatabase();
 
@@ -90,7 +141,7 @@ export async function outstandingInvoices(): Promise<OutstandingRow[]> {
   })
     .select("number issuedAt party grandTotalPaise payment contactId")
     .sort({ issuedAt: 1 })
-    .limit(500)
+    .limit(OUTSTANDING_ROW_CAP)
     .lean();
 
   const now = Date.now();
@@ -150,12 +201,17 @@ export async function dashboardFigures(now = new Date()): Promise<DashboardFigur
   // The Indian financial year, April to March — what the CA reports on.
   const fyStart = new Date(m >= 3 ? y : y - 1, 3, 1);
 
-  const [month, previous, year, owed, stock, customers, dealers, followUps, purchases] =
+  const [month, previous, year, owed, oldest, stock, customers, dealers, followUps, purchases] =
     await Promise.all([
       revenueBetween(thisMonth.from, thisMonth.to),
       revenueBetween(lastMonth.from, lastMonth.to),
       revenueBetween(fyStart, thisMonth.to),
-      outstandingInvoices(),
+      outstandingTotal(),
+      // Just the oldest, for the "oldest N days" line — not the whole list.
+      Invoice.findOne({ status: "issued", "payment.status": { $ne: "paid" } })
+        .select("issuedAt")
+        .sort({ issuedAt: 1 })
+        .lean(),
       StockItem.find().select("onHand reorderLevel").lean(),
       Contact.countDocuments({ kind: "customer", channel: "b2c" }),
       Contact.countDocuments({ kind: "customer", channel: "b2b" }),
@@ -171,9 +227,11 @@ export async function dashboardFigures(now = new Date()): Promise<DashboardFigur
     monthInvoices: month.count,
     lastMonthRevenuePaise: previous.total,
     yearRevenuePaise: year.total,
-    outstandingPaise: owed.reduce((t, r) => t + r.owedPaise, 0),
-    outstandingCount: owed.length,
-    oldestOwedDays: owed.length ? owed[0].daysOld : null,
+    outstandingPaise: owed.owedPaise,
+    outstandingCount: owed.count,
+    oldestOwedDays: oldest?.issuedAt
+      ? Math.floor((now.getTime() - new Date(oldest.issuedAt).getTime()) / 86_400_000)
+      : null,
     customers,
     dealers,
     followUpsDue: followUps,

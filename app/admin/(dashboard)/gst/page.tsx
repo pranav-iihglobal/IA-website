@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requirePageAccess } from "@/lib/admin/page-guard";
-import { invoicesForPeriod } from "@/lib/erp/reports";
+import { invoicesForPeriod, sampleInvoicesInPeriod } from "@/lib/erp/reports";
 import { buildGstReturn } from "@/lib/erp/gst";
 import { formatRate } from "@/lib/erp/tax";
 import { formatINR, formatRupees } from "@/lib/money";
@@ -31,7 +31,10 @@ export default async function GstPage({
   const year = Number(sp.year) || now.getFullYear();
   const month = Number(sp.month) || now.getMonth() + 1;
 
-  const built = buildGstReturn(await invoicesForPeriod(year, month));
+  const [built, sampleCount] = await Promise.all([
+    invoicesForPeriod(year, month).then(buildGstReturn),
+    sampleInvoicesInPeriod(year, month),
+  ]);
   const stamp = `year=${year}&month=${month}`;
   const empty = built.b2b.length === 0 && built.b2cs.length === 0;
 
@@ -58,6 +61,22 @@ export default async function GstPage({
         <Figure label="IGST" value={formatRupees(built.totals.igstPaise)} />
         <Figure label="Invoice value" value={formatRupees(built.totals.invoiceValuePaise)} />
       </section>
+
+      {/*
+        Said out loud. The return excludes seeded invoices, so its totals will
+        not match the invoice list while sample data is present — and an
+        unexplained difference on a filing document invites someone to "fix"
+        the wrong one.
+      */}
+      {sampleCount > 0 && (
+        <p className="admin-card px-4 py-2.5 text-sm text-ink">
+          <strong className="font-semibold">
+            {sampleCount} sample invoice{sampleCount === 1 ? "" : "s"} excluded.
+          </strong>{" "}
+          Seeded data never appears in a GST return. That is why the totals here
+          are lower than the invoice list for this month.
+        </p>
+      )}
 
       {built.excludedCancelled > 0 && (
         <p className="admin-card px-4 py-2.5 text-sm text-ink">

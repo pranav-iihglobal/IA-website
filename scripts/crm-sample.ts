@@ -18,6 +18,7 @@
 import { loadEnv } from "./load-env";
 import { connectToDatabase } from "../lib/db/connect";
 import { Contact } from "../lib/db/models/Contact";
+import { Invoice } from "../lib/db/models/Invoice";
 import { buildContacts } from "./crm-sample-data";
 
 loadEnv();
@@ -36,7 +37,25 @@ async function main() {
     const { deletedCount } = await Contact.deleteMany({ isSample: true });
     console.log(`\n  Deleted ${deletedCount} sample contacts.`);
     const remaining = await Contact.countDocuments({});
-    console.log(`  ${remaining} contacts remain (none of them sample).\n`);
+    console.log(`  ${remaining} contacts remain (none of them sample).`);
+
+    /*
+      Told, not cascaded.
+
+      Sample invoices point at sample contacts, so wiping only this side leaves
+      invoices whose customer no longer exists — nothing is lost, but the
+      profile pages break in a way that looks like a defect. Deleting across
+      scripts silently would be worse: a command called "wipe contacts" should
+      not quietly remove invoices.
+    */
+    const orphans = await Invoice.countDocuments({ isSample: true });
+    if (orphans > 0) {
+      console.log(
+        `\n  ⚠ ${orphans} sample invoice${orphans === 1 ? "" : "s"} now point at ` +
+          `deleted contacts.\n    Run: npm run erp-sample -- wipe`,
+      );
+    }
+    console.log();
   } else if (command === "count" || command === "doctor") {
     /*
       Answers "why is the list empty" without guessing: it reports what the

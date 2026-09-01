@@ -102,7 +102,13 @@ export async function getBillableParties(): Promise<BillableParty[]> {
     await connectToDatabase();
     // Customers and dealers only. A lead has not bought anything, and offering
     // one here would invite raising an invoice against somebody who has not.
-    const docs = await Contact.find({ kind: "customer" })
+    /*
+      Real customers only. A seeded contact in this picker means a REAL invoice
+      can be raised against a fake person — and because the invoice snapshots
+      the party, it would look perfectly correct afterwards, right up until
+      `crm-sample -- wipe` deletes the contact it points at.
+    */
+    const docs = await Contact.find({ kind: "customer", isSample: { $ne: true } })
       .select("name businessName contactId village district channel dealer")
       .sort({ name: 1 })
       .limit(2000)

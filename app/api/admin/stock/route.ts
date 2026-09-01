@@ -31,7 +31,22 @@ export async function GET(request: NextRequest) {
 
     const items = await StockItem.find(filter).sort({ name: 1 }).limit(500).lean();
     return NextResponse.json({
-      items: (items as LeanDoc[]).map((d) => ({ ...d, id: String(d._id) })),
+      // Mapped, not spread — same reason as the purchases list.
+      items: (items as LeanDoc[]).map((d) => ({
+        id: String(d._id),
+        name: d.name ?? "",
+        sku: d.sku ?? "",
+        kind: d.kind ?? "finished",
+        unit: d.unit ?? "unit",
+        onHand: d.onHand ?? 0,
+        reorderLevel: d.reorderLevel ?? 0,
+        unitCostPaise: d.unitCostPaise ?? 0,
+        supplier: d.supplier ?? "",
+        location: d.location ?? "",
+        notes: d.notes ?? "",
+        countedAt: d.countedAt ? new Date(d.countedAt).toISOString() : null,
+        isSample: Boolean(d.isSample),
+      })),
       total: items.length,
     });
   } catch (error) {

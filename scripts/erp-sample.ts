@@ -170,7 +170,17 @@ async function main() {
         `${buys.deletedCount} purchases, ${counters.deletedCount} sample counters.`,
     );
     const realInvoices = await Invoice.countDocuments({ isSample: { $ne: true } });
-    console.log(`  ${realInvoices} real invoices remain, untouched.\n`);
+    console.log(`  ${realInvoices} real invoices remain, untouched.`);
+
+    // The other half of the sample set, so it is not forgotten about.
+    const contacts = await Contact.countDocuments({ isSample: true });
+    if (contacts > 0) {
+      console.log(
+        `\n  ${contacts} sample contact${contacts === 1 ? "" : "s"} are still there.` +
+          `\n    Run: npm run crm-sample -- wipe`,
+      );
+    }
+    console.log();
   } else if (command === "seed") {
     const count = Math.max(1, Number(arg) || 60);
     // Replaces the previous sample set rather than stacking on it.
