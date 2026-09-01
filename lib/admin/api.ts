@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { currentActiveUser } from "@/lib/auth/current-user";
 import type { ActiveUser } from "@/lib/auth/users";
 import { can, ROLE_LABELS, type Permission } from "@/lib/auth/permissions";
+import { diffFields, recordAudit } from "@/lib/db/models/AuditLog";
 
 /**
  * Shared helpers for admin API route handlers.
@@ -150,4 +151,34 @@ export function revalidateTestimonials() {
 export function revalidatePost(slug?: string) {
   revalidatePath("/learn");
   if (slug) revalidatePath(`/learn/${slug}`);
+}
+
+/**
+ * Record a change, without every route repeating the same six lines.
+ *
+ * Wraps recordAudit() with the two things a route always has to supply and
+ * always supplies the same way: the actor from the verified session, and the
+ * diff rather than two whole documents.
+ *
+ * Never throws — recordAudit() does not, and a failed audit write must not
+ * roll back the change it describes.
+ */
+export async function auditChange(entry: {
+  action: string;
+  entity: string;
+  entityId: string;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+  note?: string;
+}): Promise<void> {
+  const { before, after } = diffFields(entry.before, entry.after);
+  await recordAudit({
+    actor: await currentEditor(),
+    action: entry.action,
+    entity: entry.entity,
+    entityId: entry.entityId,
+    before,
+    after,
+    note: entry.note,
+  });
 }

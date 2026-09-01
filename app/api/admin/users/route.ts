@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { isValidObjectId } from "mongoose";
 import { connectToDatabase } from "@/lib/db/connect";
 import { User } from "@/lib/db/models/User";
-import { currentUser, requirePermission } from "@/lib/admin/api";
+import { auditChange, currentUser, requirePermission } from "@/lib/admin/api";
 import {
   countActiveOwners,
   listUsers,
@@ -132,6 +132,19 @@ export async function POST(request: Request) {
       addedBy: me.email,
     });
 
+    /*
+      Access changes matter more than content changes, not less. Who was let
+      in, by whom, and with what — this is the log entry somebody will
+      eventually need, and it was the one module writing nothing at all.
+    */
+    await auditChange({
+      action: "create",
+      entity: "User",
+      entityId: String(created._id),
+      after: { email, role: parsed.data.role, modules: set },
+      note: `added by ${me.email}`,
+    });
+
     return NextResponse.json(
       { id: String(created._id), email: created.email },
       { status: 201 },
@@ -234,6 +247,15 @@ export async function PATCH(request: Request) {
           : {}),
       },
     );
+
+    await auditChange({
+      action: "update",
+      entity: "User",
+      entityId: id,
+      before: target as Record<string, unknown> | null,
+      after: { ...update, cleared },
+    });
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[users] update failed", error);
@@ -286,6 +308,15 @@ export async function DELETE(request: Request) {
     }
 
     await User.deleteOne({ _id: id });
+
+    // Revoking access leaves no other trace once the row is gone.
+    await auditChange({
+      action: "delete",
+      entity: "User",
+      entityId: id,
+      before: { email: target.email, role: target.role },
+    });
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[users] delete failed", error);

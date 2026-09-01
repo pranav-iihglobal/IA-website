@@ -10,6 +10,7 @@ import {
   fieldErrors,
   requirePermission,
   revalidateProduct,
+  auditChange,
 } from "@/lib/admin/api";
 
 export const runtime = "nodejs";
@@ -91,6 +92,13 @@ export async function POST(request: NextRequest) {
       updatedBy: await currentEditor(),
     });
     revalidateProduct(created.slug);
+
+    await auditChange({
+      action: "create",
+      entity: "Product",
+      entityId: String(created._id),
+      after: { name: parsed.data.name?.en, sku: parsed.data.sku, gstRateBps: parsed.data.gstRateBps },
+    });
 
     return NextResponse.json({ id: String(created._id) }, { status: 201 });
   } catch (error) {

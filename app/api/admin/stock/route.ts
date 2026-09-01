@@ -9,6 +9,7 @@ import {
   errorResponse,
   fieldErrors,
   requirePermission,
+  auditChange,
 } from "@/lib/admin/api";
 
 export const runtime = "nodejs";
@@ -74,6 +75,13 @@ export async function POST(request: NextRequest) {
       isSample: false,
       updatedBy: await currentEditor(),
     });
+    await auditChange({
+      action: "create",
+      entity: "StockItem",
+      entityId: String(created._id),
+      after: parsed.data as Record<string, unknown>,
+    });
+
     return NextResponse.json({ id: String(created._id) }, { status: 201 });
   } catch (error) {
     return errorResponse(error);

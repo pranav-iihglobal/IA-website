@@ -8,6 +8,7 @@ import {
   errorResponse,
   fieldErrors,
   requirePermission,
+  auditChange,
 } from "@/lib/admin/api";
 
 export const runtime = "nodejs";
@@ -52,12 +53,24 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
 
     await connectToDatabase();
+    // Read first, so the audit entry can say what actually changed rather
+    // than restating the whole document.
+    const before = await StockItem.findById(id).lean();
     const updated = await StockItem.findByIdAndUpdate(
       id,
       { ...parsed.data, updatedBy: await currentEditor() },
       { returnDocument: "after", runValidators: true },
     );
     if (!updated) return badId();
+
+    await auditChange({
+      action: "update",
+      entity: "StockItem",
+      entityId: id,
+      before: before as Record<string, unknown> | null,
+      after: parsed.data as Record<string, unknown>,
+    });
+
     return NextResponse.json({ id: String(updated._id) });
   } catch (error) {
     return errorResponse(error);
@@ -74,6 +87,19 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     await connectToDatabase();
     const deleted = await StockItem.findByIdAndDelete(id);
     if (!deleted) return badId();
+
+    /*
+      The deleted document goes in as `before` with no `after`. It is the only
+      record that it ever existed — the row is gone and the log is append-only,
+      so this entry is the whole history.
+    */
+    await auditChange({
+      action: "delete",
+      entity: "StockItem",
+      entityId: id,
+      before: deleted.toObject() as Record<string, unknown>,
+    });
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     return errorResponse(error);

@@ -10,6 +10,7 @@ import {
   errorResponse,
   fieldErrors,
   requirePermission,
+  auditChange,
 } from "@/lib/admin/api";
 
 export const runtime = "nodejs";
@@ -72,6 +73,19 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         { returnDocument: "after" },
       ).lean();
       if (!updated) return badId();
+
+      /*
+        Logged as an append rather than a diff. The note itself is the whole
+        change, and diffing a growing array would record the entire call
+        history on every single call.
+      */
+      await auditChange({
+        action: "note",
+        entity: "Contact",
+        entityId: id,
+        after: { note: parsedNote.data.body },
+      });
+
       return NextResponse.json({ ok: true, notes: (updated as LeanDoc).notes ?? [] });
     }
 
@@ -87,6 +101,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
 
     await connectToDatabase();
+    // Read first, so the audit entry holds the change rather than the record.
+    const before = await Contact.findById(id).lean();
     const updated = await Contact.findByIdAndUpdate(
       id,
       {
@@ -102,6 +118,14 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       { returnDocument: "after", runValidators: true },
     );
     if (!updated) return badId();
+
+    await auditChange({
+      action: "update",
+      entity: "Contact",
+      entityId: id,
+      before: before as Record<string, unknown> | null,
+      after: parsed.data as Record<string, unknown>,
+    });
 
     return NextResponse.json({ id: String(updated._id) });
   } catch (error) {
@@ -139,6 +163,15 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     }
 
     const doc = await Contact.findByIdAndDelete(id).lean();
+    if (doc) {
+      // The only surviving record that this person was ever here.
+      await auditChange({
+        action: "delete",
+        entity: "Contact",
+        entityId: id,
+        before: doc as Record<string, unknown>,
+      });
+    }
     if (!doc) return badId();
     return NextResponse.json({ ok: true });
   } catch (error) {

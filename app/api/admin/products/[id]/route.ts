@@ -12,6 +12,7 @@ import {
   fieldErrors,
   requirePermission,
   revalidateProduct,
+  auditChange,
 } from "@/lib/admin/api";
 
 /**
@@ -105,6 +106,20 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     );
     if (!updated) return badId();
 
+    /*
+      Products carry the GST rate and HSN every invoice line snapshots at
+      issue. "Who changed the rate, and when" is exactly the question this log
+      exists to answer — the invoice was already covered; the record that fed
+      it was not.
+    */
+    await auditChange({
+      action: "update",
+      entity: "Product",
+      entityId: id,
+      before: previous as Record<string, unknown> | null,
+      after: parsed.data as Record<string, unknown>,
+    });
+
     // Remove Cloudinary assets this edit dropped — images and PDFs alike.
     const kept = new Set(
       referencedAssets(updated.toObject() as LeanDoc).map((a) => a.publicId),
@@ -153,6 +168,14 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     }
 
     const doc = await Product.findByIdAndDelete(id).lean();
+    if (doc) {
+      await auditChange({
+        action: "delete",
+        entity: "Product",
+        entityId: id,
+        before: doc as Record<string, unknown>,
+      });
+    }
     if (!doc) return badId();
 
     await deleteTypedAssets(referencedAssets(doc as LeanDoc));
