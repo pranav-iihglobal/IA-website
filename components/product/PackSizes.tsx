@@ -1,14 +1,15 @@
 import { T } from "@/components/T";
 import { UI } from "@/lib/content";
 import type { PublicPackSize } from "@/lib/db/queries";
+import { formatRupees } from "@/lib/money";
 
 /**
  * What you can buy, and what it costs.
  *
  * The admin has collected pack sizes and MRPs since the beginning and no
  * public page ever showed them — the field projection excluded the whole
- * subtree because `dealerPrice` lives on it. The dealer price is stripped in
- * lib/db/queries.ts now, so the MRP can be shown without it.
+ * subtree because what IKSARVA pays and charges lives on it. Those are
+ * stripped in lib/db/queries.ts now, so the MRP can be shown without them.
  *
  * MRP is a maximum, not a price we set, so it is labelled as one. A pack with
  * no price simply omits the figure rather than showing a blank column — a
@@ -16,7 +17,7 @@ import type { PublicPackSize } from "@/lib/db/queries";
  */
 export function PackSizes({ sizes }: { sizes: PublicPackSize[] }) {
   if (sizes.length === 0) return null;
-  const anyPriced = sizes.some((s) => typeof s.mrp === "number");
+  const anyPriced = sizes.some((s) => typeof s.mrpPaise === "number");
 
   return (
     <section className="mt-12">
@@ -38,9 +39,9 @@ export function PackSizes({ sizes }: { sizes: PublicPackSize[] }) {
                 {size.netQuantity} {size.unit}
               </p>
             )}
-            {typeof size.mrp === "number" && (
+            {typeof size.mrpPaise === "number" && (
               <p className="mt-2 text-sm font-semibold text-alloy-dark">
-                ₹{size.mrp.toLocaleString("en-IN")}
+                {formatRupees(size.mrpPaise)}
               </p>
             )}
           </li>

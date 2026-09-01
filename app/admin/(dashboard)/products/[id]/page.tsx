@@ -14,8 +14,20 @@ import {
 } from "@/lib/admin/products-options";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
+import { paiseToRupeeString } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * A stored price, as the form should show it.
+ *
+ * Blank for an unset price rather than "0". They are different facts — one
+ * means nobody has decided, the other means free — and collapsing them here
+ * would write a zero price back on the next save.
+ */
+function rupeesOrBlank(paise: unknown): string {
+  return typeof paise === "number" ? paiseToRupeeString(paise) : "";
+}
 
 /** Merge a stored document onto the empty shape so new fields never crash. */
 function toFormValues(doc: LeanDoc): ProductFormValues {
@@ -43,17 +55,25 @@ function toFormValues(doc: LeanDoc): ProductFormValues {
     cropsNote: bi(doc.cropsNote),
     sku: doc.sku ?? "",
     hsnCode: doc.hsnCode ?? "",
-    gstRatePercent: doc.gstRatePercent ?? 0,
+    // Stored as basis points, edited as a percentage. See lib/schemas.ts.
+    gstRatePercent: (doc.gstRateBps ?? 0) / 100,
     composition: (doc.composition ?? []).map((c: LeanDoc) => ({
       ingredient: c.ingredient ?? "",
       quantity: c.quantity ?? "",
     })),
+    /*
+      Paise back out to rupees, because that is what people type. Blank stays
+      blank rather than becoming "0" — an unpriced pack must not look free,
+      and saving would then write a zero price that nobody chose.
+    */
     packSizes: (doc.packSizes ?? []).map((p: LeanDoc) => ({
       label: p.label ?? "",
       netQuantity: p.netQuantity ?? "",
       unit: p.unit ?? "g",
-      mrp: p.mrp ?? "",
-      dealerPrice: p.dealerPrice ?? "",
+      mrp: rupeesOrBlank(p.mrpPaise),
+      farmerPrice: rupeesOrBlank(p.farmerPricePaise),
+      dealerPrice: rupeesOrBlank(p.dealerPricePaise),
+      cost: rupeesOrBlank(p.costPaise),
     })),
     regulatory: {
       fcoCompliant: Boolean(doc.regulatory?.fcoCompliant),

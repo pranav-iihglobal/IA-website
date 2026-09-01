@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Bi } from "@/lib/content";
 import { slugify } from "@/lib/schemas";
+import { rupeesToPaise } from "@/lib/money";
+import { describeMargin } from "@/lib/erp/margin";
 import { ProductCard } from "@/components/ProductCard";
 import { ImageUploader, type AdminImage } from "./ImageUploader";
 import { FileUploader, type AdminAsset } from "./FileUploader";
@@ -57,8 +59,11 @@ export interface ProductFormValues {
     label: string;
     netQuantity?: number | string;
     unit: string;
+    /* Typed in RUPEES. lib/schemas.ts converts to paise on save. */
     mrp?: number | string;
+    farmerPrice?: number | string;
     dealerPrice?: number | string;
+    cost?: number | string;
   }[];
   regulatory: { fcoCompliant: boolean; fcoSchedule: string; licenseNo: string };
 
@@ -129,6 +134,40 @@ export const EMPTY_PRODUCT: ProductFormValues = {
   featured: false,
   displayOrder: 0,
 };
+
+/**
+ * What each pack earns, live as the prices are typed.
+ *
+ * Derived on every render rather than stored: a margin saved onto the product
+ * would be wrong the moment a cost changed, and nobody would notice.
+ *
+ * Both prices are shown because they are genuinely different businesses — a
+ * dealer sale at a lower price can still be the better one on volume, and
+ * that is a judgement only a director can make with both numbers in front of
+ * them.
+ */
+function PackMargins({
+  pack,
+}: {
+  pack: { farmerPrice?: number | string; dealerPrice?: number | string; cost?: number | string };
+}) {
+  const paise = (value: number | string | undefined) =>
+    value === "" || value === undefined ? null : rupeesToPaise(value);
+
+  const cost = paise(pack.cost);
+  const farmer = describeMargin(paise(pack.farmerPrice), cost);
+  const dealer = describeMargin(paise(pack.dealerPrice), cost);
+  if (!farmer && !dealer) return null;
+
+  return (
+    <p className="col-span-full text-xs font-semibold text-ink-soft">
+      Margin:{" "}
+      {[farmer && `farmer ${farmer}`, dealer && `dealer ${dealer}`]
+        .filter(Boolean)
+        .join("  ·  ")}
+    </p>
+  );
+}
 
 export function ProductForm({
   initial,
@@ -208,11 +247,14 @@ export function ProductForm({
               ? undefined
               : Number(values.dosage.amountPerAcre),
         },
+        /*
+          Prices go over as typed. They are rupee strings, and the ONLY place
+          they become paise is rupeeField() in lib/schemas.ts — converting
+          here as well would be a second conversion to keep in step.
+        */
         packSizes: values.packSizes.map((p) => ({
           ...p,
           netQuantity: p.netQuantity === "" ? undefined : Number(p.netQuantity),
-          mrp: p.mrp === "" ? undefined : Number(p.mrp),
-          dealerPrice: p.dealerPrice === "" ? undefined : Number(p.dealerPrice),
         })),
       };
 
@@ -831,7 +873,15 @@ export function ProductForm({
                   onAdd={() =>
                     update("packSizes", [
                       ...values.packSizes,
-                      { label: "", netQuantity: "", unit: "g", mrp: "", dealerPrice: "" },
+                      {
+                        label: "",
+                        netQuantity: "",
+                        unit: "g",
+                        mrp: "",
+                        farmerPrice: "",
+                        dealerPrice: "",
+                        cost: "",
+                      },
                     ])
                   }
                   onRemove={(i) =>
@@ -890,6 +940,20 @@ export function ProductForm({
                         }
                       />
                       <TextField
+                        label="Farmer ₹"
+                        type="number"
+                        hint="What a farmer actually pays. Usually below MRP."
+                        value={values.packSizes[i].farmerPrice ?? ""}
+                        onChange={(v) =>
+                          update(
+                            "packSizes",
+                            values.packSizes.map((p, idx) =>
+                              idx === i ? { ...p, farmerPrice: v } : p,
+                            ),
+                          )
+                        }
+                      />
+                      <TextField
                         label="Dealer ₹"
                         type="number"
                         value={values.packSizes[i].dealerPrice ?? ""}
@@ -902,6 +966,21 @@ export function ProductForm({
                           )
                         }
                       />
+                      <TextField
+                        label="Cost ₹"
+                        type="number"
+                        hint="What the pack costs to make and fill. Never shown publicly."
+                        value={values.packSizes[i].cost ?? ""}
+                        onChange={(v) =>
+                          update(
+                            "packSizes",
+                            values.packSizes.map((p, idx) =>
+                              idx === i ? { ...p, cost: v } : p,
+                            ),
+                          )
+                        }
+                      />
+                      <PackMargins pack={values.packSizes[i]} />
                     </div>
                   )}
                 />

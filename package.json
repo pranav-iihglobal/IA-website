@@ -16,6 +16,7 @@
     "icons": "tsx scripts/generate-icons.ts",
     "check-models": "tsx scripts/check-models.ts",
     "check-erp": "tsx scripts/check-erp.ts",
+    "migrate-product-money": "tsx scripts/migrate-product-money.ts",
     "users": "tsx scripts/users.ts",
     "crm-sample": "tsx scripts/crm-sample.ts"
   },

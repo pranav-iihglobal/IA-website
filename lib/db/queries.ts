@@ -12,11 +12,11 @@ import type { Bi } from "@/lib/content";
  * Mongoose documents) so results can cross the server/client boundary.
  *
  * Field projections are explicit and deliberately narrow. `packSizes` IS
- * selected — a farmer needs to know what a pack costs — but `dealerPrice`
- * lives inside it and is stripped in toPublicProduct, never by omission from
- * the projection. Dropping the whole subtree would have been safer and also
- * would have hidden the MRP, so the removal is done once, explicitly, where
- * it can be read.
+ * selected — a farmer needs to know what a pack costs — but the farmer price,
+ * dealer price and cost live inside it and are stripped in toPublicProduct,
+ * never by omission from the projection. Dropping the whole subtree would
+ * have been safer and also would have hidden the MRP, so the removal is done
+ * once, explicitly, where it can be read.
  */
 
 /**
@@ -26,7 +26,7 @@ import type { Bi } from "@/lib/content";
  * silently renders blank, which is exactly how several admin fields ended up
  * being editable but invisible.
  *
- * `sku`, `hsnCode` and `gstRatePercent` stay out on purpose: they are for
+ * `sku`, `hsnCode` and `gstRateBps` stay out on purpose: they are for
  * invoices, not for farmers.
  */
 const PUBLIC_PRODUCT_FIELDS =
@@ -44,8 +44,11 @@ export interface PublicPackSize {
   label: string;
   netQuantity?: number;
   unit: string;
-  /** Maximum retail price. dealerPrice is deliberately absent. */
-  mrp?: number;
+  /**
+   * Maximum retail price, in PAISE. The farmer price, dealer price and cost
+   * on the same subdocument are deliberately absent.
+   */
+  mrpPaise?: number;
 }
 
 export interface PublicComposition {
@@ -263,9 +266,9 @@ function toPublicProduct(doc: any): PublicProduct {
     availabilityNote: bi(doc.availabilityNote),
 
     /*
-      Rebuilt field by field rather than spread. dealerPrice sits on the same
-      subdocument as mrp, and a spread would carry it to the browser the
-      moment anyone added it to the projection.
+      Rebuilt field by field rather than spread. What IKSARVA pays and charges
+      — farmer price, dealer price, cost — sits on the same subdocument as the
+      MRP, and a spread would carry all of it to the browser.
     */
     packSizes: (doc.packSizes ?? [])
       .filter((p: any) => p?.label)
@@ -273,7 +276,7 @@ function toPublicProduct(doc: any): PublicProduct {
         label: p.label,
         netQuantity: p.netQuantity ?? undefined,
         unit: p.unit ?? "g",
-        mrp: p.mrp ?? undefined,
+        mrpPaise: p.mrpPaise ?? undefined,
       })),
     composition: (doc.composition ?? [])
       .filter((c: any) => c?.ingredient)

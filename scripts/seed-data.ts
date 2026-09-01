@@ -69,7 +69,8 @@ export function buildProductDocs() {
       cropsNote: bi(p.crops),
       sku: "",
       hsnCode: "",
-      gstRatePercent: 0,
+      // Storage shape: seed.ts writes these straight to Mongo. Basis points.
+      gstRateBps: 0,
       composition: [] as { ingredient: string; quantity: string }[],
       packSizes: PACK_SIZES_BY_SLUG[p.slug] ?? [],
       regulatory: {

@@ -25,6 +25,7 @@ npm run dev                    # http://localhost:3000  ·  admin at /admin
 | `npm run check-models` | Validates every Mongoose model against a minimal document — no database needed |
 | `npm test` | Unit tests for the money, GST and query logic — no database needed |
 | `npm run check-erp` | Proves invoice numbering is atomic and the audit log is append-only — needs a real cluster |
+| `npm run migrate-product-money` | One-off: product prices → paise, GST → basis points. Dry run; add `-- --apply` to write |
 | `npm run crm-sample -- doctor` | Reports what the contacts collection actually holds, and any leftover index |
 
 ## Money and GST
@@ -56,6 +57,18 @@ otherwise both get the same number, and a duplicate number on a filed invoice is
 not something you fix afterwards. The historical import seeds each month's
 counter with `$max`, so re-running it can never drag the sequence back onto
 numbers already issued.
+
+**Product prices are integer paise and the GST rate is basis points**
+(`lib/db/models/Product.ts`). Per pack: `mrpPaise` (public), plus
+`farmerPricePaise`, `dealerPricePaise` and `costPaise`, which are commercially
+sensitive and stripped in `lib/db/queries.ts` rather than merely left out of a
+projection. Margin is **derived** (`lib/erp/margin.ts`), never stored — a saved
+margin is wrong the moment a cost changes.
+
+The admin form still speaks rupees and percentages, because that is what people
+type. `lib/schemas.ts` is the **only** place the conversion happens, in
+`rupeeField()` and the transform at the end of `productSchema`. Do not convert
+anywhere else: a second conversion is a second thing to keep in step.
 
 **The audit log is append-only** (`lib/db/models/AuditLog.ts`). No update path,
 no delete path, deliberately — a trail that can be rewritten is not a trail. It

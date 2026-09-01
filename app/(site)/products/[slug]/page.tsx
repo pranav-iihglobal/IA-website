@@ -3,6 +3,7 @@ import { LocaleLink as Link } from "@/components/LocaleLink";
 import { notFound } from "next/navigation";
 import { MISC, SITE, UI, navLabel, resolveText, type Lang } from "@/lib/content";
 import { CLD, cldUrl } from "@/lib/images";
+import { paiseToRupeeString } from "@/lib/money";
 import {
   getDisplayProduct,
   getDisplayProductSlugs,
@@ -63,9 +64,9 @@ export default async function ProductPage({
     .map((i) => cldUrl(i.url, CLD.productDetail))
     .filter(Boolean) as string[];
   const outOfStock = product.availability === "out_of_stock";
-  /** MRPs of the packs that actually carry one. */
+  /** MRPs of the packs that actually carry one, in paise. */
   const pricedPacks = product.packSizes
-    .map((pack) => pack.mrp)
+    .map((pack) => pack.mrpPaise)
     .filter((mrp): mrp is number => typeof mrp === "number" && mrp > 0);
 
   /*
@@ -102,8 +103,14 @@ export default async function ProductPage({
       ? {
           "@type": "AggregateOffer",
           priceCurrency: "INR",
-          lowPrice: Math.min(...pricedPacks),
-          highPrice: Math.max(...pricedPacks),
+          /*
+            schema.org wants a decimal amount in the stated currency, so these
+            are the only place on this page that leaves paise — as a plain
+            "1234.56" string rather than a formatted one, since a rich result
+            is parsed by a machine and ₹ and commas would break it.
+          */
+          lowPrice: paiseToRupeeString(Math.min(...pricedPacks)),
+          highPrice: paiseToRupeeString(Math.max(...pricedPacks)),
           offerCount: pricedPacks.length,
           availability: outOfStock
             ? "https://schema.org/OutOfStock"

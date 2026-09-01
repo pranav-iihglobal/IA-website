@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { LEVELS, ROLES } from "@/lib/auth/permissions";
+import { rupeesToPaise } from "@/lib/money";
 
 /**
  * Shared zod schemas — the single source of truth for validation on BOTH the
@@ -37,14 +38,55 @@ export const imageSchema = z.object({
 /* PRODUCT                                                                    */
 /* ========================================================================== */
 
-export const packSizeSchema = z.object({
-  label: z.string().trim().min(1, "Pack label is required"),
-  netQuantity: z.coerce.number().min(0).optional(),
-  unit: z.string().trim().default("g"),
-  mrp: z.coerce.number().min(0).optional(),
-  /** Admin-only; never returned by public queries. */
-  dealerPrice: z.coerce.number().min(0).optional(),
-});
+/**
+ * A rupee amount typed into a form, stored as integer paise.
+ *
+ * THE ONLY PLACE rupees become paise. People type rupees — that is what is on
+ * the pack and in their heads — and everything past this line is an integer,
+ * so no float ever reaches the database or an invoice. See lib/money.ts.
+ *
+ * Blank stays blank rather than becoming zero: a price nobody has set and a
+ * price of nothing are different facts, and collapsing them would quietly
+ * make an unpriced pack free.
+ */
+function rupeeField(label: string) {
+  return z
+    .union([z.string(), z.number(), z.null()])
+    .optional()
+    .transform((value, ctx) => {
+      if (value === null || value === undefined || value === "") return undefined;
+      const paise = rupeesToPaise(value);
+      if (paise === null) {
+        ctx.addIssue({ code: "custom", message: `${label} must be a number` });
+        return z.NEVER;
+      }
+      if (paise < 0) {
+        ctx.addIssue({ code: "custom", message: `${label} cannot be negative` });
+        return z.NEVER;
+      }
+      return paise;
+    });
+}
+
+export const packSizeSchema = z
+  .object({
+    label: z.string().trim().min(1, "Pack label is required"),
+    netQuantity: z.coerce.number().min(0).optional(),
+    unit: z.string().trim().default("g"),
+    mrp: rupeeField("MRP"),
+    /** All three are admin-only; never returned by public queries. */
+    farmerPrice: rupeeField("Farmer price"),
+    dealerPrice: rupeeField("Dealer price"),
+    cost: rupeeField("Cost"),
+  })
+  // Renamed on the way out, so the stored name always says its unit.
+  .transform(({ mrp, farmerPrice, dealerPrice, cost, ...rest }) => ({
+    ...rest,
+    mrpPaise: mrp,
+    farmerPricePaise: farmerPrice,
+    dealerPricePaise: dealerPrice,
+    costPaise: cost,
+  }));
 
 export const compositionItemSchema = z.object({
   ingredient: z.string().trim().min(1, "Ingredient is required"),
@@ -144,7 +186,17 @@ export const productSchema = z.object({
 
   sku: z.string().trim().default(""),
   hsnCode: z.string().trim().default(""),
-  gstRatePercent: z.coerce.number().min(0).max(100).default(0),
+  /*
+    Typed as a percentage — 5, 2.5, 18 — because that is how a GST rate is
+    written and spoken. Stored as basis points by the transform at the end of
+    this schema, because 2.5% cannot be an integer percentage and the invoice
+    engine will not take a float.
+  */
+  gstRatePercent: z.coerce
+    .number()
+    .min(0, "GST rate cannot be negative")
+    .max(100, "GST rate cannot be over 100%")
+    .default(0),
   composition: z.array(compositionItemSchema).default([]),
   packSizes: z.array(packSizeSchema).default([]),
   regulatory: z
@@ -175,7 +227,18 @@ export const productSchema = z.object({
   status: z.enum(["draft", "published"]).default("draft"),
   featured: z.boolean().default(false),
   displayOrder: z.coerce.number().default(0),
-});
+})
+  /*
+    The unit boundary, mirroring what rupeeField does for prices: the form
+    speaks percentages, the database speaks basis points, and the translation
+    happens once, here, rather than in each route that saves a product.
+
+    Rounded, so 2.5 becomes exactly 250 rather than 249.99999999999997.
+  */
+  .transform(({ gstRatePercent, ...rest }) => ({
+    ...rest,
+    gstRateBps: Math.round(gstRatePercent * 100),
+  }));
 
 export type ProductInput = z.input<typeof productSchema>;
 export type ProductValues = z.output<typeof productSchema>;

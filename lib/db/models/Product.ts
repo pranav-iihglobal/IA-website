@@ -8,12 +8,14 @@ import { emptyBi, optionalBi, requiredBi } from "./bi";
  *  - DISPLAY fields (name, tagline, benefits, format, complianceNote …) drive
  *    the public pages and mirror what the site rendered when content lived in
  *    lib/content.ts, so the design stays pixel-identical.
- *  - STRUCTURED fields (sku, hsnCode, gstRatePercent, packSizes, composition,
- *    regulatory) exist so a future billing/invoicing feature can read
- *    everything it needs from the product document alone.
+ *  - STRUCTURED fields (sku, hsnCode, gstRateBps, packSizes, composition,
+ *    regulatory) exist so invoicing can read everything it needs from the
+ *    product document alone. Money is integer paise and the GST rate is
+ *    basis points, so nothing here is a float.
  *
- * `packSizes[].dealerPrice` is commercially sensitive: public queries must
- * never select it. See lib/db/queries.ts (PUBLIC_PRODUCT_FIELDS).
+ * `packSizes[]` carries the farmer price, dealer price and cost, all of
+ * which are commercially sensitive: public queries must never return them.
+ * See lib/db/queries.ts (toPublicProduct).
  */
 
 const imageSchema = new Schema(
@@ -27,14 +29,32 @@ const imageSchema = new Schema(
   { _id: false },
 );
 
+/**
+ * One pack of a product, and what it costs at each level.
+ *
+ * EVERY PRICE HERE IS INTEGER PAISE — see lib/money.ts. They were rupee
+ * floats, which is fine for printing "₹245" on a page and not fine at all for
+ * an invoice: ₹12.35 is 12.3499999999999996 in binary, and a grand total
+ * computed from floats stops agreeing with the sum of its own lines. Now that
+ * invoices read these numbers, they have to be exact.
+ *
+ * Only `mrpPaise` is public. The other three are what IKSARVA pays and
+ * charges, and they are stripped in lib/db/queries.ts rather than merely left
+ * out of a projection.
+ */
 const packSizeSchema = new Schema(
   {
     label: { type: String, required: true, trim: true },
     netQuantity: { type: Number, min: 0 },
     unit: { type: String, trim: true, default: "g" },
-    mrp: { type: Number, min: 0 },
-    /** Admin-only. Never expose on public routes. */
-    dealerPrice: { type: Number, min: 0 },
+    /** Maximum retail price, printed on the pack. Public. */
+    mrpPaise: { type: Number, min: 0 },
+    /** What a farmer actually pays — usually below MRP. Admin-only. */
+    farmerPricePaise: { type: Number, min: 0 },
+    /** What a dealer pays. Commercially sensitive; admin-only. */
+    dealerPricePaise: { type: Number, min: 0 },
+    /** What the pack costs to make and fill. Admin-only; drives margin. */
+    costPaise: { type: Number, min: 0 },
   },
   { _id: false },
 );
@@ -152,7 +172,16 @@ const productSchema = new Schema(
     // ---- billing-ready structured data ----
     sku: { type: String, trim: true, default: "" },
     hsnCode: { type: String, trim: true, default: "" },
-    gstRatePercent: { type: Number, min: 0, max: 100, default: 0 },
+    /**
+     * GST rate in BASIS POINTS — 500 is 5%, 250 is 2.5%, 1800 is 18%.
+     *
+     * Not a percentage, because GST has half-percent rates and a percentage
+     * would have to be a float. This is the ONE place a product's rate is
+     * recorded: every invoice line for this SKU reads it from here rather
+     * than having it typed on, so the rate can only ever be wrong in one
+     * place — and it is editable there.
+     */
+    gstRateBps: { type: Number, min: 0, max: 10_000, default: 0 },
     composition: {
       type: [
         new Schema(
