@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/db/connect";
 import { Product } from "@/lib/db/models/Product";
 import { productSchema } from "@/lib/schemas";
 import type { LeanDoc } from "@/lib/db/lean";
+import { searchRegex } from "@/lib/search";
 import {
   currentEditor,
   errorResponse,
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
     const filter: LeanDoc = {};
     if (status === "draft" || status === "published") filter.status = status;
     if (search) {
-      const rx = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      const rx = searchRegex(search);
       filter.$or = [{ "name.en": rx }, { "name.gu": rx }, { slug: rx }, { sku: rx }];
     }
 

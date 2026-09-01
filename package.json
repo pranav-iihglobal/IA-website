@@ -13,6 +13,7 @@
     "check-auth": "tsx scripts/check-auth.ts",
     "icons": "tsx scripts/generate-icons.ts",
     "check-models": "tsx scripts/check-models.ts",
+    "check-crm-filter": "tsx scripts/check-crm-filter.ts",
     "users": "tsx scripts/users.ts",
     "crm-sample": "tsx scripts/crm-sample.ts"
   },

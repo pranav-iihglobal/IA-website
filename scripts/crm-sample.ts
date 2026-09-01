@@ -41,7 +41,7 @@ async function main() {
     /*
       Answers "why is the list empty" without guessing: it reports what the
       collection actually holds, broken down by the exact filters the three
-      admin screens use, and whether the text index search depends on exists.
+      admin screens use, plus any leftover index that is no longer used.
     */
     const q: [string, Record<string, string>][] = [
       ["Customers  (kind=customer, channel=b2c)", { kind: "customer", channel: "b2c" }],
@@ -71,12 +71,23 @@ async function main() {
       }
     }
 
-    // Search silently returns nothing if the text index was never built.
+    /*
+      The text index is no longer used — search is a regex now, because a text
+      index matches whole words and nobody types whole words into a search
+      box. Mongoose never drops an index it stopped declaring, so on any
+      cluster seeded before that change one is still sitting there, costing
+      writes and serving nothing. Reported rather than dropped: this runs
+      against the live cluster, and surprise surgery on someone else's
+      database is not this script's call.
+    */
     const indexes = await Contact.collection.indexes();
-    const hasText = indexes.some((i) => Object.values(i.key).includes("text"));
-    console.log(`\n  Text index: ${hasText ? "present" : "MISSING — search will return nothing"}`);
-    if (!hasText) {
-      console.log("  Mongoose builds it on first connect; restart the app once.");
+    const staleIndexes = indexes.filter((i) => Object.values(i.key).includes("text"));
+    if (staleIndexes.length > 0) {
+      console.log("\n  Leftover text index — unused since search moved to regex.");
+      console.log("  Harmless, but it slows every write. Drop it when convenient:");
+      for (const index of staleIndexes) {
+        console.log(`    db.contacts.dropIndex("${index.name}")`);
+      }
     }
     console.log();
   } else if (command === "seed") {

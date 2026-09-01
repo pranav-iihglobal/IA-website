@@ -4,6 +4,7 @@ import { Post } from "@/lib/db/models/Post";
 import { postSchema } from "@/lib/schemas";
 import { sanitizeHtml } from "@/lib/sanitize";
 import type { LeanDoc } from "@/lib/db/lean";
+import { searchRegex } from "@/lib/search";
 import {
   currentEditor,
   errorResponse,
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
     const filter: LeanDoc = {};
     if (["draft", "published", "scheduled"].includes(status)) filter.status = status;
     if (search) {
-      const rx = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      const rx = searchRegex(search);
       filter.$or = [{ "title.en": rx }, { "title.gu": rx }, { slug: rx }];
     }
 

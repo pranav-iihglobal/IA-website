@@ -185,18 +185,21 @@ const contactSchema = new Schema(
 /*
   Search at 5,000+ rows.
 
-  A text index rather than a regex scan: the lists are searched by name,
-  business, village and district constantly, and a case-insensitive regex
-  cannot use an index at all — it reads every document. Phone is matched
-  separately as a prefix, which a plain index does serve.
+  There was a text index here, on the reasoning that a case-insensitive regex
+  cannot use an index and reads every document. True, and beside the point: a
+  text index tokenises and stems, so it matches WHOLE TERMS ONLY — typing
+  "Kher" found nothing, and a search box people type into is unusable that
+  way. Correctness first; the index was premature optimisation that cost the
+  requirement. See lib/crm/filter.ts.
+
+  What is left backs the queries that can actually use an index: the list
+  itself (kind + channel, sorted), the follow-up view, and the district
+  filter. Phone is matched as an anchored prefix against its own index.
+
+  Removing an index from this schema does NOT remove it from the database —
+  Mongoose only ever creates. `npm run crm-sample -- doctor` reports the
+  leftover one and prints the command to drop it.
 */
-contactSchema.index({
-  name: "text",
-  businessName: "text",
-  village: "text",
-  district: "text",
-  crop: "text",
-});
 contactSchema.index({ kind: 1, channel: 1, updatedAt: -1 });
 contactSchema.index({ kind: 1, "lead.followUpStatus": 1, followUpAt: 1 });
 contactSchema.index({ district: 1, kind: 1 });

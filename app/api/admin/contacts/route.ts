@@ -4,6 +4,7 @@ import { Contact } from "@/lib/db/models/Contact";
 import { contactSchema } from "@/lib/schemas";
 import type { LeanDoc } from "@/lib/db/lean";
 import { toContactRow } from "@/lib/crm/shape";
+import { buildFilter } from "@/lib/crm/filter";
 import {
   currentEditor,
   errorResponse,
@@ -15,51 +16,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 25;
-
-/**
- * Build the Mongo filter from the query string.
- *
- * Search deliberately does NOT use a case-insensitive regex across every
- * field: at five thousand contacts that scans the whole collection on every
- * keystroke. A phone lookup is an anchored prefix so the phone index serves
- * it; anything else goes through the text index declared on the model.
- */
-function buildFilter(params: URLSearchParams): LeanDoc {
-  const filter: LeanDoc = {};
-
-  const kind = params.get("kind");
-  if (kind === "lead" || kind === "customer") filter.kind = kind;
-
-  const channel = params.get("channel");
-  if (channel === "b2c" || channel === "b2b") filter.channel = channel;
-
-  const district = params.get("district");
-  if (district) filter.district = district;
-
-  const source = params.get("source");
-  if (source) filter.source = source;
-
-  const followUpStatus = params.get("followUpStatus");
-  if (followUpStatus) filter["lead.followUpStatus"] = followUpStatus;
-
-  // The "due" view: a follow-up date that has already passed.
-  if (params.get("due") === "1") {
-    filter.followUpAt = { $ne: null, $lte: new Date() };
-  }
-
-  const search = (params.get("search") ?? "").trim();
-  if (search) {
-    const digits = search.replace(/[\s-+()]/g, "");
-    if (/^\d{3,}$/.test(digits)) {
-      // Anchored, so it can use the phone index rather than scanning.
-      filter.phone = new RegExp(`^${digits}`);
-    } else {
-      filter.$text = { $search: search };
-    }
-  }
-
-  return filter;
-}
 
 export async function GET(request: NextRequest) {
   const unauthorized = await requirePermission("crm:read");
@@ -76,7 +32,7 @@ export async function GET(request: NextRequest) {
         .select(
           "contactId kind channel name businessName phone village taluka district region crop source owner followUpAt lastContactAt lead customer dealer isSample updatedAt updatedBy",
         )
-        .sort(filter.$text ? { score: { $meta: "textScore" } } : { updatedAt: -1 })
+        .sort({ updatedAt: -1 })
         .skip((page - 1) * PAGE_SIZE)
         .limit(PAGE_SIZE)
         .lean(),
