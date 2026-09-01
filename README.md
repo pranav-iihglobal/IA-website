@@ -240,6 +240,22 @@ The public site is unaffected either way — every page under `app/(site)` is
 statically generated with ISR and served from Vercel's global CDN, which is
 regional no matter where functions run.
 
+## Measurement
+
+Two Vercel packages, mounted in **different places on purpose**.
+
+- **Speed Insights** (`app/layout.tsx`, the root) measures the public site
+  **and** the admin. The admin routes are the ones worth watching — they were
+  the slow ones, and the Mumbai region pin should show up here as real TTFB
+  rather than something inferred from an `x-vercel-id` header.
+- **Web Analytics** (`app/(site)/layout.tsx`, public pages only) counts
+  visitors. It is deliberately NOT in the root layout: three directors
+  clicking around the admin all day would inflate the visitor count into a
+  number that describes us rather than our customers.
+
+Both are cookieless. Neither sets an identifier or follows anyone between
+sites, so no consent banner is required for them.
+
 ## Installable app (PWA)
 
 The site is installable — "Add to home screen" on a phone, or the install

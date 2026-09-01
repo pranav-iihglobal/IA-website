@@ -4,6 +4,7 @@ import { CursorFX } from "@/components/CursorFX";
 import { NavProgress } from "@/components/NavProgress";
 import { RouteTransition } from "@/components/RouteTransition";
 import { SITE, SOCIALS } from "@/lib/content";
+import { Analytics } from "@vercel/analytics/next";
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
@@ -59,6 +60,15 @@ export default function SiteLayout({
         <RouteTransition>{children}</RouteTransition>
       </main>
       <Footer />
+      {/*
+        Public pages only, not the root layout — so admin sessions are not
+        counted as visits. Otherwise "how many people looked at FloraMax"
+        would quietly include us looking at our own CRM.
+
+        Cookieless and per-page: no identifier is set and nothing here follows
+        a visitor between sites.
+      */}
+      <Analytics />
     </>
   );
 }

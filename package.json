@@ -29,6 +29,8 @@
     "@tiptap/react": "^3.30.3",
     "@tiptap/starter-kit": "^3.30.3",
     "@types/three": "^0.185.4",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "cloudinary": "^2.10.1",
     "gray-matter": "^4.0.3",
     "marked": "^18.0.9",

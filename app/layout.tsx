@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Anek_Gujarati, Montserrat, Noto_Sans_Gujarati } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ServiceWorker } from "@/components/ServiceWorker";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { appleTouchIcon, faviconPngs } from "@/lib/app-icons";
@@ -183,6 +184,20 @@ export default function RootLayout({
       <body className="flex min-h-screen flex-col">
         <LanguageProvider>{children}</LanguageProvider>
         <ServiceWorker />
+        {/*
+          Speed Insights sits in the ROOT layout, so it measures the admin as
+          well as the public site. Web Analytics deliberately does not — see
+          app/(site)/layout.tsx.
+
+          The asymmetry is the point. Analytics counts visitors, and three
+          directors clicking around the admin all day would inflate that into
+          a number that describes us rather than our customers. Speed Insights
+          measures how fast each route is, and the admin routes are precisely
+          the ones worth watching: they were the slow ones, and the Mumbai
+          region fix should be visible here as real TTFB rather than inferred
+          from an x-vercel-id header.
+        */}
+        <SpeedInsights />
       </body>
     </html>
   );
