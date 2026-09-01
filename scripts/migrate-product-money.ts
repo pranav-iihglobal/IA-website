@@ -29,6 +29,17 @@ loadEnv();
 
 const APPLY = process.argv.includes("--apply");
 
+/*
+  `npm run migrate-product-money --apply` does NOT reach this script — npm eats
+  the flag as one of its own and turns it into an environment variable. It runs
+  a dry run instead, looking exactly like the command that was asked for, which
+  is a poor way for a write-guarded script to behave.
+
+  So catch it and say what to type. The separator is easy to forget and
+  impossible to guess from the output.
+*/
+const SWALLOWED_BY_NPM = !APPLY && process.env.npm_config_apply !== undefined;
+
 /** A stored rupee amount as paise, or undefined if there was nothing there. */
 function paise(value: unknown): number | undefined {
   if (typeof value !== "number") return undefined;
@@ -44,6 +55,15 @@ async function main() {
   await connectToDatabase();
   const collection = Product.collection;
   const products = await collection.find({}).toArray();
+
+  if (SWALLOWED_BY_NPM) {
+    console.log(
+      "\n  You passed --apply, but npm kept it for itself.\n" +
+        "  It needs a -- separator to reach this script:\n\n" +
+        "      npm run migrate-product-money -- --apply\n\n" +
+        "  Showing the dry run instead.",
+    );
+  }
 
   console.log(
     `\n  ${APPLY ? "APPLYING" : "DRY RUN — nothing will be written"}\n` +
