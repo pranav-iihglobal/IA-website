@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { b2bCsv, b2csCsv, buildGstReturn, isB2B, type ExportableInvoice } from "./gst";
+import {
+  ASSUMED_UQC,
+  b2bCsv,
+  b2csCsv,
+  buildGstReturn,
+  buildHsnSummary,
+  hsnCsv,
+  isB2B,
+  type ExportableInvoice,
+} from "./gst";
 
 /**
  * The return the CA files from.
@@ -169,5 +178,79 @@ describe("the CSV the CA opens", () => {
   it("marks B2CS rows OE, as the portal expects", () => {
     const r = buildGstReturn([invoice()]);
     expect(b2csCsv(r.b2cs).split("\n")[1]).toMatch(/^OE,24,5,/);
+  });
+});
+
+describe("the HSN summary (Table 12)", () => {
+  const withHsn = (hsn: string, qty: number, taxable: number, bps = 500) => ({
+    hsn,
+    description: "FloraMax",
+    quantity: qty,
+    ...line(bps, taxable),
+  });
+
+  it("covers ALL supplies, registered and not", () => {
+    // Unlike B2B/B2CS, Table 12 does not split by GSTIN — it is one pass over
+    // everything, so a summary built from those two sections would be wrong.
+    const rows = buildHsnSummary([
+      invoice({ party: withGstin, lines: [withHsn("31010099", 5, rupees(1000))] }),
+      invoice({ number: "B", lines: [withHsn("31010099", 3, rupees(600))] }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].quantity).toBe(8);
+    expect(rows[0].taxableValuePaise).toBe(rupees(1600));
+  });
+
+  it("splits by rate as well as by HSN", () => {
+    const rows = buildHsnSummary([
+      invoice({
+        lines: [withHsn("31010099", 2, rupees(500)), withHsn("31010099", 1, rupees(400), 1800)],
+      }),
+    ]);
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.gstRateBps)).toEqual([500, 1800]);
+  });
+
+  it("excludes cancelled invoices, like every other section", () => {
+    const rows = buildHsnSummary([
+      invoice({ status: "cancelled", lines: [withHsn("31010099", 99, rupees(9000))] }),
+    ]);
+    expect(rows).toEqual([]);
+  });
+
+  it("reports total value as taxable plus tax", () => {
+    const rows = buildHsnSummary([
+      invoice({ lines: [withHsn("31010099", 1, rupees(1000))] }),
+    ]);
+    expect(rows[0].taxableValuePaise).toBe(rupees(1000));
+    expect(rows[0].totalValuePaise).toBe(rupees(1050));
+  });
+
+  it("does not invent an HSN for a line that has none", () => {
+    // Reported blank so the gap is visible on the return, rather than filled
+    // in with something plausible.
+    const rows = buildHsnSummary([
+      invoice({ lines: [{ ...line(500, rupees(100)), hsn: "", quantity: 1 }] }),
+    ]);
+    expect(rows[0].hsn).toBe("");
+  });
+
+  it("marks the unit as NOS, which is assumed rather than recorded", () => {
+    const rows = buildHsnSummary([
+      invoice({ lines: [withHsn("31010099", 1, rupees(100))] }),
+    ]);
+    expect(rows[0].uqc).toBe(ASSUMED_UQC);
+    expect(ASSUMED_UQC).toBe("NOS");
+  });
+
+  it("writes a CSV with rupees and a percentage rate", () => {
+    const rows = buildHsnSummary([
+      invoice({ lines: [withHsn("31010099", 4, rupees(2000))] }),
+    ]);
+    const csv = hsnCsv(rows);
+    expect(csv).toContain("31010099");
+    expect(csv).toContain("NOS");
+    expect(csv).toContain("2000.00");
+    expect(csv).not.toContain("₹");
   });
 });

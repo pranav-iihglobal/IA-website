@@ -61,6 +61,9 @@ export async function invoicesForPeriod(
     },
     grandTotalPaise: i.grandTotalPaise ?? 0,
     lines: (i.lines ?? []).map((l: LeanDoc) => ({
+      hsn: l.hsn ?? "",
+      description: l.description ?? "",
+      quantity: l.quantity ?? 0,
       gstRateBps: l.gstRateBps ?? 0,
       taxableValuePaise: l.taxableValuePaise ?? 0,
       cgstPaise: l.cgstPaise ?? 0,

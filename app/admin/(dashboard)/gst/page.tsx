@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { invoicesForPeriod, sampleInvoicesInPeriod } from "@/lib/erp/reports";
-import { buildGstReturn } from "@/lib/erp/gst";
+import { ASSUMED_UQC, buildGstReturn, buildHsnSummary } from "@/lib/erp/gst";
 import { formatRate } from "@/lib/erp/tax";
 import { formatINR, formatRupees } from "@/lib/money";
 import { SELLER } from "@/lib/content";
@@ -31,10 +31,12 @@ export default async function GstPage({
   const year = Number(sp.year) || now.getFullYear();
   const month = Number(sp.month) || now.getMonth() + 1;
 
-  const [built, sampleCount] = await Promise.all([
-    invoicesForPeriod(year, month).then(buildGstReturn),
+  const [invoices, sampleCount] = await Promise.all([
+    invoicesForPeriod(year, month),
     sampleInvoicesInPeriod(year, month),
   ]);
+  const built = buildGstReturn(invoices);
+  const hsn = buildHsnSummary(invoices);
   const stamp = `year=${year}&month=${month}`;
   const empty = built.b2b.length === 0 && built.b2cs.length === 0;
 
@@ -172,6 +174,59 @@ export default async function GstPage({
                 ))}
               </tbody>
             </table>
+          </section>
+
+          <section className="admin-card overflow-x-auto p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-display text-base font-bold text-ink-strong">
+                HSN summary — {hsn.length} row{hsn.length === 1 ? "" : "s"}
+              </h2>
+              {hsn.length > 0 && (
+                <Download href={`/api/admin/gst?${stamp}&section=hsn`} />
+              )}
+            </div>
+            <p className="mt-1 text-xs text-ink-soft">
+              Table 12. Covers <strong>all</strong> supplies together, registered
+              and unregistered — not the two sections above added up.
+            </p>
+            <table className="mt-3 w-full min-w-[640px] border-collapse">
+              <thead>
+                <tr className="border-b border-line">
+                  <th className={th}>HSN</th>
+                  <th className={th}>Description</th>
+                  <th className={th}>UQC</th>
+                  <th className={`${th} text-right`}>Qty</th>
+                  <th className={`${th} text-right`}>Rate</th>
+                  <th className={`${th} text-right`}>Taxable</th>
+                  <th className={`${th} text-right`}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hsn.map((r) => (
+                  <tr key={`${r.hsn}-${r.gstRateBps}`} className="border-b border-line-soft">
+                    <td className={`${td} font-mono text-xs`}>
+                      {r.hsn || <span className="text-cta">not set</span>}
+                    </td>
+                    <td className={td}>{r.description}</td>
+                    <td className={td}>{r.uqc}</td>
+                    <td className={num}>{r.quantity}</td>
+                    <td className={num}>{formatRate(r.gstRateBps)}</td>
+                    <td className={num}>{formatINR(r.taxableValuePaise)}</td>
+                    <td className={num}>{formatINR(r.totalValuePaise)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {/*
+              Said, not hidden. Assuming quietly on a filing is how a wrong
+              return gets signed.
+            */}
+            <p className="mt-2 text-xs text-ink-soft">
+              UQC is shown as <strong>{ASSUMED_UQC}</strong> for every line.
+              Invoice lines do not record a unit code, and nothing here is sold
+              by weight — sachets and canisters are counted. Confirm with your
+              CA; if they want something else it becomes a field on the product.
+            </p>
           </section>
         </>
       )}

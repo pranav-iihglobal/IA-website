@@ -36,6 +36,10 @@ export interface ExportableInvoice {
   party: { name: string; businessName: string; gstin: string };
   grandTotalPaise: number;
   lines: {
+    /** Blank on a line whose product had none. Reported as such, not guessed. */
+    hsn?: string;
+    description?: string;
+    quantity?: number;
     gstRateBps: number;
     taxableValuePaise: number;
     cgstPaise: number;
@@ -245,6 +249,111 @@ export function b2csCsv(rows: B2CSRow[]): string {
       r.placeOfSupply,
       rate(r.gstRateBps),
       paiseToRupeeString(r.taxableValuePaise),
+      "0",
+    ]),
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Table 12 — the HSN-wise summary                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Every supply rolled up by HSN and rate.
+ *
+ * GSTR-1 asks for this separately from B2B and B2CS, and unlike those two it
+ * covers **all** supplies together — registered and unregistered alike. So it
+ * is not derived from the other two sections; it is its own pass over the
+ * same invoices.
+ *
+ * UQC is the unit-of-quantity code the portal expects, from a fixed list
+ * (NOS, KGS, GMS, BOX…). Invoice lines do not carry one: nothing in this
+ * business is sold by weight — sachets and canisters are counted — so `NOS`
+ * is right for all three SKUs. It is **assumed rather than recorded**, and the
+ * screen says so, because assuming quietly on a filing is how a wrong return
+ * gets signed. If the CA wants something else it becomes a product field.
+ */
+export const ASSUMED_UQC = "NOS";
+
+export interface HsnRow {
+  hsn: string;
+  description: string;
+  uqc: string;
+  quantity: number;
+  gstRateBps: number;
+  taxableValuePaise: number;
+  cgstPaise: number;
+  sgstPaise: number;
+  igstPaise: number;
+  totalValuePaise: number;
+}
+
+export function buildHsnSummary(invoices: ExportableInvoice[]): HsnRow[] {
+  const rows = new Map<string, HsnRow>();
+
+  for (const invoice of invoices) {
+    // Same exclusion as the rest of the return: a cancellation is not a supply.
+    if (invoice.status === "cancelled") continue;
+
+    for (const line of invoice.lines ?? []) {
+      const hsn = (line.hsn ?? "").trim();
+      const key = `${hsn}:${line.gstRateBps}`;
+      const row = rows.get(key) ?? {
+        hsn,
+        description: line.description ?? "",
+        uqc: ASSUMED_UQC,
+        quantity: 0,
+        gstRateBps: line.gstRateBps,
+        taxableValuePaise: 0,
+        cgstPaise: 0,
+        sgstPaise: 0,
+        igstPaise: 0,
+        totalValuePaise: 0,
+      };
+
+      const tax =
+        (line.cgstPaise ?? 0) + (line.sgstPaise ?? 0) + (line.igstPaise ?? 0);
+      row.quantity += line.quantity ?? 0;
+      row.taxableValuePaise += line.taxableValuePaise ?? 0;
+      row.cgstPaise += line.cgstPaise ?? 0;
+      row.sgstPaise += line.sgstPaise ?? 0;
+      row.igstPaise += line.igstPaise ?? 0;
+      row.totalValuePaise += (line.taxableValuePaise ?? 0) + tax;
+      rows.set(key, row);
+    }
+  }
+
+  return [...rows.values()].sort(
+    (a, b) => a.hsn.localeCompare(b.hsn) || a.gstRateBps - b.gstRateBps,
+  );
+}
+
+export function hsnCsv(rows: HsnRow[]): string {
+  return toCsv(
+    [
+      "HSN",
+      "Description",
+      "UQC",
+      "Total Quantity",
+      "Rate",
+      "Total Value",
+      "Taxable Value",
+      "Integrated Tax Amount",
+      "Central Tax Amount",
+      "State/UT Tax Amount",
+      "Cess Amount",
+    ],
+    rows.map((r) => [
+      r.hsn,
+      r.description,
+      r.uqc,
+      r.quantity,
+      rate(r.gstRateBps),
+      paiseToRupeeString(r.totalValuePaise),
+      paiseToRupeeString(r.taxableValuePaise),
+      paiseToRupeeString(r.igstPaise),
+      paiseToRupeeString(r.cgstPaise),
+      paiseToRupeeString(r.sgstPaise),
       "0",
     ]),
   );
