@@ -23,6 +23,44 @@ npm run dev                    # http://localhost:3000  ·  admin at /admin
 | `npm run check-auth` | Drives the admin guard with a minted session cookie — needs a running server; add a URL to check a deployed one |
 | `npm run users -- list` | Manage who can sign in and what they may do, from a terminal |
 | `npm run check-models` | Validates every Mongoose model against a minimal document — no database needed |
+| `npm test` | Unit tests for the money, GST and query logic — no database needed |
+| `npm run check-erp` | Proves invoice numbering is atomic and the audit log is append-only — needs a real cluster |
+| `npm run crm-sample -- doctor` | Reports what the contacts collection actually holds, and any leftover index |
+
+## Money and GST
+
+Everything financial goes through two files, and both are covered by `npm test`.
+
+**`lib/money.ts` — every rupee amount in this app is an integer number of
+paise.** Never a float. `12.35` is not representable in binary floating point —
+it is 12.3499999999999996 — which is exactly how a spreadsheet's grand total
+stops agreeing with the sum of its own lines. Integers do not drift. Rupees
+exist at two boundaries only: reading what someone typed, and showing them a
+number.
+
+Rounding is **half away from zero**, not `Math.round`. `Math.round(-0.5)` is
+`-0` — half *up*, not half away — which means a credit note would not exactly
+cancel the invoice it reverses. There is a test for that specific rupee.
+
+**`lib/erp/tax.ts` — the GST arithmetic**, as one pure function that knows
+nothing about the database or the page. GST rates are **basis points** (500 =
+5%), because GST has half-percent rates and a percentage would have to be a
+float. It guarantees the four things a tax invoice has to get right: CGST and
+SGST shown separately intra-state, IGST instead inter-state, an explicit
+round-off line rather than a difference that quietly disappears, and one grand
+total that agrees with both the line sum and the figure in words.
+
+**Invoice numbers are allocated atomically** (`lib/db/models/Counter.ts`), never
+as `count + 1` — two people raising an invoice in the same second would
+otherwise both get the same number, and a duplicate number on a filed invoice is
+not something you fix afterwards. The historical import seeds each month's
+counter with `$max`, so re-running it can never drag the sequence back onto
+numbers already issued.
+
+**The audit log is append-only** (`lib/db/models/AuditLog.ts`). No update path,
+no delete path, deliberately — a trail that can be rewritten is not a trail. It
+also does real work on M0, where there are no automated backups: it is the only
+record of what a document used to say.
 
 ## ✏️ Site content (one file)
 
