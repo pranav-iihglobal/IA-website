@@ -36,11 +36,22 @@ export function rankOf(role: Role): number {
  * `crm` covers dealers and leads together — they are one job, and a lead
  * becomes a dealer, so splitting them would mean granting half a workflow.
  *
+ * `billing` is separate from everything else because ONE person needs exactly
+ * it and nothing else: the CA, who files the GST returns. He has no business
+ * reading farmer testimonials or editing the blog, and the directors have no
+ * wish to give him that just to hand him the invoices.
+ *
  * Adding to this list is only half the change: the per-user overrides live in
  * a CLOSED sub-schema on the User model, which has to gain the same key or
  * the override silently will not persist. See lib/db/models/User.ts.
  */
-export const MODULES = ["products", "testimonials", "posts", "crm"] as const;
+export const MODULES = [
+  "products",
+  "testimonials",
+  "posts",
+  "crm",
+  "billing",
+] as const;
 export type ModuleKey = (typeof MODULES)[number];
 
 /**
@@ -72,6 +83,17 @@ export const PERMISSIONS = [
   "crm:read",
   "crm:write",
   "crm:delete",
+  /**
+   * Invoices and the GST export.
+   *
+   * `billing:delete` exists for symmetry and is deliberately not used to
+   * delete anything: an issued invoice is cancelled, never removed, because a
+   * missing number in a GST series is a question from the department. It
+   * gates cancelling.
+   */
+  "billing:read",
+  "billing:write",
+  "billing:delete",
   /** Signing a Cloudinary upload. Anyone who can write anything needs it. */
   "media:upload",
   "users:read",
@@ -207,6 +229,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   testimonials: "Testimonials",
   posts: "Blog",
   crm: "Dealers & leads",
+  billing: "Invoices",
 };
 
 /**
@@ -224,6 +247,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
  */
 export const BETA_MODULES: Partial<Record<ModuleKey, string>> = {
   crm: "Sample data — not the real customer list yet",
+  billing: "New invoices only — the 53 historical ones are not imported yet",
 };
 
 /** The beta note for a module, or null when it is finished. */

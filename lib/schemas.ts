@@ -642,3 +642,54 @@ export type ContactValues = z.output<typeof contactSchema>;
 export const contactNoteSchema = z.object({
   body: z.string().trim().min(1, "Write something first"),
 });
+
+/* ========================================================================== */
+/* INVOICE                                                                    */
+/* ========================================================================== */
+
+/**
+ * What the admin sends to raise an invoice.
+ *
+ * Note what is ABSENT: no GST rate, no HSN, no totals, no invoice number.
+ * Those are not the client's to state — the rate and HSN come from the product
+ * record, the totals from computeInvoice(), and the number from the atomic
+ * counter at the moment of issue. A field that is not accepted cannot be
+ * tampered with, and this list is the enforcement.
+ */
+export const invoiceLineSchema = z.object({
+  productId: objectIdSchema,
+  packLabel: z.string().trim().default(""),
+  quantity: z.coerce.number().int().positive("Quantity must be at least 1"),
+  /** Rupees in, paise out — the same boundary as a product price. */
+  unitPrice: rupeeField("Price"),
+  discount: rupeeField("Discount"),
+});
+
+export const issueInvoiceSchema = z.object({
+  contactId: objectIdSchema,
+  lines: z.array(invoiceLineSchema).min(1, "Add at least one line"),
+  /**
+   * A STATE CODE, two digits — 24 is Gujarat. Not a PIN code, which is what
+   * their existing GST export carries in this position.
+   */
+  placeOfSupplyStateCode: z
+    .string()
+    .trim()
+    .regex(/^\d{2}$/, "Place of supply is a two-digit state code, e.g. 24")
+    .default("24"),
+  transport: rupeeField("Transport"),
+  transportCharged: z.boolean().default(false),
+  notes: z.string().trim().default(""),
+});
+
+/** After issue, only these may change. See lib/db/models/Invoice.ts. */
+export const invoicePaymentSchema = z.object({
+  status: z.enum(["unpaid", "partial", "paid"]),
+  paid: rupeeField("Amount paid"),
+  referenceNo: z.string().trim().default(""),
+  paidAt: z.coerce.date().nullable().default(null),
+});
+
+export const cancelInvoiceSchema = z.object({
+  reason: z.string().trim().min(3, "Say why it is being cancelled"),
+});

@@ -21,6 +21,7 @@ import { loadEnv } from "./load-env";
 import { connectToDatabase } from "../lib/db/connect";
 import { Counter, nextInSeries, peekSeries, raiseSeriesTo } from "../lib/db/models/Counter";
 import { AuditLog, recordAudit } from "../lib/db/models/AuditLog";
+import { Invoice } from "../lib/db/models/Invoice";
 
 loadEnv();
 
@@ -146,12 +147,86 @@ async function main() {
   console.log("    ↑ deliberate ↑");
   check("an invalid entry is logged, not thrown", !threw);
 
+  console.log("\n  An issued invoice is locked\n");
+
+  /*
+    lib/db/models/Invoice.test.ts already proves the RULE — which paths an
+    issued invoice must refuse. It cannot prove the rule is actually WIRED to
+    a save, because a save hook needs a server. That is what this does, and it
+    is the difference between a correct function and a correct system.
+  */
+  const invoice = await Invoice.create({
+    number: `SELFTEST.${Date.now()}`,
+    status: "issued",
+    issuedAt: new Date(),
+    party: { name: "check-erp" },
+    lines: [
+      {
+        description: "Self test",
+        quantity: 1,
+        unitPricePaise: 10000,
+        gstRateBps: 500,
+        taxableValuePaise: 10000,
+        lineTotalPaise: 10500,
+      },
+    ],
+    grandTotalPaise: 10500,
+    notes: "created by check-erp",
+  });
+
+  invoice.grandTotalPaise = 1;
+  let locked = false;
+  let message = "";
+  try {
+    await invoice.save();
+  } catch (error) {
+    locked = true;
+    message = error instanceof Error ? error.message : String(error);
+  }
+  check("changing a total on an issued invoice is refused", locked, "IT SAVED");
+  check(
+    "and the refusal says what was wrong",
+    message.includes("grandTotalPaise"),
+    message || "(no message)",
+  );
+
+  /*
+    Re-read rather than reusing the rejected document: a failed save leaves
+    the in-memory copy holding the change it could not write, and asserting
+    against that would prove nothing about what is actually stored.
+  */
+  const stored = await Invoice.findById(invoice._id).lean();
+  check("and the stored figure is untouched", stored?.grandTotalPaise === 10500);
+
+  const payable = await Invoice.findById(invoice._id);
+  payable!.payment = {
+    status: "paid",
+    paidPaise: 10500,
+    referenceNo: "SELFTEST",
+    paidAt: new Date(),
+  };
+  let paymentSaved = true;
+  try {
+    await payable!.save();
+  } catch {
+    paymentSaved = false;
+  }
+  check(
+    "but recording a payment still works, because money arrives later",
+    paymentSaved,
+  );
+
   console.log("\n  Cleaning up\n");
   const removedCounters = await Counter.deleteMany({ _id: SERIES });
   const removedAudits = await AuditLog.deleteMany({ entity: ENTITY });
+  // deleteOne on the collection, not the document: the model refuses changes
+  // to an issued invoice, and this row has no business surviving the run.
+  const removedInvoices = await Invoice.deleteMany({ number: /^SELFTEST\./ });
   check(
-    "the test series and rows are gone",
-    removedCounters.deletedCount === 1 && removedAudits.deletedCount >= 2,
+    "the test series, rows and invoice are gone",
+    removedCounters.deletedCount === 1 &&
+      removedAudits.deletedCount >= 2 &&
+      removedInvoices.deletedCount >= 1,
   );
 
   console.log(

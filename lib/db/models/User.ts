@@ -18,6 +18,8 @@ const MODULE_LEVEL_FIELDS = {
   posts: { type: String, enum: LEVELS },
   /** Dealers and leads. */
   crm: { type: String, enum: LEVELS },
+  /** Invoices and the GST export — the CA's one module. */
+  billing: { type: String, enum: LEVELS },
 } satisfies Record<ModuleKey, unknown>;
 
 /**
