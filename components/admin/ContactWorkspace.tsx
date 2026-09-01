@@ -334,7 +334,13 @@ export function ContactWorkspace({
               <RecordCard
                 key={row.id}
                 label={row.name}
-                editHref={`${pathname}?edit=${row.id}`}
+                /*
+                  The profile, not the edit form. A row was opening straight
+                  into a form, so a record could be changed but never read —
+                  and a mis-tap landed in an editor. Edit is one click from
+                  the profile.
+                */
+                editHref={`/admin/contacts/${row.id}`}
                 onDelete={() => setDeleting(row)}
                 thumb={
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft font-display text-base font-bold text-ink">

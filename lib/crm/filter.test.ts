@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildFilter } from "./filter";
+import { SCOPE_QUERY, scopeFor } from "./scopes";
 
 /**
  * The query behind every CRM list.
@@ -117,5 +118,30 @@ describe("the rest of the query string", () => {
     const due = filterFor("due=1").followUpAt as { $lte: Date; $ne: null };
     expect(due.$lte).toBeInstanceOf(Date);
     expect(due.$ne).toBeNull();
+  });
+});
+
+describe("scopeFor", () => {
+  it("puts a lead in Leads regardless of channel", () => {
+    expect(scopeFor("lead", "")).toBe("leads");
+    expect(scopeFor("lead", "b2b")).toBe("leads");
+  });
+
+  it("splits customers by channel", () => {
+    expect(scopeFor("customer", "b2b")).toBe("dealers");
+    expect(scopeFor("customer", "b2c")).toBe("customers");
+  });
+
+  it("treats an unset channel as B2C rather than throwing", () => {
+    // Older records predate the field; they belong in Customers, not nowhere.
+    expect(scopeFor("customer", "")).toBe("customers");
+  });
+
+  it("round-trips with SCOPE_QUERY", () => {
+    // The two are inverses; if they disagree a profile shows the wrong form.
+    for (const scope of ["customers", "dealers", "leads"] as const) {
+      const q = SCOPE_QUERY[scope];
+      expect(scopeFor(q.kind, q.channel ?? "")).toBe(scope);
+    }
   });
 });

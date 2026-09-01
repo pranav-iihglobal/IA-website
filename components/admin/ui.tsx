@@ -625,16 +625,56 @@ export function Button({
   );
 }
 
+/**
+ * A small labelled state.
+ *
+ * The map is the whole point: an unrecognised status falls back to the neutral
+ * "draft" grey, which is safe but says nothing — so anything that should
+ * prompt an action has to be listed here explicitly. "Unpaid" rendering in the
+ * same grey as "Paid" would quietly undo the reason for showing it at all.
+ */
 export function StatusPill({ status }: { status: string }) {
   const styles: Record<string, string> = {
     published: "bg-accent-soft/60 text-ink-muted ring-laurel",
     draft: "bg-surface-strong/40 text-ink ring-line-soft",
     scheduled: "bg-surface-strong/35 text-ink-strong ring-line",
+
+    // Money owed. Red because it is the one that means ring them.
+    unpaid: "bg-danger/12 text-danger ring-danger/35",
+    partial: "bg-alloy/15 text-ink-strong ring-alloy/40",
+    paid: "bg-accent-soft/60 text-ink-muted ring-laurel",
+    cancelled: "bg-surface-strong/40 text-ink-faint ring-line-soft",
+    issued: "bg-accent-soft/60 text-ink-muted ring-laurel",
+    filed: "bg-surface-strong/35 text-ink-strong ring-line",
+
+    // Derived customer states — see STATUS_LABELS in lib/crm/shape.ts.
+    Active: "bg-accent-soft/60 text-ink-muted ring-laurel",
+    "At risk": "bg-alloy/15 text-ink-strong ring-alloy/40",
+    Dormant: "bg-danger/12 text-danger ring-danger/35",
+    Prospect: "bg-surface-strong/35 text-ink-strong ring-line",
+
+    dealer: "bg-surface-strong/35 text-ink-strong ring-line",
+    sample: "bg-alloy/15 text-ink-strong ring-alloy/40",
   };
   const dot: Record<string, string> = {
     published: "bg-olive",
     draft: "bg-camel-dark/60",
     scheduled: "bg-alloy",
+
+    unpaid: "bg-danger",
+    partial: "bg-alloy",
+    paid: "bg-olive",
+    cancelled: "bg-camel-dark/50",
+    issued: "bg-olive",
+    filed: "bg-camel-dark/60",
+
+    Active: "bg-olive",
+    "At risk": "bg-alloy",
+    Dormant: "bg-danger",
+    Prospect: "bg-camel-dark/60",
+
+    dealer: "bg-camel-dark/60",
+    sample: "bg-alloy",
   };
   return (
     <span

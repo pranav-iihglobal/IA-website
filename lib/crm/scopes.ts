@@ -29,3 +29,19 @@ export function listQueryKey(params: URLSearchParams): string {
   const sorted = [...params.entries()].sort(([a], [b]) => a.localeCompare(b));
   return new URLSearchParams(sorted).toString();
 }
+
+/**
+ * Which list a contact belongs to, from the record itself.
+ *
+ * The inverse of SCOPE_QUERY. The profile page serves all three kinds from one
+ * route, so it has to work out which scope a record is in order to show the
+ * right form — a lead needs the sample pipeline, a dealer needs GSTIN and
+ * credit terms.
+ *
+ * Derived rather than passed in the URL, so a link to a contact cannot claim
+ * the wrong kind and get a form that does not match the record.
+ */
+export function scopeFor(kind: string, channel: string): Scope {
+  if (kind === "lead") return "leads";
+  return channel === "b2b" ? "dealers" : "customers";
+}
