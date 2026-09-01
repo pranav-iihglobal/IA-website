@@ -43,8 +43,6 @@ export interface IssueRequest {
   lines: DraftLine[];
   /** State code — 24 for Gujarat. Decides CGST+SGST versus IGST. */
   placeOfSupplyStateCode?: string;
-  transportPaise?: number;
-  transportCharged?: boolean;
   notes?: string;
   issuedAt?: Date;
 }
@@ -216,8 +214,6 @@ export async function issueInvoice(
     roundOffPaise: computed.roundOffPaise,
     grandTotalPaise: computed.grandTotalPaise,
     amountInWords: computed.amountInWords,
-    transportPaise: request.transportPaise ?? 0,
-    transportCharged: Boolean(request.transportCharged),
     notes: request.notes ?? "",
     createdBy: actor,
   });

@@ -123,9 +123,18 @@ const invoiceSchema = new Schema(
     /** Derived from grandTotalPaise at issue, so the two cannot disagree. */
     amountInWords: { type: String, default: "", trim: true },
 
-    /** Per-invoice, already in use on their sheets. */
-    transportPaise: { type: Number, default: 0 },
-    transportCharged: { type: Boolean, default: false },
+    /*
+      There is no transport field here, deliberately.
+
+      Their sheets carried "Transport Cost" and "Transport Charged?" per line,
+      but across 54 invoices the second was never once yes — and the directors
+      confirmed freight comes out of their own pockets rather than the
+      company's. So it is neither charged to the customer nor a company cost,
+      and it has no business on a tax invoice.
+
+      Where it DOES belong is a purchase marked paid by a director, which
+      records it as a cost the company owes back. See lib/db/models/Purchase.
+    */
 
     /**
      * The one part that legitimately changes after issue — money arrives

@@ -677,8 +677,6 @@ export const issueInvoiceSchema = z.object({
     .trim()
     .regex(/^\d{2}$/, "Place of supply is a two-digit state code, e.g. 24")
     .default("24"),
-  transport: rupeeField("Transport"),
-  transportCharged: z.boolean().default(false),
   notes: z.string().trim().default(""),
 });
 
@@ -739,6 +737,8 @@ export const purchaseSchema = z
     igst: rupeeField("IGST"),
     total: rupeeField("Total"),
     inputCreditEligible: z.boolean().default(true),
+    paidBy: z.enum(["company", "director"]).default("company"),
+    paidByName: z.string().trim().default(""),
     paymentStatus: z.enum(["unpaid", "partial", "paid"]).default("unpaid"),
     paid: rupeeField("Paid"),
     notes: z.string().trim().default(""),

@@ -55,6 +55,28 @@ const purchaseSchema = new Schema(
      */
     inputCreditEligible: { type: Boolean, default: true },
 
+    /**
+     * Whose money actually left.
+     *
+     * The directors pay some costs — freight, most obviously — out of their
+     * own pockets. Recording those as ordinary purchases would show company
+     * money going out that never did; recording them nowhere makes the cost
+     * base look better than it is and quietly loses what the company owes
+     * back. Neither is acceptable, so the flag exists.
+     *
+     * This is NOT a ledger and never becomes one. It records the fact; the CA
+     * decides what to do with it.
+     */
+    paidBy: {
+      type: String,
+      enum: ["company", "director"],
+      default: "company",
+      required: true,
+      index: true,
+    },
+    /** Which director, where it matters. Free text — there are two of them. */
+    paidByName: { type: String, default: "", trim: true },
+
     paymentStatus: {
       type: String,
       enum: ["unpaid", "partial", "paid"],

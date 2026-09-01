@@ -128,7 +128,10 @@ export function buildPurchases() {
     { supplier: "Sabar Minerals", gstin: "24AAFFS9021K1ZR", category: "raw_material", description: "Lignite carrier 500 kg", taxable: 1600000, rate: 500, days: 41 },
     { supplier: "Vraj Printers", gstin: "", category: "packaging", description: "Labels — three SKUs", taxable: 420000, rate: 1200, days: 55 },
     { supplier: "Anand Biotech Labs", gstin: "24AADCA3388J1ZK", category: "job_work", description: "Culture multiplication — batch 09", taxable: 3500000, rate: 1800, days: 63 },
+    // Freight, paid personally — see paidBy below. Their real sheet shows the
+    // same thing: transport recorded, never once charged to a customer.
     { supplier: "Patel Transport", gstin: "24AAGFP5540L1ZQ", category: "freight", description: "Freight to Mehsana dealers", taxable: 180000, rate: 500, days: 9 },
+    { supplier: "Local tempo hire", gstin: "", category: "freight", description: "Deliveries — Bhiloda and Kheradi", taxable: 62000, rate: 0, days: 20 },
     { supplier: "Skyline Digital", gstin: "24AAJCS2201F1ZW", category: "marketing", description: "Field-day banners and leaflets", taxable: 650000, rate: 1800, days: 78 },
     { supplier: "Nirav & Associates", gstin: "24AAKFN8834C1ZD", category: "services", description: "Accounting retainer — quarter", taxable: 900000, rate: 1800, days: 33 },
   ];
@@ -155,7 +158,14 @@ export function buildPurchases() {
       totalPaise: r.taxable + tax,
       // No GSTIN means no input credit to claim — the one case where the flag
       // is not a judgement call.
-      inputCreditEligible: Boolean(r.gstin),
+      inputCreditEligible: Boolean(r.gstin) && r.category !== "freight",
+      /*
+        Freight is the case the flag exists for: the directors pay it out of
+        their own pockets, so it is a cost the company owes back rather than
+        company money that went out.
+      */
+      paidBy: r.category === "freight" ? "director" : "company",
+      paidByName: r.category === "freight" ? "Director" : "",
       paymentStatus: i % 3 === 0 ? "unpaid" : "paid",
       paidPaise: i % 3 === 0 ? 0 : r.taxable + tax,
       isSample: true,

@@ -40,8 +40,6 @@ export interface InvoiceFormValues {
   contactId: string;
   placeOfSupplyStateCode: string;
   lines: InvoiceLineValues[];
-  transport: string;
-  transportCharged: boolean;
   notes: string;
 }
 
@@ -54,8 +52,6 @@ export function emptyInvoice(): InvoiceFormValues {
     contactId: "",
     placeOfSupplyStateCode: GUJARAT_STATE_CODE,
     lines: [emptyInvoiceLine()],
-    transport: "",
-    transportCharged: false,
     notes: "",
   };
 }

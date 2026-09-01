@@ -57,8 +57,6 @@ export async function POST(request: NextRequest) {
           discountPaise: l.discount ?? 0,
         })),
         placeOfSupplyStateCode: parsed.data.placeOfSupplyStateCode,
-        transportPaise: parsed.data.transport ?? 0,
-        transportCharged: parsed.data.transportCharged,
         notes: parsed.data.notes,
       },
       await currentEditor(),

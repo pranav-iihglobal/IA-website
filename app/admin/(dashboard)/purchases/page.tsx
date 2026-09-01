@@ -27,6 +27,8 @@ export default async function PurchasesPage() {
     igstPaise: d.igstPaise ?? 0,
     totalPaise: d.totalPaise ?? 0,
     inputCreditEligible: Boolean(d.inputCreditEligible),
+    paidBy: d.paidBy ?? "company",
+    paidByName: d.paidByName ?? "",
     paymentStatus: d.paymentStatus ?? "unpaid",
     paidPaise: d.paidPaise ?? 0,
     notes: d.notes ?? "",

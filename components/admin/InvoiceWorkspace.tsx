@@ -163,8 +163,6 @@ export function InvoiceWorkspace({
             unitPrice: l.unitPrice,
             discount: l.discount,
           })),
-          transport: values.transport,
-          transportCharged: values.transportCharged,
           notes: values.notes,
         }),
       });

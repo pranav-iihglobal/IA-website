@@ -252,21 +252,6 @@ export default async function InvoicePrintPage({
         <span className="font-semibold">Amount in words:</span> {doc.amountInWords}
       </p>
 
-      {/*
-        Transport is NOT in the totals above, and must not appear as though it
-        were: computeInvoice() does not add it, so a row inside that stack
-        would show a Total that is not the sum of the rows above it. Whether
-        freight should be a taxable line on a composite supply is a question
-        for the CA, not something to guess at on a filed document.
-      */}
-      {Boolean(doc.transportCharged) && doc.transportPaise > 0 && (
-        <p className="mt-2 text-[12px]">
-          <span className="font-semibold">Transport:</span>{" "}
-          {formatINR(doc.transportPaise)} — recorded separately, not included in
-          the total above.
-        </p>
-      )}
-
       {doc.notes && <p className="mt-2 text-[12px]">{doc.notes}</p>}
 
       {/*

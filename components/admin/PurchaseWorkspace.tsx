@@ -40,6 +40,8 @@ export interface PurchaseRow {
   igstPaise: number;
   totalPaise: number;
   inputCreditEligible: boolean;
+  paidBy: string;
+  paidByName: string;
   paymentStatus: string;
   paidPaise: number;
   notes: string;
@@ -59,20 +61,23 @@ const FILTERS = [
   { value: "", label: "All" },
   { value: "unpaid", label: "Unpaid" },
   { value: "credit", label: "Input credit" },
+  { value: "director", label: "Paid by a director" },
 ];
 
 interface FormValues {
   supplier: string; supplierGstin: string; billNo: string; billDate: string;
   category: string; description: string;
   taxableValue: string; cgst: string; sgst: string; igst: string; total: string;
-  inputCreditEligible: boolean; paymentStatus: string; paid: string; notes: string;
+  inputCreditEligible: boolean; paidBy: string; paidByName: string;
+  paymentStatus: string; paid: string; notes: string;
 }
 
 const EMPTY: FormValues = {
   supplier: "", supplierGstin: "", billNo: "", billDate: "",
   category: "raw_material", description: "",
   taxableValue: "", cgst: "", sgst: "", igst: "", total: "",
-  inputCreditEligible: true, paymentStatus: "unpaid", paid: "", notes: "",
+  inputCreditEligible: true, paidBy: "company", paidByName: "",
+  paymentStatus: "unpaid", paid: "", notes: "",
 };
 
 const paise = (v: string) => rupeesToPaise(v) ?? 0;
@@ -124,6 +129,7 @@ export function PurchaseWorkspace({
   const shown = useMemo(() => {
     if (filter === "unpaid") return rows.filter((r) => r.paymentStatus !== "paid");
     if (filter === "credit") return rows.filter((r) => r.inputCreditEligible);
+    if (filter === "director") return rows.filter((r) => r.paidBy === "director");
     return rows;
   }, [rows, filter]);
 
@@ -132,6 +138,20 @@ export function PurchaseWorkspace({
       rows
         .filter((r) => r.inputCreditEligible)
         .reduce((t, r) => t + r.cgstPaise + r.sgstPaise + r.igstPaise, 0),
+    [rows],
+  );
+
+  /*
+    What the company owes its directors. Not an accounting figure — the CA
+    decides what it becomes — but a number nobody should have to reconstruct
+    from memory, which is what happens when personal spending is recorded
+    nowhere.
+  */
+  const owedToDirectors = useMemo(
+    () =>
+      rows
+        .filter((r) => r.paidBy === "director")
+        .reduce((t, r) => t + r.totalPaise, 0),
     [rows],
   );
 
@@ -149,6 +169,8 @@ export function PurchaseWorkspace({
         igst: paiseToRupeeString(row.igstPaise),
         total: paiseToRupeeString(row.totalPaise),
         inputCreditEligible: row.inputCreditEligible,
+        paidBy: row.paidBy || "company",
+        paidByName: row.paidByName ?? "",
         paymentStatus: row.paymentStatus,
         paid: paiseToRupeeString(row.paidPaise),
         notes: row.notes,
@@ -231,6 +253,12 @@ export function PurchaseWorkspace({
           </h1>
           <p className="mt-0.5 text-xs font-semibold text-ink-soft">
             {formatRupees(creditable)} input credit on eligible bills
+            {owedToDirectors > 0 && (
+              <span className="text-cta">
+                {" · "}
+                {formatRupees(owedToDirectors)} paid by directors, owed back
+              </span>
+            )}
           </p>
         </div>
         {canWrite && <Button onClick={() => open(null)}>Add purchase</Button>}
@@ -270,6 +298,11 @@ export function PurchaseWorkspace({
                     {row.billDate && (
                       <span className="text-ink-faint">
                         {new Date(row.billDate).toLocaleDateString("en-IN")}
+                      </span>
+                    )}
+                    {row.paidBy === "director" && (
+                      <span className="text-cta">
+                        paid by {row.paidByName || "a director"}
                       </span>
                     )}
                     {!row.supplierGstin && (
@@ -374,9 +407,49 @@ export function PurchaseWorkspace({
             <TextField label="Paid ₹" type="number" value={values.paid} onChange={(paid) => set({ paid })} />
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              label="Paid by"
+              hint="Directors fund some costs personally — freight, most often."
+              value={values.paidBy}
+              onChange={(paidBy) =>
+                set({
+                  paidBy,
+                  /*
+                    A personal payment is not the company's input credit to
+                    claim, so switching to a director turns it off rather than
+                    leaving a claim nobody meant to make. Still overridable —
+                    that call belongs to the CA, not to this form.
+                  */
+                  inputCreditEligible:
+                    paidBy === "director" ? false : values.inputCreditEligible,
+                })
+              }
+              options={[
+                { value: "company", label: "The company" },
+                { value: "director", label: "A director, personally" },
+              ]}
+            />
+            {values.paidBy === "director" && (
+              <TextField
+                label="Which director"
+                value={values.paidByName}
+                onChange={(paidByName) => set({ paidByName })}
+              />
+            )}
+          </div>
+
+          {values.paidBy === "director" && (
+            <p className="rounded-xl bg-surface-muted/50 px-3 py-2 text-xs text-ink-muted">
+              Recorded as a cost the company owes back. This app does not keep a
+              ledger — the figure is here so your CA does not have to
+              reconstruct it.
+            </p>
+          )}
+
           <Toggle
             label="Input credit can be claimed"
-            hint="Your CA's call. Defaults on where a GSTIN is present."
+            hint="Your CA's call. Defaults on where a GSTIN is present, off where a director paid personally."
             checked={values.inputCreditEligible}
             onChange={(inputCreditEligible) => set({ inputCreditEligible })}
           />
