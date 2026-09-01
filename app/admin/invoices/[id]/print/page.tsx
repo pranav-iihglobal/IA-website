@@ -269,11 +269,20 @@ export default async function InvoicePrintPage({
 
       {doc.notes && <p className="mt-2 text-[12px]">{doc.notes}</p>}
 
+      {/*
+        Payment details, printed so a customer can pay from the page itself.
+        The UPI id is not decoration: a farmer with a phone can settle a
+        printed invoice without having to ring anyone for the account number.
+      */}
       {SELLER.bank.accountNo && (
-        <p className="mt-3 text-[11px]">
-          Bank: {SELLER.bank.name} · A/c {SELLER.bank.accountNo} · IFSC{" "}
-          {SELLER.bank.ifsc}
-        </p>
+        <div className="mt-3 border-t border-black/30 pt-2 text-[11px] leading-relaxed">
+          <p className="font-semibold">Payment</p>
+          <p>
+            {SELLER.bank.accountName} · {SELLER.bank.name} · A/c{" "}
+            {SELLER.bank.accountNo} · IFSC {SELLER.bank.ifsc}
+          </p>
+          {SELLER.bank.upi && <p>UPI: {SELLER.bank.upi}</p>}
+        </div>
       )}
 
       {doc.status === "cancelled" && doc.cancelledReason && (

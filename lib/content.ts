@@ -61,10 +61,21 @@ export const SITE = {
   address: {
     street: "01, Patel Rameshbhai Hemtabhai, Vill. Kheradi, At & Po. Kheradi, Ta. Bhiloda",
     city: "Bhiloda",
-    district: "Sabarkantha",
+    /*
+      District and PIN are as they appear on the GST registration certificate
+      (Form GST REG-06, 24AAHCI7997Q1ZG), not as they were first written here.
+      Bhiloda taluka moved from Sabarkantha to the newly created Aravalli
+      district in 2013, and the certificate's own locality line still carries
+      the old name — which is where "Sabarkantha" came from.
+
+      This matters twice over: an invoice must show the supplier's address as
+      registered, and this same object feeds the Organization structured data
+      in app/(site)/layout.tsx, so a wrong PIN was also a live SEO defect.
+    */
+    district: "Aravalli",
     region: "North Gujarat",
     state: "Gujarat",
-    postalCode: "383355",
+    postalCode: "383250",
     country: "IN",
   },
 
@@ -85,16 +96,29 @@ export const SITE = {
  * and is not is worse than one that says what is missing.
  */
 export const SELLER = {
-  /** 15 characters, e.g. 24ABCDE1234F1Z5. */
-  gstin: "",
-  pan: "",
+  /**
+   * 15 characters. The first two are the state code and characters 3–12 are
+   * the PAN, so these three fields are not independent — lib/content.test.ts
+   * asserts they agree, because if the state code and the GSTIN ever diverge
+   * every invoice silently charges the wrong KIND of tax.
+   */
+  gstin: "24AAHCI7997Q1ZG",
+  pan: "AAHCI7997Q",
   /** State code for the place of supply. 24 is Gujarat. */
   stateCode: "24",
-  /** Optional, printed under the totals if set. */
+  /**
+   * Printed under the totals so a customer can pay from the page.
+   *
+   * Details for RECEIVING money, which is why they go on the document at all.
+   * The UPI id is worth as much as the account number here: a farmer with a
+   * phone can pay from a printed invoice without having to ask for anything.
+   */
   bank: {
-    name: "",
-    accountNo: "",
-    ifsc: "",
+    accountName: "IKSARVA AGRITECH PRIVATE LIMITED",
+    name: "HDFC Bank",
+    accountNo: "50200097910552",
+    ifsc: "HDFC0009254",
+    upi: "iksarva.agritech@okhdfcbank",
   },
 } as const;
 
