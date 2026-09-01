@@ -256,6 +256,73 @@ export function betaNote(module: ModuleKey): string | null {
   return BETA_MODULES[module] ?? null;
 }
 
+/**
+ * Ready-made module sets, for the access shapes that actually recur.
+ *
+ * A `viewer` defaults to `view` on EVERY module — so giving the CA
+ * finance-only access means setting products, testimonials, posts and crm each
+ * to `none` by hand. Four switches described everywhere as one, and missing a
+ * single one silently hands him the whole customer list.
+ *
+ * The permission model is unchanged; this only removes the chance to
+ * half-apply it.
+ */
+export const ACCESS_PRESETS: {
+  id: string;
+  label: string;
+  description: string;
+  role: Role;
+  /** `null` clears an override so the module follows the role again. */
+  modules: Partial<Record<ModuleKey, Level | null>>;
+}[] = [
+  {
+    id: "accountant",
+    label: "Accountant — billing only",
+    description:
+      "Reads invoices, the GST return, stock and purchases. Cannot see customers, products or content, and cannot change anything.",
+    role: "viewer",
+    modules: {
+      billing: "view",
+      products: "none",
+      testimonials: "none",
+      posts: "none",
+      crm: "none",
+    },
+  },
+  {
+    id: "sales",
+    label: "Sales — customers and leads",
+    description:
+      "Works the CRM and reads products. No invoices, no money, no content.",
+    role: "editor",
+    modules: {
+      crm: "edit",
+      products: "view",
+      billing: "none",
+      testimonials: "none",
+      posts: "none",
+    },
+  },
+  {
+    id: "director",
+    label: "Director — everything",
+    description: "Full access to every module, including adding people.",
+    role: "owner",
+    /*
+      Every override CLEARED, not merely absent. Sending nothing would leave a
+      former accountant's four `none` settings in place, and they would
+      override the owner role — a director with no access to anything.
+    */
+    modules: {
+      billing: null,
+      products: null,
+      testimonials: null,
+      posts: null,
+      crm: null,
+    },
+  },
+];
+
 export const LEVEL_LABELS: Record<Level, { label: string; description: string }> = {
   none: { label: "No access", description: "The module is hidden entirely." },
   view: { label: "View", description: "Can read, cannot change anything." },

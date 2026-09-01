@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LEVELS, ROLES } from "@/lib/auth/permissions";
+import { LEVELS, ROLES, type ModuleKey } from "@/lib/auth/permissions";
 import { rupeesToPaise } from "@/lib/money";
 
 /**
@@ -440,13 +440,28 @@ const nameField = z
  * "follow the role" — which has to be expressible, or an override could be
  * set but never removed.
  */
-const modulesField = z
-  .object({
-    products: z.enum(LEVELS).nullable().optional(),
-    testimonials: z.enum(LEVELS).nullable().optional(),
-    posts: z.enum(LEVELS).nullable().optional(),
-  })
-  .optional();
+/**
+ * Per-module access overrides.
+ *
+ * `crm` and `billing` were MISSING here, and zod strips unknown keys — so
+ * every override sent for those two was silently discarded. The UI offered the
+ * control, the request succeeded, and the value went nowhere. On the two
+ * modules holding the customer list and the money, of all of them.
+ *
+ * `satisfies Record<ModuleKey, unknown>` is why it cannot happen again: a
+ * module added to MODULES without a line here stops compiling. Exactly the
+ * guard lib/db/models/User.ts already puts on its closed sub-schema — this was
+ * the same trap one file over, without it.
+ */
+const MODULE_LEVEL_FIELDS = {
+  products: z.enum(LEVELS).nullable().optional(),
+  testimonials: z.enum(LEVELS).nullable().optional(),
+  posts: z.enum(LEVELS).nullable().optional(),
+  crm: z.enum(LEVELS).nullable().optional(),
+  billing: z.enum(LEVELS).nullable().optional(),
+} satisfies Record<ModuleKey, unknown>;
+
+const modulesField = z.object(MODULE_LEVEL_FIELDS).optional();
 
 /** Adding someone to the admin panel. */
 export const userCreateSchema = z.object({

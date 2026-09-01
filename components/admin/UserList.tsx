@@ -7,6 +7,7 @@ import {
   LEVELS,
   LEVEL_LABELS,
   MODULES,
+  ACCESS_PRESETS,
   MODULE_LABELS,
   ROLES,
   ROLE_LABELS,
@@ -137,6 +138,43 @@ function ModuleAccess({
         );
       })}
     </div>
+  );
+}
+
+/**
+ * Apply a whole access shape in one action.
+ *
+ * The point is not convenience. A `viewer` defaults to `view` on every module,
+ * so "accountant, billing only" is really five separate settings — and the
+ * failure mode of missing one is silent: he simply sees the customer list and
+ * nobody notices. One action cannot be half-applied.
+ */
+function PresetPicker({
+  disabled,
+  onPick,
+}: {
+  disabled: boolean;
+  onPick: (preset: (typeof ACCESS_PRESETS)[number]) => void;
+}) {
+  return (
+    <select
+      value=""
+      disabled={disabled}
+      aria-label="Apply an access preset"
+      onChange={(e) => {
+        const preset = ACCESS_PRESETS.find((p) => p.id === e.target.value);
+        if (preset) onPick(preset);
+        e.target.value = "";
+      }}
+      className="admin-input h-9 w-full appearance-none py-0 text-xs disabled:opacity-50"
+    >
+      <option value="">Apply a preset…</option>
+      {ACCESS_PRESETS.map((p) => (
+        <option key={p.id} value={p.id} title={p.description}>
+          {p.label}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -445,19 +483,38 @@ export function UserList({
                                 ).join(" · ")}
                               </span>
                             ) : (
-                              <ModuleAccess
-                                person={person}
-                                disabled={isBusy}
-                                onChange={(module, level) =>
-                                  patch(
-                                    person,
-                                    { modules: { [module]: level } },
-                                    level === null
-                                      ? `${MODULE_LABELS[module]} follows ${person.email}'s role again`
-                                      : `${person.email}: ${MODULE_LABELS[module]} set to ${LEVEL_LABELS[level].label}`,
-                                  )
-                                }
-                              />
+                              <div className="space-y-2">
+                                {/*
+                                  Presets first, because the shape people
+                                  actually want is almost always one of three —
+                                  and setting five modules by hand means five
+                                  chances to leave one on `view`, which is what
+                                  a viewer defaults to.
+                                */}
+                                <PresetPicker
+                                  disabled={isBusy}
+                                  onPick={(preset) =>
+                                    patch(
+                                      person,
+                                      { role: preset.role, modules: preset.modules },
+                                      `${person.email}: ${preset.label}`,
+                                    )
+                                  }
+                                />
+                                <ModuleAccess
+                                  person={person}
+                                  disabled={isBusy}
+                                  onChange={(module, level) =>
+                                    patch(
+                                      person,
+                                      { modules: { [module]: level } },
+                                      level === null
+                                        ? `${MODULE_LABELS[module]} follows ${person.email}'s role again`
+                                        : `${person.email}: ${MODULE_LABELS[module]} set to ${LEVEL_LABELS[level].label}`,
+                                    )
+                                  }
+                                />
+                              </div>
                             )}
                           </td>
                           <td className="px-5 py-3.5 text-xs text-ink-muted">
