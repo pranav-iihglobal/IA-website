@@ -247,7 +247,8 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
  */
 export const BETA_MODULES: Partial<Record<ModuleKey, string>> = {
   crm: "Sample data — not the real customer list yet",
-  billing: "New invoices only — the 53 historical ones are not imported yet",
+  billing:
+    "Sample data, and the 53 historical invoices are not imported yet",
 };
 
 /** The beta note for a module, or null when it is finished. */
