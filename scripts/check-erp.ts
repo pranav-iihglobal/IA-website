@@ -22,6 +22,7 @@ import { connectToDatabase } from "../lib/db/connect";
 import { Counter, nextInSeries, peekSeries, raiseSeriesTo } from "../lib/db/models/Counter";
 import { AuditLog, recordAudit } from "../lib/db/models/AuditLog";
 import { Invoice } from "../lib/db/models/Invoice";
+import { formatIstDate, istParts } from "../lib/time";
 
 loadEnv();
 
@@ -215,6 +216,46 @@ async function main() {
     "but recording a payment still works, because money arrives later",
     paymentSaved,
   );
+
+  /*
+    Every real invoice already issued, checked against the timezone fix.
+
+    Reported, never rewritten — the same rule the historical import follows. A
+    number is printed on a document and filed; if one disagrees with its own
+    issue date, that is the CA's to resolve, and silently correcting it would
+    misrepresent what was sent.
+  */
+  console.log("\n  Invoice numbers against their issue date (IST)\n");
+  const issued = await Invoice.find({
+    isSample: { $ne: true },
+    isHistorical: { $ne: true },
+    number: { $ne: "" },
+    issuedAt: { $ne: null },
+  })
+    .select("number issuedAt")
+    .lean();
+
+  const mismatched = issued.filter((doc) => {
+    const parsed = /\.(\d{2})\.(\d{2})\./.exec(doc.number ?? "");
+    if (!parsed || !doc.issuedAt) return false;
+    const { year, month } = istParts(new Date(doc.issuedAt));
+    return Number(parsed[1]) !== month || Number(parsed[2]) !== year % 100;
+  });
+
+  check(
+    `every issued number matches its date in IST (${issued.length} checked)`,
+    mismatched.length === 0,
+    mismatched
+      .map((d) => `${d.number} was issued ${formatIstDate(new Date(d.issuedAt!))} IST`)
+      .join("; "),
+  );
+  if (mismatched.length > 0) {
+    console.log(
+      "\n    These were numbered before the timezone fix, in the 00:00–05:30 IST\n" +
+        "    window where the server's UTC clock was still on the previous month.\n" +
+        "    Raise them with the CA. Nothing here rewrites a filed number.\n",
+    );
+  }
 
   console.log("\n  Cleaning up\n");
   const removedCounters = await Counter.deleteMany({ _id: SERIES });

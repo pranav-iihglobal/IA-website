@@ -9,6 +9,7 @@ import {
 } from "@/lib/erp/gst";
 import { formatRate } from "@/lib/erp/tax";
 import { formatINR, formatRupees } from "@/lib/money";
+import { istParts } from "@/lib/time";
 import { SELLER } from "@/lib/content";
 import { MonthPicker } from "@/components/admin/MonthPicker";
 
@@ -34,10 +35,11 @@ export default async function GstPage({
 }) {
   await requirePageAccess("billing:read");
 
-  const now = new Date();
+  // The current month as India reckons it, not as the UTC server does.
+  const today = istParts(new Date());
   const sp = await searchParams;
-  const year = Number(sp.year) || now.getFullYear();
-  const month = Number(sp.month) || now.getMonth() + 1;
+  const year = Number(sp.year) || today.year;
+  const month = Number(sp.month) || today.month;
 
   const [invoices, sampleCount] = await Promise.all([
     invoicesForPeriod(year, month),

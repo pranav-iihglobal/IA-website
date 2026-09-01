@@ -1,4 +1,5 @@
 import { paiseToRupeeString } from "@/lib/money";
+import { formatIstDate } from "@/lib/time";
 import type { SupplyType } from "./tax";
 
 /**
@@ -123,11 +124,16 @@ export function isB2B(invoice: ExportableInvoice): boolean {
   return Boolean(invoice.party?.gstin?.trim());
 }
 
+/**
+ * dd-mm-yyyy, which is what the GST portal expects — and the IST day.
+ *
+ * This is the date the CA files against each invoice, so reading it off the
+ * server's UTC clock put a day-early date on the return for anything raised
+ * before 05:30 IST.
+ */
 function isoDate(value: string | null): string {
   if (!value) return "";
-  const d = new Date(value);
-  // dd-mm-yyyy, which is what the GST portal expects.
-  return `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+  return formatIstDate(new Date(value));
 }
 
 export function buildGstReturn(invoices: ExportableInvoice[]): GstReturn {

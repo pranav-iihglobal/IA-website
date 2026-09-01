@@ -11,16 +11,23 @@ import {
 import { getTestimonialOptions } from "@/lib/admin/products-options";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
+import { istDateTimeInputValue } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
-/** datetime-local needs "YYYY-MM-DDTHH:mm" in local time. */
+/**
+ * datetime-local needs "YYYY-MM-DDTHH:mm", and it has no timezone.
+ *
+ * This page is a server component, so the old `getHours()` gave UTC: a post
+ * scheduled for 09:00 IST was shown as 03:30, and one typed as 09:00 published
+ * at 14:30 IST. `parseIstDateTimeInput` in lib/schemas.ts is the other half of
+ * this — the two must agree.
+ */
 function toLocalInput(value: unknown): string | null {
   if (!value) return null;
   const date = new Date(value as string);
   if (Number.isNaN(date.getTime())) return null;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return istDateTimeInputValue(date);
 }
 
 function toFormValues(doc: LeanDoc): PostFormValues {

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { LEVELS, ROLES, type ModuleKey } from "@/lib/auth/permissions";
 import { rupeesToPaise } from "@/lib/money";
+import { parseIstDateTimeInput } from "@/lib/time";
 
 /**
  * Shared zod schemas — the single source of truth for validation on BOTH the
@@ -369,7 +370,19 @@ export const postSchema = z
       .default("other"),
 
     status: z.enum(["draft", "published", "scheduled"]).default("draft"),
-    publishAt: z.coerce.date().nullable().default(null),
+    /*
+      The value arrives from a `datetime-local` input, which carries no
+      timezone — so `z.coerce.date()` read it in the SERVER's zone, and the
+      server runs in UTC. "09:00" typed by a director in Gujarat became 09:00Z
+      and published at 14:30 IST. Read as IST instead; a string that already
+      carries a zone still passes straight through. See lib/time.ts.
+    */
+    publishAt: z
+      .union([z.string(), z.date(), z.null()])
+      .transform((v) =>
+        v === null ? null : v instanceof Date ? v : parseIstDateTimeInput(v),
+      )
+      .default(null),
     author: z.string().trim().default("IKSARVA Team"),
 
     metaTitle: biOptionalSchema.default({ en: "", gu: "" }),

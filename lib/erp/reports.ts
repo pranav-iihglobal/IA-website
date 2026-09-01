@@ -4,6 +4,7 @@ import { Purchase } from "@/lib/db/models/Purchase";
 import { StockItem, needsReorder } from "@/lib/db/models/StockItem";
 import { Contact } from "@/lib/db/models/Contact";
 import type { LeanDoc } from "@/lib/db/lean";
+import { istMonthStart, istParts } from "@/lib/time";
 import type { ExportableInvoice } from "./gst";
 
 /**
@@ -14,13 +15,20 @@ import type { ExportableInvoice } from "./gst";
  * a query over invoices rather than a second copy of it.
  */
 
-/** Start and end of a month, as the GST return and the dashboard both need. */
+/**
+ * Start and end of a month, as the GST return and the dashboard both need.
+ *
+ * IN IST. `new Date(year, month - 1, 1)` asks the server for midnight, and the
+ * server runs in UTC — so October began at 05:30 IST, and every invoice raised
+ * in India in those five and a half hours filed in September's return. See
+ * lib/time.ts.
+ */
 export function monthRange(year: number, month: number): { from: Date; to: Date } {
   return {
-    from: new Date(year, month - 1, 1),
+    from: istMonthStart(year, month),
     // Exclusive: the first instant of the next month, so an invoice issued at
     // 23:59 on the last day is inside the period rather than lost to it.
-    to: new Date(year, month, 1),
+    to: istMonthStart(year, month + 1),
   };
 }
 
@@ -229,12 +237,13 @@ async function revenueBetween(from: Date, to: Date): Promise<{ total: number; co
 export async function dashboardFigures(now = new Date()): Promise<DashboardFigures> {
   await connectToDatabase();
 
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  const thisMonth = monthRange(y, m + 1);
-  const lastMonth = monthRange(m === 0 ? y - 1 : y, m === 0 ? 12 : m);
+  // "Today" as India reckons it. For five and a half hours after midnight IST
+  // the server's own calendar is still on yesterday's month.
+  const { year: y, month: m } = istParts(now);
+  const thisMonth = monthRange(y, m);
+  const lastMonth = monthRange(m === 1 ? y - 1 : y, m === 1 ? 12 : m - 1);
   // The Indian financial year, April to March — what the CA reports on.
-  const fyStart = new Date(m >= 3 ? y : y - 1, 3, 1);
+  const fyStart = istMonthStart(m >= 4 ? y : y - 1, 4);
 
   const [month, previous, year, owed, oldest, stock, customers, dealers, followUps, purchases] =
     await Promise.all([

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requirePermission, errorResponse } from "@/lib/admin/api";
 import { invoicesForPeriod } from "@/lib/erp/reports";
+import { istParts } from "@/lib/time";
 import {
   b2bCsv,
   b2csCsv,
@@ -26,9 +27,11 @@ export async function GET(request: NextRequest) {
 
   try {
     const params = request.nextUrl.searchParams;
-    const now = new Date();
-    const year = Number(params.get("year")) || now.getFullYear();
-    const month = Number(params.get("month")) || now.getMonth() + 1;
+    // The current month in IST — the download must default to the same period
+    // the screen is showing, and the screen reckons in IST.
+    const today = istParts(new Date());
+    const year = Number(params.get("year")) || today.year;
+    const month = Number(params.get("month")) || today.month;
     const requested = params.get("section") ?? "";
     const section = (
       ["b2cs", "hsn", "cdnr", "cdnur"].includes(requested) ? requested : "b2b"

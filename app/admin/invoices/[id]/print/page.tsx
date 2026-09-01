@@ -6,6 +6,7 @@ import { requirePageAccess } from "@/lib/admin/page-guard";
 import { SELLER, SITE } from "@/lib/content";
 import { formatINR } from "@/lib/money";
 import { formatRate } from "@/lib/erp/tax";
+import { formatIstDateLong } from "@/lib/time";
 import type { LeanDoc } from "@/lib/db/lean";
 import { PrintButton } from "@/components/admin/PrintButton";
 
@@ -102,14 +103,14 @@ export default async function InvoicePrintPage({
             {isCredit ? "Credit Note" : "Tax Invoice"}
           </p>
           <p className="mt-2 text-base font-bold">{doc.number}</p>
+          {/*
+            The IST date. This page is a server component, so
+            `toLocaleDateString` formatted in the server's UTC and printed the
+            previous day on anything raised before 05:30 IST — on the document
+            itself. See lib/time.ts.
+          */}
           <p className="text-[12px]">
-            {doc.issuedAt
-              ? new Date(doc.issuedAt).toLocaleDateString("en-IN", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })
-              : "—"}
+            {doc.issuedAt ? formatIstDateLong(new Date(doc.issuedAt)) : "—"}
           </p>
           {doc.financialYear && (
             <p className="text-[12px]">FY {doc.financialYear}</p>

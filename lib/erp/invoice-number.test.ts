@@ -96,6 +96,44 @@ describe("parseInvoiceNumber", () => {
   });
 });
 
+describe("the month segment is India's month", () => {
+  /*
+    The number is STORED, so this is the one part of the timezone bug that a
+    re-render cannot fix. An invoice raised at 05:00 IST on 1 October is held as
+    2026-09-30T23:30Z; read that in the server's UTC and it is numbered into
+    September's series — a series that has already closed and been filed.
+  */
+  const earlyOnTheFirst = new Date("2026-09-30T23:30:00.000Z");
+
+  it("numbers a 05:00 IST invoice into October, not September", () => {
+    expect(formatInvoiceNumber(earlyOnTheFirst, 1)).toBe("IA.10.26.001");
+  });
+
+  it("counts it against October's series", () => {
+    expect(seriesKey(earlyOnTheFirst)).toBe(seriesKey(new Date("2026-10-15T06:00:00.000Z")));
+    expect(seriesKey(earlyOnTheFirst)).not.toBe(
+      seriesKey(new Date("2026-09-15T06:00:00.000Z")),
+    );
+  });
+
+  it("stamps it with the financial year India is in", () => {
+    // 03:00 IST on 1 April 2026 — the same trap at the year boundary.
+    expect(financialYear(new Date("2026-03-31T21:30:00.000Z"))).toBe("26-27");
+  });
+
+  it("keeps the last evening of a month in that month", () => {
+    // 23:59 IST on 30 September.
+    expect(formatInvoiceNumber(new Date("2026-09-30T18:29:00.000Z"), 7)).toBe(
+      "IA.09.26.007",
+    );
+  });
+
+  it("applies to the sample and credit-note series too", () => {
+    expect(formatSampleCreditNoteNumber(earlyOnTheFirst, 1)).toBe("SMP.CN.10.26.001");
+    expect(formatCreditNoteNumber(earlyOnTheFirst, 1)).toBe("CN.10.26.001");
+  });
+});
+
 describe("sample numbers", () => {
   it("marks a sample credit note as sample AND as a credit note", () => {
     const n = formatSampleCreditNoteNumber(new Date(2026, 8, 4), 3);

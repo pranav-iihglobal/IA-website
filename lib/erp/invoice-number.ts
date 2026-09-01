@@ -1,4 +1,5 @@
 import { nextInSeries, raiseSeriesTo } from "@/lib/db/models/Counter";
+import { istFinancialYear, istMonthStart, istParts } from "@/lib/time";
 
 /**
  * Invoice numbering — `IA.MM.YY.NNN`, exactly as IKSARVA already issues them.
@@ -13,28 +14,35 @@ import { nextInSeries, raiseSeriesTo } from "@/lib/db/models/Counter";
  * The financial year is tracked alongside because it is what the CA files by,
  * and it does not follow the calendar: April to March, so January 2026 is in
  * 25-26, not 26-27.
+ *
+ * EVERY DATE HERE IS READ IN IST, never in the server's UTC. The month segment
+ * of a number is part of a filed GST series, so an invoice raised at 05:00 IST
+ * on the 1st must not be stamped with last month — see lib/time.ts.
  */
+
+/** `mm` and `yy` for a number, as the calendar reads in India. */
+function stamp(date: Date): { mm: string; yy: string } {
+  const { year, month } = istParts(date);
+  return {
+    mm: String(month).padStart(2, "0"),
+    yy: String(year % 100).padStart(2, "0"),
+  };
+}
 
 /** The Indian financial year runs 1 April → 31 March. */
 export function financialYear(date: Date): string {
-  const year = date.getFullYear();
-  const month = date.getMonth(); // 0-indexed: 3 is April
-  const startYear = month >= 3 ? year : year - 1;
-  const two = (y: number) => String(y % 100).padStart(2, "0");
-  return `${two(startYear)}-${two(startYear + 1)}`;
+  return istFinancialYear(date);
 }
 
 /** The counter key for one month. One series per month, because it resets. */
 export function seriesKey(date: Date): string {
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const yy = String(date.getFullYear() % 100).padStart(2, "0");
+  const { mm, yy } = stamp(date);
   return `invoice:${yy}:${mm}`;
 }
 
 /** Render a number in their format. `IA.09.26.007`. */
 export function formatInvoiceNumber(date: Date, sequence: number): string {
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const yy = String(date.getFullYear() % 100).padStart(2, "0");
+  const { mm, yy } = stamp(date);
   return `IA.${mm}.${yy}.${String(sequence).padStart(3, "0")}`;
 }
 
@@ -81,7 +89,14 @@ export async function allocateInvoiceNumber(
 export async function seedFromIssuedNumber(value: string): Promise<boolean> {
   const parsed = parseInvoiceNumber(value);
   if (!parsed) return false;
-  const date = new Date(parsed.year, parsed.month - 1, 1);
+  /*
+    Built as an IST instant, not `new Date(y, m, 1)`. That happened to give the
+    right key only because the server runs UTC and the shift to IST is forward;
+    on any other host it would have keyed the wrong month. The number already
+    says which month it belongs to — the round trip should not be able to lose
+    that.
+  */
+  const date = istMonthStart(parsed.year, parsed.month);
   await raiseSeriesTo(seriesKey(date), parsed.sequence);
   return true;
 }
@@ -106,8 +121,7 @@ export function sampleSeriesKey(date: Date): string {
 }
 
 export function formatSampleInvoiceNumber(date: Date, sequence: number): string {
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const yy = String(date.getFullYear() % 100).padStart(2, "0");
+  const { mm, yy } = stamp(date);
   return `SMP.${mm}.${yy}.${String(sequence).padStart(3, "0")}`;
 }
 
@@ -119,8 +133,7 @@ export function formatSampleInvoiceNumber(date: Date, sequence: number): string 
  * is at a glance.
  */
 export function formatSampleCreditNoteNumber(date: Date, sequence: number): string {
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const yy = String(date.getFullYear() % 100).padStart(2, "0");
+  const { mm, yy } = stamp(date);
   return `SMP.CN.${mm}.${yy}.${String(sequence).padStart(3, "0")}`;
 }
 
@@ -146,8 +159,7 @@ export function creditNoteSeriesKey(date: Date): string {
 }
 
 export function formatCreditNoteNumber(date: Date, sequence: number): string {
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const yy = String(date.getFullYear() % 100).padStart(2, "0");
+  const { mm, yy } = stamp(date);
   return `CN.${mm}.${yy}.${String(sequence).padStart(3, "0")}`;
 }
 
