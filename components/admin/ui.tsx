@@ -633,6 +633,33 @@ export function Button({
  * prompt an action has to be listed here explicitly. "Unpaid" rendering in the
  * same grey as "Paid" would quietly undo the reason for showing it at all.
  */
+/**
+ * Marks a module that is built but not finished.
+ *
+ * A star, not a banner. The banner version was a full-width card above every
+ * list — the first thing read on the page, every single time, saying something
+ * that only needs saying once. This says it in one character, next to the name
+ * of the thing it is about.
+ *
+ * The meaning is not left to the reader to guess: `title` carries the detail
+ * on hover, and the screen-reader text carries it always. Removing the star is
+ * still the last step of finishing a module — see betaNote in permissions.ts.
+ */
+export function BetaStar({
+  note,
+  className = "",
+}: {
+  note: string;
+  className?: string;
+}) {
+  return (
+    <span title={`Beta — ${note}`} className={`shrink-0 leading-none ${className}`}>
+      <span aria-hidden="true">★</span>
+      <span className="sr-only"> Beta — {note}</span>
+    </span>
+  );
+}
+
 export function StatusPill({ status }: { status: string }) {
   const styles: Record<string, string> = {
     published: "bg-accent-soft/60 text-ink-muted ring-laurel",

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  BetaStar,
   Button,
   EmptyState,
   ErrorBanner,
@@ -93,10 +94,13 @@ export function ContactWorkspace({
   initialData,
   /** The query the server already ran, as lib/crm/scopes.ts canonicalises it. */
   initialQuery,
+  /** The module's beta note, if it has one. Renders a star beside the title. */
+  beta,
 }: {
   scope: Scope;
   initialData?: ContactList;
   initialQuery?: string;
+  beta?: string | null;
 }) {
   const config = SCOPE[scope];
   const router = useRouter();
@@ -286,6 +290,10 @@ export function ContactWorkspace({
             <span className="ml-2 align-middle text-sm font-semibold text-ink-soft">
               {total}
             </span>
+            {/* Same star as the sidebar, so the two say one thing. */}
+            {beta && (
+              <BetaStar note={beta} className="ml-1.5 align-middle text-base text-alloy" />
+            )}
           </h1>
           {sampleCount > 0 && (
             <p className="mt-0.5 text-xs font-semibold text-ink-faint">

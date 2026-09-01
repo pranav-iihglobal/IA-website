@@ -23,18 +23,11 @@ export default async function AdminCustomersPage() {
 
   return (
     <>
-      {beta && (
-        <p className="admin-card mb-4 flex flex-wrap items-center gap-2 px-4 py-2.5 text-sm text-ink">
-          <span className="rounded-full bg-accent-mid/80 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-cornsilk-light">
-            Beta
-          </span>
-          {beta}
-        </p>
-      )}
       {/* Suspense because the workspace reads the ?edit / ?new search params,
           which opts the subtree into client-side rendering. */}
       <Suspense fallback={<ListPageSkeleton rows={5} />}>
         <ContactWorkspace
+          beta={beta}
           scope="customers"
           initialData={initialData}
           initialQuery={listQueryKey(query)}

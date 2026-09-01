@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
+  BetaStar,
   Button,
   EmptyState,
   ErrorBanner,
@@ -73,6 +74,8 @@ export function InvoiceWorkspace({
   parties,
   canWrite,
   canCancel,
+  /** The module's beta note, if it has one. Renders a star beside the title. */
+  beta,
 }: {
   initialData?: InvoiceList;
   initialQuery?: string;
@@ -80,6 +83,7 @@ export function InvoiceWorkspace({
   parties: BillableParty[];
   canWrite: boolean;
   canCancel: boolean;
+  beta?: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -334,6 +338,10 @@ export function InvoiceWorkspace({
             <span className="ml-2 align-middle text-sm font-semibold text-ink-soft">
               {total}
             </span>
+            {/* Same star as the sidebar, so the two say one thing. */}
+            {beta && (
+              <BetaStar note={beta} className="ml-1.5 align-middle text-base text-alloy" />
+            )}
           </h1>
         </div>
         {canWrite && (

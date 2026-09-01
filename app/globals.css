@@ -760,6 +760,34 @@ select.admin-input {
   height: 60%;
 }
 
+/*
+  Children of a nav group.
+
+  The hairline down the left of the list IS the parent-child relation — the
+  same line the group heading sits above. So the active marker is pulled onto
+  it rather than floating beside it: the bright segment says "this branch",
+  and the full height says which node. Two bars an eighth of an inch apart
+  would just read as a rendering fault.
+*/
+.admin-nav-children .admin-nav-link::before {
+  left: calc(-0.5rem - 1px);
+  width: 2px;
+  border-radius: 2px;
+}
+.admin-nav-children .admin-nav-link-active::before {
+  height: 100%;
+}
+
+/*
+  Group headings. A fold control, so it needs a hit area and a visible focus
+  ring — but it is a label first, and it must not compete with the links
+  underneath it for attention.
+*/
+.admin-nav-group:focus-visible {
+  outline: 2px solid var(--color-laurel-light);
+  outline-offset: -2px;
+}
+
 /* --- Toasts -------------------------------------------------------------- */
 @keyframes toast-in {
   from {
@@ -884,6 +912,7 @@ select.admin-input {
   .admin-btn,
   .admin-input,
   .admin-nav-link,
+  .admin-nav-group svg,
   .admin-row,
   .admin-row-actions {
     transition: none;

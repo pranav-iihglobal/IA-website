@@ -32,14 +32,6 @@ export default async function AdminInvoicesPage() {
 
   return (
     <>
-      {beta && (
-        <p className="admin-card mb-4 flex flex-wrap items-center gap-2 px-4 py-2.5 text-sm text-ink">
-          <span className="rounded-full bg-accent-mid/80 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-cornsilk-light">
-            Beta
-          </span>
-          {beta}
-        </p>
-      )}
 
       {/*
         Said here rather than discovered halfway through raising an invoice.
@@ -59,6 +51,7 @@ export default async function AdminInvoicesPage() {
 
       <Suspense fallback={<ListPageSkeleton rows={5} />}>
         <InvoiceWorkspace
+          beta={beta}
           initialData={initialData}
           initialQuery={listQueryKey(query)}
           products={products}
