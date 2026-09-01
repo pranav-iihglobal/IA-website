@@ -1,6 +1,7 @@
 "use client";
 
-import { FieldGroup, SelectField, TextField } from "./ui";
+import { Button, FieldGroup, SelectField, TextField } from "./ui";
+import { ContactNotes, type ContactNote } from "./ContactNotes";
 import type { Scope } from "./ContactWorkspace";
 
 /**
@@ -42,6 +43,8 @@ export interface ContactFormValues {
   lead?: Record<string, unknown>;
   customer?: Record<string, unknown>;
   dealer?: Record<string, unknown>;
+  /** Appended through their own endpoint, never through this form. */
+  notes?: ContactNote[];
 }
 
 export function emptyContact(): ContactFormValues {
@@ -71,6 +74,7 @@ export function emptyContact(): ContactFormValues {
     lead: {},
     customer: {},
     dealer: {},
+    notes: [],
   };
 }
 
@@ -116,11 +120,14 @@ export function ContactForm({
   values,
   errors,
   onChange,
+  contactId,
 }: {
   scope: Scope;
   values: ContactFormValues;
   errors: Record<string, string>;
   onChange: (next: ContactFormValues) => void;
+  /** The saved record's id. Absent while creating — notes need somewhere to go. */
+  contactId?: string;
 }) {
   const set = (patch: Partial<ContactFormValues>) =>
     onChange({ ...values, ...patch });
@@ -319,7 +326,7 @@ export function ContactForm({
           htmlFor="contact-remarks"
           className="mb-1.5 block text-sm font-semibold text-ink-strong"
         >
-          Notes
+          Standing notes
         </label>
         <textarea
           id="contact-remarks"
@@ -329,6 +336,69 @@ export function ContactForm({
           className="admin-input"
         />
       </div>
+
+      {/*
+        Converting is one field changing on the same row — the whole reason
+        leads and customers share a collection. Nothing is copied, nothing is
+        retyped, and the call log and follow-up history come with them.
+
+        Only offered on a saved lead: there is nothing to convert until the
+        record exists, and a brand new customer is created from the Customers
+        screen anyway.
+      */}
+      {isLead && contactId && (
+        <div className="rounded-xl border border-line-soft bg-surface-muted p-3">
+          <p className="text-sm font-semibold text-ink-strong">
+            Convert this lead
+          </p>
+          <p className="mt-0.5 text-sm text-ink-soft">
+            Keeps the same record, its notes and its history. It moves off the
+            Leads list to Customers or Dealers.
+          </p>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => onChange({ ...values, kind: "customer", channel: "b2c" })}
+            >
+              To customer
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => onChange({ ...values, kind: "customer", channel: "b2b" })}
+            >
+              To dealer
+            </Button>
+          </div>
+          {values.kind === "customer" && (
+            <p className="mt-2.5 text-sm font-semibold text-cta">
+              Will become a {values.channel === "b2b" ? "dealer" : "customer"} when
+              you save
+              {values.channel === "b2b" && !values.dealer?.gstin
+                ? " — a dealer needs a GSTIN first."
+                : "."}
+            </p>
+          )}
+          {values.channel === "b2b" && (
+            <div className="mt-2.5">
+              <TextField
+                label="GSTIN"
+                value={String(values.dealer?.gstin ?? "")}
+                onChange={(v) => setGroup("dealer", { gstin: v.toUpperCase() })}
+                error={errors["dealer.gstin"]}
+                required
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {contactId && (
+        <ContactNotes
+          contactId={contactId}
+          notes={values.notes ?? []}
+          onAdded={(notes) => onChange({ ...values, notes })}
+        />
+      )}
     </div>
   );
 }

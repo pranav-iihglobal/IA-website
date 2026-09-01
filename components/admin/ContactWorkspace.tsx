@@ -389,6 +389,7 @@ export function ContactWorkspace({ scope }: { scope: Scope }) {
         {formValues && (
           <ContactForm
             scope={scope}
+            contactId={editId ?? undefined}
             values={formValues}
             errors={fieldErrors}
             onChange={(next) => {
