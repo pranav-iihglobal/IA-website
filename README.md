@@ -164,6 +164,30 @@ Local development must run on **port 3000** — the registered redirect URI is `
 
 Add every variable from `.env.example` under **Settings → Environment Variables** (Production + Preview), then redeploy. Never commit `.env.local`.
 
+#### The function region has to match the database region
+
+`vercel.json` pins serverless functions to **`bom1` (Mumbai)**. That is not a
+preference — it is the single biggest thing affecting how fast the admin panel
+feels, and it is easy to undo by accident, so here is why.
+
+Vercel's default region is `iad1`, Washington DC. Atlas is in Mumbai. With the
+default, every database round trip crossed half the planet (~220 ms), and so did
+every request from the directors in Gujarat (~250 ms each way). Opening one admin
+list makes two browser round trips and three database round trips, so the panel
+spent roughly **1.7 seconds doing nothing but waiting on the network** — before
+any query ran. Cold-starting a function added the MongoDB TLS handshake at the
+same distance again.
+
+Pinned to Mumbai, the functions sit beside both the database and the people using
+them, and those same round trips cost single-digit milliseconds.
+
+**If you ever move the Atlas cluster, move this too.** They belong in the same
+region; which region matters far less than that they match.
+
+The public site is unaffected either way — every page under `app/(site)` is
+statically generated with ISR and served from Vercel's global CDN, which is
+regional no matter where functions run.
+
 ## Installable app (PWA)
 
 The site is installable — "Add to home screen" on a phone, or the install
