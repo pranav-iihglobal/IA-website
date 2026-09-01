@@ -16,6 +16,8 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { FormSheet } from "./FormSheet";
 import { ContactForm, type ContactFormValues, emptyContact } from "./ContactForm";
 import { STATUS_LABELS, type ContactRow } from "@/lib/crm/shape";
+import type { ContactList } from "@/lib/crm/list";
+import { SCOPE_QUERY, listQueryKey, type Scope } from "@/lib/crm/scopes";
 
 /**
  * The list + overlay pairing every CRM screen is built from.
@@ -30,8 +32,12 @@ import { STATUS_LABELS, type ContactRow } from "@/lib/crm/shape";
  * instead of leaving the page, and lets a row be linked to directly.
  */
 
-export type Scope = "customers" | "dealers" | "leads";
+export type { Scope };
 
+/*
+  What each list is called and what a new record starts as. The QUERY behind
+  each one lives in lib/crm/scopes.ts, because the page runs it too.
+*/
 const SCOPE: Record<
   Scope,
   {
@@ -45,19 +51,19 @@ const SCOPE: Record<
   customers: {
     title: "Customers",
     noun: "customer",
-    query: { kind: "customer", channel: "b2c" },
+    query: SCOPE_QUERY.customers,
     defaults: { kind: "customer", channel: "b2c" },
   },
   dealers: {
     title: "Dealers",
     noun: "dealer",
-    query: { kind: "customer", channel: "b2b" },
+    query: SCOPE_QUERY.dealers,
     defaults: { kind: "customer", channel: "b2b" },
   },
   leads: {
     title: "Leads",
     noun: "lead",
-    query: { kind: "lead" },
+    query: SCOPE_QUERY.leads,
     defaults: { kind: "lead" },
   },
 };
@@ -82,20 +88,31 @@ function rupees(paise: number) {
   return `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 }
 
-export function ContactWorkspace({ scope }: { scope: Scope }) {
+export function ContactWorkspace({
+  scope,
+  initialData,
+  /** The query the server already ran, as lib/crm/scopes.ts canonicalises it. */
+  initialQuery,
+}: {
+  scope: Scope;
+  initialData?: ContactList;
+  initialQuery?: string;
+}) {
   const config = SCOPE[scope];
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
 
-  const [rows, setRows] = useState<ContactRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [sampleCount, setSampleCount] = useState(0);
-  const [pages, setPages] = useState(1);
+  // Seeded from the HTML, so the first page is on screen before this
+  // component has run a single fetch.
+  const [rows, setRows] = useState<ContactRow[]>(initialData?.items ?? []);
+  const [total, setTotal] = useState(initialData?.total ?? 0);
+  const [sampleCount, setSampleCount] = useState(initialData?.sampleCount ?? 0);
+  const [pages, setPages] = useState(initialData?.pages ?? 1);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
 
   const [saving, setSaving] = useState(false);
@@ -115,15 +132,19 @@ export function ContactWorkspace({ scope }: { scope: Scope }) {
     return () => clearTimeout(t);
   }, [search]);
 
+  /** Everything that decides which rows this list shows. */
+  const query = useMemo(() => {
+    const q = new URLSearchParams({ ...config.query, page: String(page) });
+    if (debounced) q.set("search", debounced);
+    if (filter === "due") q.set("due", "1");
+    else if (filter) q.set("followUpStatus", filter);
+    return q;
+  }, [config.query, page, debounced, filter]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const query = new URLSearchParams({ ...config.query, page: String(page) });
-      if (debounced) query.set("search", debounced);
-      if (filter === "due") query.set("due", "1");
-      else if (filter) query.set("followUpStatus", filter);
-
       const res = await fetch(`/api/admin/contacts?${query}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not load the list");
@@ -136,11 +157,25 @@ export function ContactWorkspace({ scope }: { scope: Scope }) {
     } finally {
       setLoading(false);
     }
-  }, [config.query, page, debounced, filter]);
+  }, [query]);
 
+  /*
+    Fetch on mount ONLY if the server has not already answered this exact
+    query. It has, for the first page of an untouched list — those rows came
+    down in the HTML — and re-fetching them would be the round trip this whole
+    change exists to remove, plus a needless skeleton flash.
+
+    Spent after one use: coming back to page 1 later must re-fetch, because a
+    record may have been edited since the page was rendered.
+  */
+  const alreadyServed = useRef(initialData ? initialQuery : null);
   useEffect(() => {
+    if (alreadyServed.current === listQueryKey(query)) {
+      alreadyServed.current = null;
+      return;
+    }
     void load();
-  }, [load]);
+  }, [load, query]);
 
   // A new search starts at page 1 — staying on page 7 of the old result set
   // shows an empty list and looks like a bug.
