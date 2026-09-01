@@ -118,6 +118,15 @@ const LINKS: {
     ),
   },
   {
+    href: "/admin/invoices",
+    module: "billing",
+    label: "Invoices",
+    needs: "billing:read",
+    icon: (
+      <Icon path="M6 3h9l3 3v15l-2.5-1.5L13 21l-2.5-1.5L8 21l-2-1.5V3Zm3 5h6M9 12h6M9 16h4" />
+    ),
+  },
+  {
     href: "/admin/users",
     label: "People",
     needs: "users:read",

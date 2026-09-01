@@ -1,10 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { connectToDatabase } from "@/lib/db/connect";
-import { Invoice } from "@/lib/db/models/Invoice";
 import { issueInvoiceSchema } from "@/lib/schemas";
 import { InvoiceError, issueInvoice } from "@/lib/erp/invoice";
-import { searchRegex } from "@/lib/search";
-import type { LeanDoc } from "@/lib/db/lean";
+import { listInvoices } from "@/lib/erp/list";
 import {
   currentEditor,
   errorResponse,
@@ -15,64 +12,12 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 25;
-
 export async function GET(request: NextRequest) {
   const unauthorized = await requirePermission("billing:read");
   if (unauthorized) return unauthorized;
 
   try {
-    await connectToDatabase();
-    const params = request.nextUrl.searchParams;
-    const page = Math.max(1, Number(params.get("page") ?? 1));
-
-    const filter: LeanDoc = {};
-    const status = params.get("status");
-    if (status === "issued" || status === "cancelled" || status === "draft") {
-      filter.status = status;
-    }
-    const year = params.get("financialYear");
-    if (year) filter.financialYear = year;
-    const payment = params.get("payment");
-    if (payment) filter["payment.status"] = payment;
-
-    const search = (params.get("search") ?? "").trim();
-    if (search) {
-      const rx = searchRegex(search);
-      filter.$or = [{ number: rx }, { "party.name": rx }, { "party.businessName": rx }];
-    }
-
-    const [items, total] = await Promise.all([
-      Invoice.find(filter)
-        .select(
-          "number financialYear status issuedAt party grandTotalPaise payment isHistorical cancelledAt",
-        )
-        // Newest first, and drafts (no issuedAt) at the top where they need acting on.
-        .sort({ issuedAt: -1, createdAt: -1 })
-        .skip((page - 1) * PAGE_SIZE)
-        .limit(PAGE_SIZE)
-        .lean(),
-      Invoice.countDocuments(filter),
-    ]);
-
-    return NextResponse.json({
-      items: (items as LeanDoc[]).map((i) => ({
-        id: String(i._id),
-        number: i.number ?? "",
-        financialYear: i.financialYear ?? "",
-        status: i.status,
-        issuedAt: i.issuedAt ? new Date(i.issuedAt).toISOString() : null,
-        partyName: i.party?.businessName || i.party?.name || "",
-        gstin: i.party?.gstin ?? "",
-        grandTotalPaise: i.grandTotalPaise ?? 0,
-        paymentStatus: i.payment?.status ?? "unpaid",
-        isHistorical: Boolean(i.isHistorical),
-      })),
-      total,
-      page,
-      pages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
-      pageSize: PAGE_SIZE,
-    });
+    return NextResponse.json(await listInvoices(request.nextUrl.searchParams));
   } catch (error) {
     return errorResponse(error);
   }

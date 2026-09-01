@@ -72,6 +72,32 @@ export const SITE = {
   email: "info@iksarva.com",
 } as const;
 
+/**
+ * What has to appear on a tax invoice as the SELLER.
+ *
+ * None of this is secret — every one of these is printed on every invoice and
+ * shown to every customer — so it lives here as ordinary content rather than
+ * in an environment variable.
+ *
+ * ⚠️ FILL THESE IN. A tax invoice without the supplier's GSTIN is not a valid
+ * tax invoice. The print view refuses to pretend: it shows a visible warning
+ * rather than printing a blank line, because a document that looks complete
+ * and is not is worse than one that says what is missing.
+ */
+export const SELLER = {
+  /** 15 characters, e.g. 24ABCDE1234F1Z5. */
+  gstin: "",
+  pan: "",
+  /** State code for the place of supply. 24 is Gujarat. */
+  stateCode: "24",
+  /** Optional, printed under the totals if set. */
+  bank: {
+    name: "",
+    accountNo: "",
+    ifsc: "",
+  },
+} as const;
+
 /** Build a WhatsApp deep link with a pre-filled message. */
 export function waLink(message: string): string {
   return `https://wa.me/${SITE.whatsappNumber}?text=${encodeURIComponent(message)}`;
