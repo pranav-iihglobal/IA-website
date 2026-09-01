@@ -31,8 +31,8 @@ describe("module overrides survive validation", () => {
     const modules = Object.fromEntries(MODULES.map((m) => [m, "none"]));
     const out = userUpdateSchema.safeParse({ ...base, modules });
     expect(out.success).toBe(true);
-    for (const module of MODULES) {
-      expect(out.success && out.data.modules?.[module]).toBe("none");
+    for (const key of MODULES) {
+      expect(out.success && out.data.modules?.[key]).toBe("none");
     }
   });
 
