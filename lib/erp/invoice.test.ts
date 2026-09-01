@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { computeInvoice } from "./tax";
-import { InvoiceError, snapshotLine, type DraftLine, type LineProduct } from "./invoice";
+import {
+  InvoiceError,
+  resolveCreditPicks,
+  snapshotLine,
+  type DraftLine,
+  type LineProduct,
+} from "./invoice";
 
 /**
  * The rules that decide what ends up on an invoice line.
@@ -126,5 +132,136 @@ describe("end to end, without a database", () => {
     const inter = computeInvoice(snapshots.map((s) => s.tax), "inter");
     expect(inter.igstPaise).toBe(intra.totalTaxPaise);
     expect(inter.cgstPaise + inter.sgstPaise).toBe(0);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Credit notes                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * What a credit note is allowed to reverse.
+ *
+ * Every case here is about the same failure: crediting more than was sold.
+ * That is not a display bug — it is a smaller GST liability on a return that
+ * has been filed, and it is the direction nobody goes looking in.
+ */
+
+const sold = (...quantities: number[]) => quantities.map((quantity) => ({ quantity }));
+
+describe("credit picks — the whole invoice", () => {
+  it("reverses every line at its full quantity when none are named", () => {
+    expect(resolveCreditPicks(sold(10, 4), undefined)).toEqual([
+      { index: 0, quantity: 10 },
+      { index: 1, quantity: 4 },
+    ]);
+  });
+
+  it("reverses only what is LEFT after an earlier credit", () => {
+    // "Credit the rest" is one action, not arithmetic done by hand.
+    const already = new Map([[0, 6]]);
+    expect(resolveCreditPicks(sold(10, 4), undefined, already)).toEqual([
+      { index: 0, quantity: 4 },
+      { index: 1, quantity: 4 },
+    ]);
+  });
+
+  it("drops a line that has already been credited in full", () => {
+    const already = new Map([[0, 10]]);
+    expect(resolveCreditPicks(sold(10, 4), undefined, already)).toEqual([
+      { index: 1, quantity: 4 },
+    ]);
+  });
+
+  it("refuses when there is nothing left to credit at all", () => {
+    const already = new Map([
+      [0, 10],
+      [1, 4],
+    ]);
+    expect(() => resolveCreditPicks(sold(10, 4), undefined, already)).toThrow(InvoiceError);
+  });
+});
+
+describe("credit picks — named lines", () => {
+  it("takes the lines asked for", () => {
+    expect(resolveCreditPicks(sold(10, 4), [{ index: 1, quantity: 2 }])).toEqual([
+      { index: 1, quantity: 2 },
+    ]);
+  });
+
+  it("refuses a line that is not on the invoice", () => {
+    expect(() => resolveCreditPicks(sold(10), [{ index: 5, quantity: 1 }])).toThrow(
+      /not on that invoice/,
+    );
+  });
+
+  it("refuses crediting more than was invoiced", () => {
+    expect(() => resolveCreditPicks(sold(10), [{ index: 0, quantity: 11 }])).toThrow(
+      /only 10 were invoiced/,
+    );
+  });
+
+  it("refuses a fractional or negative quantity", () => {
+    expect(() => resolveCreditPicks(sold(10), [{ index: 0, quantity: 2.5 }])).toThrow(InvoiceError);
+    expect(() => resolveCreditPicks(sold(10), [{ index: 0, quantity: -3 }])).toThrow(InvoiceError);
+    expect(() => resolveCreditPicks(sold(10), [{ index: 0, quantity: 0 }])).toThrow(InvoiceError);
+  });
+
+  it("sums a line named twice instead of letting it double-credit", () => {
+    /*
+      The bypass this exists for: five and five against a line of five passes
+      any per-pick check and credits ten. Merged first, it is one pick of ten
+      and is refused.
+    */
+    expect(() =>
+      resolveCreditPicks(sold(5), [
+        { index: 0, quantity: 5 },
+        { index: 0, quantity: 5 },
+      ]),
+    ).toThrow(/only 5 were invoiced/);
+  });
+
+  it("merges a line named twice when the total is legitimate", () => {
+    expect(
+      resolveCreditPicks(sold(10), [
+        { index: 0, quantity: 3 },
+        { index: 0, quantity: 4 },
+      ]),
+    ).toEqual([{ index: 0, quantity: 7 }]);
+  });
+
+  it("counts what an earlier credit note already took", () => {
+    const already = new Map([[0, 8]]);
+    expect(resolveCreditPicks(sold(10), [{ index: 0, quantity: 2 }], already)).toEqual([
+      { index: 0, quantity: 2 },
+    ]);
+    expect(() => resolveCreditPicks(sold(10), [{ index: 0, quantity: 3 }], already)).toThrow(
+      /only 2 of 10 are left/,
+    );
+  });
+});
+
+describe("a credit note cancels its invoice exactly", () => {
+  it("negated quantities reverse the totals to zero", () => {
+    // The reason amounts are stored negative: every sum just works.
+    const original = computeInvoice(
+      [
+        { description: "FloraMax", hsn: "31010099", quantity: 7, unitPricePaise: 24500, gstRateBps: 500 },
+        { description: "MycoBoost", hsn: "31010099", quantity: 3, unitPricePaise: 99900, gstRateBps: 1800 },
+      ],
+      "intra",
+    );
+    const credit = computeInvoice(
+      [
+        { description: "FloraMax", hsn: "31010099", quantity: -7, unitPricePaise: 24500, gstRateBps: 500 },
+        { description: "MycoBoost", hsn: "31010099", quantity: -3, unitPricePaise: 99900, gstRateBps: 1800 },
+      ],
+      "intra",
+    );
+
+    expect(original.grandTotalPaise + credit.grandTotalPaise).toBe(0);
+    expect(original.cgstPaise + credit.cgstPaise).toBe(0);
+    expect(original.sgstPaise + credit.sgstPaise).toBe(0);
+    expect(original.subtotalPaise + credit.subtotalPaise).toBe(0);
   });
 });

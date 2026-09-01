@@ -53,6 +53,17 @@ const lineSchema = new Schema(
     /** Reporting only. Never read for a price, a rate or an HSN code. */
     productId: { type: Schema.Types.ObjectId, ref: "Product", default: null },
 
+    /**
+     * Credit note lines only: which line of the ORIGINAL invoice this reverses,
+     * by its position.
+     *
+     * Recorded because a second credit note has to know what the first one
+     * already took. Without it, crediting the same line twice is invisible and
+     * the month's liability is understated on a filed return. Null on an
+     * invoice line, which reverses nothing.
+     */
+    againstLineIndex: { type: Number, default: null },
+
     // ---- the snapshot ----
     description: { type: String, required: true, trim: true },
     /** The pack, e.g. "25g sachet", as it was named at the time. */
@@ -78,8 +89,43 @@ const lineSchema = new Schema(
 const invoiceSchema = new Schema(
   {
     /**
-     * IA.MM.YY.NNN. Absent on a draft: the number is allocated at ISSUE, so
-     * an abandoned draft cannot leave a gap in a GST series.
+     * Which kind of document this is.
+     *
+     * A credit note lives in this collection rather than its own, because it
+     * IS an invoice structurally — a party snapshot, snapshotted lines, tax
+     * computed once, totals written down — and because every report has to
+     * see both. A second model would duplicate all of that and then need
+     * every query written twice.
+     *
+     * Its AMOUNTS ARE NEGATIVE. That is the whole trick: outstanding,
+     * lifetime revenue, the dashboard and the customer profile all just sum,
+     * and a credit note reduces them without a single special case. Storing
+     * positives and subtracting by type would work until somebody added the
+     * ninth aggregation and forgot. computeInvoice() was already built and
+     * tested for this — negating an invoice's quantities cancels it to
+     * exactly zero.
+     *
+     * The print view shows absolute values, because a printed credit note
+     * reads "₹1,050", not "−₹1,050".
+     */
+    documentType: {
+      type: String,
+      enum: ["invoice", "credit_note"],
+      default: "invoice",
+      required: true,
+      index: true,
+    },
+    /** The invoice this reverses. Required on a credit note. */
+    againstInvoiceId: { type: Schema.Types.ObjectId, ref: "Invoice", default: null },
+    /** Its number, snapshotted — the original must be nameable even if edited. */
+    againstNumber: { type: String, default: "", trim: true },
+    /** Why it was raised. Printed, and required by the GST return. */
+    reason: { type: String, default: "", trim: true },
+
+    /**
+     * IA.MM.YY.NNN for an invoice, CN.MM.YY.NNN for a credit note. Absent on a
+     * draft: the number is allocated at ISSUE, so an abandoned draft cannot
+     * leave a gap in a GST series.
      */
     number: { type: String, default: "", trim: true, index: true },
     /** April–March, e.g. "25-26". What the CA files by. */
@@ -180,7 +226,8 @@ const invoiceSchema = new Schema(
 );
 
 /** The list: newest first, and the CA's filter by year. */
-invoiceSchema.index({ status: 1, issuedAt: -1 });
+invoiceSchema.index({ documentType: 1, status: 1, issuedAt: -1 });
+invoiceSchema.index({ againstInvoiceId: 1 });
 invoiceSchema.index({ financialYear: 1, issuedAt: -1 });
 invoiceSchema.index({ contactId: 1, issuedAt: -1 });
 

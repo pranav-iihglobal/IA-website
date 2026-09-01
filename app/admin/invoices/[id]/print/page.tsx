@@ -24,6 +24,11 @@ export const dynamic = "force-dynamic";
  * Everything here is READ from the stored invoice. Nothing is recomputed: the
  * totals were worked out once at issue and written down, and a rounding fix
  * shipped next year must not change what a document already filed says.
+ *
+ * A CREDIT NOTE prints from the same page. It is stored with negative amounts
+ * — that is what makes every internal sum work without a special case — but a
+ * printed credit note reads "₹1,050", not "−₹1,050". So the sign is dropped
+ * HERE, at the point of display, and nowhere earlier.
  */
 export default async function InvoicePrintPage({
   params,
@@ -40,7 +45,12 @@ export default async function InvoicePrintPage({
   if (!doc) notFound();
 
   const intra = doc.supplyType === "intra";
+  const isCredit = doc.documentType === "credit_note";
   const rateRows = summariseByRate(doc.lines ?? []);
+
+  /* Displayed magnitude. The stored sign is what the sums rely on. */
+  const money = (paise: number) => formatINR(isCredit ? Math.abs(paise ?? 0) : (paise ?? 0));
+  const count = (quantity: number) => (isCredit ? Math.abs(quantity ?? 0) : quantity);
 
   return (
     <div className="mx-auto w-full max-w-[820px] bg-white p-8 text-[13px] text-black print:p-0">
@@ -88,7 +98,9 @@ export default async function InvoicePrintPage({
           </p>
         </div>
         <div className="text-right">
-          <p className="text-sm font-bold uppercase tracking-wider">Tax Invoice</p>
+          <p className="text-sm font-bold uppercase tracking-wider">
+            {isCredit ? "Credit Note" : "Tax Invoice"}
+          </p>
           <p className="mt-2 text-base font-bold">{doc.number}</p>
           <p className="text-[12px]">
             {doc.issuedAt
@@ -101,6 +113,11 @@ export default async function InvoicePrintPage({
           </p>
           {doc.financialYear && (
             <p className="text-[12px]">FY {doc.financialYear}</p>
+          )}
+          {isCredit && doc.againstNumber && (
+            <p className="mt-1 text-[12px] font-semibold">
+              Against invoice {doc.againstNumber}
+            </p>
           )}
           {doc.isHistorical && (
             <p className="mt-1 text-[11px] font-semibold uppercase">Imported record</p>
@@ -160,18 +177,20 @@ export default async function InvoicePrintPage({
               <td className="py-1.5 pr-2">{i + 1}</td>
               <td className="py-1.5 pr-2">{line.description}</td>
               <td className="py-1.5 pr-2">{line.hsn}</td>
-              <td className="py-1.5 pr-2 text-right tabular-nums">{line.quantity}</td>
+              <td className="py-1.5 pr-2 text-right tabular-nums">
+                {count(line.quantity)}
+              </td>
               <td className="py-1.5 pr-2 text-right tabular-nums">
                 {formatINR(line.unitPricePaise)}
               </td>
               <td className="py-1.5 pr-2 text-right tabular-nums">
-                {formatINR(line.taxableValuePaise)}
+                {money(line.taxableValuePaise)}
               </td>
               <td className="py-1.5 pr-2 text-right tabular-nums">
                 {formatRate(line.gstRateBps)}
               </td>
               <td className="py-1.5 text-right tabular-nums">
-                {formatINR(line.lineTotalPaise)}
+                {money(line.lineTotalPaise)}
               </td>
             </tr>
           ))}
@@ -200,20 +219,20 @@ export default async function InvoicePrintPage({
               <tr key={r.gstRateBps} className="border-b border-black/20">
                 <td className="py-1 pr-3">{formatRate(r.gstRateBps)}</td>
                 <td className="py-1 pr-3 text-right tabular-nums">
-                  {formatINR(r.taxableValuePaise)}
+                  {money(r.taxableValuePaise)}
                 </td>
                 {intra ? (
                   <>
                     <td className="py-1 pr-3 text-right tabular-nums">
-                      {formatINR(r.cgstPaise)}
+                      {money(r.cgstPaise)}
                     </td>
                     <td className="py-1 text-right tabular-nums">
-                      {formatINR(r.sgstPaise)}
+                      {money(r.sgstPaise)}
                     </td>
                   </>
                 ) : (
                   <td className="py-1 text-right tabular-nums">
-                    {formatINR(r.igstPaise)}
+                    {money(r.igstPaise)}
                   </td>
                 )}
               </tr>
@@ -223,34 +242,51 @@ export default async function InvoicePrintPage({
 
         <table className="ml-auto border-collapse text-[12px]">
           <tbody>
-            <Total label="Taxable value" paise={doc.subtotalPaise} />
+            <Total label="Taxable value" value={money(doc.subtotalPaise)} />
             {intra ? (
               <>
-                <Total label="CGST" paise={doc.cgstPaise} />
-                <Total label="SGST" paise={doc.sgstPaise} />
+                <Total label="CGST" value={money(doc.cgstPaise)} />
+                <Total label="SGST" value={money(doc.sgstPaise)} />
               </>
             ) : (
-              <Total label="IGST" paise={doc.igstPaise} />
+              <Total label="IGST" value={money(doc.igstPaise)} />
             )}
             {/* Shown explicitly. A difference that quietly disappears between
                 the computed total and the printed one is how books stop tying. */}
             {doc.roundOffPaise !== 0 && (
-              <Total label="Round off" paise={doc.roundOffPaise} />
+              <Total label="Round off" value={money(doc.roundOffPaise)} />
             )}
             <tr className="border-t-2 border-black">
-              <td className="py-1.5 pr-6 font-bold">Total</td>
+              <td className="py-1.5 pr-6 font-bold">
+                {isCredit ? "Credit total" : "Total"}
+              </td>
               <td className="py-1.5 text-right text-base font-bold tabular-nums">
-                {formatINR(doc.grandTotalPaise)}
+                {money(doc.grandTotalPaise)}
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      {/* Derived from the same integer as the total, so they cannot disagree. */}
+      {/*
+        Derived from the same integer as the total, so they cannot disagree.
+        Stored on a credit note as "Minus Rupees …" because the total is
+        negative; the word is dropped for print alongside the sign, so the
+        figure and the words still say the same thing. A display transform of
+        the stored string, not a recalculation of it.
+      */}
       <p className="mt-3 border-t border-black/30 pt-2 text-[12px]">
-        <span className="font-semibold">Amount in words:</span> {doc.amountInWords}
+        <span className="font-semibold">Amount in words:</span>{" "}
+        {isCredit
+          ? String(doc.amountInWords ?? "").replace(/^Minus\s+/, "")
+          : doc.amountInWords}
       </p>
+
+      {isCredit && doc.reason && (
+        <p className="mt-2 text-[12px]">
+          <span className="font-semibold">Reason:</span> {doc.reason}
+        </p>
+      )}
 
       {doc.notes && <p className="mt-2 text-[12px]">{doc.notes}</p>}
 
@@ -259,7 +295,8 @@ export default async function InvoicePrintPage({
         The UPI id is not decoration: a farmer with a phone can settle a
         printed invoice without having to ring anyone for the account number.
       */}
-      {SELLER.bank.accountNo && (
+      {/* Not printed on a credit note: the money moves the other way. */}
+      {!isCredit && SELLER.bank.accountNo && (
         <div className="mt-3 border-t border-black/30 pt-2 text-[11px] leading-relaxed">
           <p className="font-semibold">Payment</p>
           <p>
@@ -278,8 +315,10 @@ export default async function InvoicePrintPage({
 
       <footer className="mt-10 flex items-end justify-between text-[11px]">
         <p className="max-w-[46ch] leading-snug">
-          Goods once sold will not be taken back. Subject to{" "}
-          {SITE.address.district} jurisdiction.
+          {isCredit
+            ? `This credit note reduces the amount due on ${doc.againstNumber || "the invoice above"}.`
+            : "Goods once sold will not be taken back."}{" "}
+          Subject to {SITE.address.district} jurisdiction.
         </p>
         <p className="text-right">
           For {SITE.name}
@@ -291,11 +330,11 @@ export default async function InvoicePrintPage({
   );
 }
 
-function Total({ label, paise }: { label: string; paise: number }) {
+function Total({ label, value }: { label: string; value: string }) {
   return (
     <tr>
       <td className="py-1 pr-6">{label}</td>
-      <td className="py-1 text-right tabular-nums">{formatINR(paise)}</td>
+      <td className="py-1 text-right tabular-nums">{value}</td>
     </tr>
   );
 }

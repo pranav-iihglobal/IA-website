@@ -399,10 +399,20 @@ export function ContactProfile({
                         className="min-w-0 flex-1 truncate text-sm font-semibold text-ink hover:underline"
                       >
                         {inv.number || "(no number)"}
+                        {inv.documentType === "credit_note" && inv.againstNumber && (
+                          <span className="ml-1 font-normal text-xs text-ink-faint">
+                            credits {inv.againstNumber}
+                          </span>
+                        )}
                       </Link>
                       <span className="shrink-0 text-xs text-ink-faint">
                         {date(inv.issuedAt) ?? "—"}
                       </span>
+                      {/*
+                        Shown NEGATIVE here, unlike on the printed note. This is
+                        the internal ledger view: the minus is what makes the
+                        rows add up to the total above them.
+                      */}
                       <span
                         className={`shrink-0 text-sm tabular-nums ${
                           inv.status === "cancelled"
@@ -414,12 +424,23 @@ export function ContactProfile({
                       </span>
                       <StatusPill
                         status={
-                          inv.status === "cancelled" ? "cancelled" : inv.paymentStatus
+                          inv.status === "cancelled"
+                            ? "cancelled"
+                            : inv.documentType === "credit_note"
+                              ? "credit note"
+                              : inv.paymentStatus
                         }
                       />
                     </li>
                   ))}
                 </ul>
+              )}
+              {trading.creditNoteCount > 0 && (
+                <p className="mt-2 text-xs text-ink-faint">
+                  {trading.creditNoteCount} credit note
+                  {trading.creditNoteCount === 1 ? " is" : "s are"} netted off the
+                  totals above, and not counted as orders.
+                </p>
               )}
               {trading.cancelledCount > 0 && (
                 <p className="mt-2 text-xs text-ink-faint">

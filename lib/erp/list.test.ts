@@ -51,3 +51,31 @@ describe("filters", () => {
     expect(filterFor("")).toEqual({});
   });
 });
+
+describe("credit notes in the list", () => {
+  it("shows both kinds by default", () => {
+    /*
+      Not a nicety. A credit note is part of the month's paperwork, and a list
+      that hid them would show a month's total that disagreed with the return.
+    */
+    expect(filterFor("")).not.toHaveProperty("documentType");
+  });
+
+  it("narrows to credit notes when asked", () => {
+    expect(filterFor("kind=credit_note").documentType).toBe("credit_note");
+  });
+
+  it("treats a document written before credit notes existed as an invoice", () => {
+    // Those rows have no documentType at all, so it cannot be an equality test.
+    expect(filterFor("kind=invoice").documentType).toEqual({ $ne: "credit_note" });
+  });
+
+  it("ignores an unknown kind rather than returning nothing", () => {
+    expect(filterFor("kind=receipt")).not.toHaveProperty("documentType");
+  });
+
+  it("finds the credit notes raised against an invoice number", () => {
+    // Searching IA.09.26.001 should surface the note that reverses it.
+    expect(matches(filterFor("search=" + encodeURIComponent("IA.09.26.001")), "againstNumber", "IA.09.26.001")).toBe(true);
+  });
+});

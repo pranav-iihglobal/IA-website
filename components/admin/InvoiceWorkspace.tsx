@@ -36,7 +36,13 @@ import type { InvoiceList, InvoiceRow } from "@/lib/erp/list";
  *
  * There is no EDIT. An issued invoice is a record of what was filed; the
  * model refuses a financial change regardless of what any screen asks for. The
- * only things a row offers are recording a payment, cancelling, and printing.
+ * only things a row offers are recording a payment, cancelling, crediting, and
+ * printing.
+ *
+ * Cancelling and crediting are not the same act and the screen does not blur
+ * them. Cancel voids the whole document; a credit note leaves it standing and
+ * reverses part of it, which is what a correction to something already filed
+ * has to look like.
  */
 
 const FILTERS = [
@@ -44,7 +50,21 @@ const FILTERS = [
   { value: "unpaid", label: "Unpaid" },
   { value: "paid", label: "Paid" },
   { value: "cancelled", label: "Cancelled" },
+  { value: "credit_notes", label: "Credit notes" },
 ];
+
+const isCredit = (row: InvoiceRow) => row.documentType === "credit_note";
+
+/** One line of the invoice being credited, as the sheet edits it. */
+interface CreditLine {
+  index: number;
+  description: string;
+  packLabel: string;
+  /** What was invoiced. The ceiling for what can be credited. */
+  invoiced: number;
+  /** What is being credited now, as typed. */
+  quantity: string;
+}
 
 export function InvoiceWorkspace({
   initialData,
@@ -84,6 +104,10 @@ export function InvoiceWorkspace({
   const [cancelling, setCancelling] = useState<InvoiceRow | null>(null);
   const [cancelReason, setCancelReason] = useState("");
 
+  const [crediting, setCrediting] = useState<InvoiceRow | null>(null);
+  const [creditReason, setCreditReason] = useState("");
+  const [creditLines, setCreditLines] = useState<CreditLine[] | null>(null);
+
   const creating = params.get("new") === "1";
 
   const [debounced, setDebounced] = useState("");
@@ -96,6 +120,7 @@ export function InvoiceWorkspace({
     const q = new URLSearchParams({ page: String(page) });
     if (debounced) q.set("search", debounced);
     if (filter === "cancelled") q.set("status", "cancelled");
+    else if (filter === "credit_notes") q.set("kind", "credit_note");
     else if (filter) q.set("payment", filter);
     return q;
   }, [page, debounced, filter]);
@@ -227,6 +252,79 @@ export function InvoiceWorkspace({
     }
   }
 
+  /**
+   * Open the credit sheet, having fetched the invoice's lines.
+   *
+   * The list row does not carry them, and a partial credit is meaningless
+   * without them — "credit 3 of the 10 sachets" needs to know there were ten.
+   * Fetched on open rather than shipped with every row, because this is one
+   * invoice out of a page of twenty-five.
+   */
+  async function openCredit(row: InvoiceRow) {
+    setCrediting(row);
+    setCreditReason("");
+    setCreditLines(null);
+    try {
+      const res = await fetch(`/api/admin/invoices/${row.id}`, { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not read that invoice");
+      setCreditLines(
+        (data.lines ?? []).map(
+          (l: { description?: string; packLabel?: string; quantity?: number }, index: number) => ({
+            index,
+            description: l.description ?? "",
+            packLabel: l.packLabel ?? "",
+            invoiced: l.quantity ?? 0,
+            // Defaulted to the whole line: a full reversal is the common case.
+            quantity: String(l.quantity ?? 0),
+          }),
+        ),
+      );
+    } catch (e) {
+      setCrediting(null);
+      setError(e instanceof Error ? e.message : "Could not read that invoice");
+    }
+  }
+
+  async function confirmCredit() {
+    if (!crediting || !creditLines) return;
+    setSaving(true);
+    try {
+      /*
+        Lines are sent only when this is a PARTIAL credit. Sending every line
+        at its full quantity would be the same thing, but omitting them lets
+        the server work out what is LEFT — which is the right answer when an
+        earlier note already took some of it.
+      */
+      const picked = creditLines
+        .map((l) => ({ index: l.index, quantity: Number(l.quantity) || 0 }))
+        .filter((l) => l.quantity > 0);
+      const whole =
+        picked.length === creditLines.length &&
+        picked.every((l) => l.quantity === creditLines[l.index].invoiced);
+
+      const res = await fetch(`/api/admin/invoices/${crediting.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "credit",
+          reason: creditReason,
+          ...(whole ? {} : { lines: picked }),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Could not raise the credit note");
+      setCrediting(null);
+      setCreditLines(null);
+      setCreditReason("");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not raise the credit note");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -283,9 +381,23 @@ export function InvoiceWorkspace({
                     {row.partyName}
                     {row.gstin ? ` · ${row.gstin}` : ""}
                   </p>
+                  {isCredit(row) && row.againstNumber && (
+                    <p className="mt-0.5 text-xs text-ink-faint">
+                      credits {row.againstNumber}
+                    </p>
+                  )}
                   <p className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                    <StatusPill status={row.status} />
-                    <StatusPill status={row.paymentStatus} />
+                    {isCredit(row) ? (
+                      <StatusPill status="credit note" />
+                    ) : (
+                      <>
+                        <StatusPill status={row.status} />
+                        <StatusPill status={row.paymentStatus} />
+                      </>
+                    )}
+                    {isCredit(row) && row.status === "cancelled" && (
+                      <StatusPill status="cancelled" />
+                    )}
                     {row.isHistorical && <StatusPill status="filed" />}
                     <span className="text-ink-faint">
                       {row.issuedAt
@@ -305,7 +417,7 @@ export function InvoiceWorkspace({
                     >
                       Print
                     </Link>
-                    {canWrite && !row.isHistorical && row.status === "issued" && (
+                    {canWrite && !row.isHistorical && !isCredit(row) && row.status === "issued" && (
                       <button
                         type="button"
                         onClick={() => {
@@ -321,7 +433,16 @@ export function InvoiceWorkspace({
                         Payment
                       </button>
                     )}
-                    {canCancel && !row.isHistorical && row.status === "issued" && (
+                    {canWrite && !row.isHistorical && !isCredit(row) && row.status === "issued" && (
+                      <button
+                        type="button"
+                        onClick={() => void openCredit(row)}
+                        className="admin-tap inline-flex items-center rounded-full border border-line px-3 py-1 text-xs font-semibold text-ink-muted hover:border-olive"
+                      >
+                        Credit
+                      </button>
+                    )}
+                    {canCancel && !row.isHistorical && !isCredit(row) && row.status === "issued" && (
                       <button
                         type="button"
                         onClick={() => setCancelling(row)}
@@ -446,6 +567,95 @@ export function InvoiceWorkspace({
         />
       </FormSheet>
 
+      {/*
+        Crediting. The quantities default to the whole invoice, so the common
+        case is type a reason and save; changing one to a smaller number makes
+        it a partial credit. Nothing here can be raised above what was
+        invoiced, and the server checks it again against any earlier note.
+      */}
+      <FormSheet
+        open={Boolean(crediting)}
+        title={`Credit note against ${crediting?.number ?? ""}`}
+        description="The invoice stays as it is. This raises a separate document that reverses part of it, with its own CN number."
+        busy={saving}
+        onClose={() => {
+          setCrediting(null);
+          setCreditLines(null);
+        }}
+        wide
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setCrediting(null);
+                setCreditLines(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmCredit}
+              disabled={
+                saving ||
+                !creditLines ||
+                creditReason.trim().length < 3 ||
+                creditLines.every((l) => (Number(l.quantity) || 0) <= 0)
+              }
+            >
+              Raise credit note
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <TextField
+            label="Reason"
+            value={creditReason}
+            onChange={setCreditReason}
+            hint="Printed on the note and filed with the return — short delivery, goods returned, price corrected."
+          />
+
+          {!creditLines ? (
+            <p className="text-sm text-ink-faint">Reading the invoice…</p>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
+                What to credit
+              </p>
+              {creditLines.map((line, i) => (
+                <div
+                  key={line.index}
+                  className="flex flex-wrap items-center gap-3 rounded-xl border border-line-soft/60 p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-ink-strong">
+                      {line.description}
+                    </p>
+                    <p className="text-xs text-ink-faint">{line.invoiced} invoiced</p>
+                  </div>
+                  <div className="w-28">
+                    <TextField
+                      label="Credit"
+                      type="number"
+                      value={line.quantity}
+                      onChange={(quantity) =>
+                        setCreditLines(
+                          creditLines.map((l, j) => (i === j ? { ...l, quantity } : l)),
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+              ))}
+              <p className="text-xs text-ink-faint">
+                Set a line to 0 to leave it alone. A credit note cannot reverse more
+                than was invoiced, or more than is left after an earlier one.
+              </p>
+            </div>
+          )}
+        </div>
+      </FormSheet>
     </div>
   );
 }

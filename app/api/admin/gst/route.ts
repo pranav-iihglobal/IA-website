@@ -1,7 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requirePermission, errorResponse } from "@/lib/admin/api";
 import { invoicesForPeriod } from "@/lib/erp/reports";
-import { b2bCsv, b2csCsv, buildGstReturn, buildHsnSummary, hsnCsv } from "@/lib/erp/gst";
+import {
+  b2bCsv,
+  b2csCsv,
+  buildGstReturn,
+  buildHsnSummary,
+  cdnCsv,
+  hsnCsv,
+} from "@/lib/erp/gst";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,9 +29,10 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const year = Number(params.get("year")) || now.getFullYear();
     const month = Number(params.get("month")) || now.getMonth() + 1;
-    const requested = params.get("section");
-    const section =
-      requested === "b2cs" || requested === "hsn" ? requested : "b2b";
+    const requested = params.get("section") ?? "";
+    const section = (
+      ["b2cs", "hsn", "cdnr", "cdnur"].includes(requested) ? requested : "b2b"
+    ) as "b2b" | "b2cs" | "hsn" | "cdnr" | "cdnur";
 
     if (month < 1 || month > 12) {
       return NextResponse.json({ error: "Month must be 1–12." }, { status: 400 });
@@ -37,7 +45,11 @@ export async function GET(request: NextRequest) {
         ? hsnCsv(buildHsnSummary(invoices))
         : section === "b2cs"
           ? b2csCsv(built.b2cs)
-          : b2bCsv(built.b2b);
+          : section === "cdnr"
+            ? cdnCsv(built.cdnr, true)
+            : section === "cdnur"
+              ? cdnCsv(built.cdnur, false)
+              : b2bCsv(built.b2b);
     const stamp = `${year}-${String(month).padStart(2, "0")}`;
 
     return new NextResponse(csv, {

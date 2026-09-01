@@ -707,6 +707,29 @@ export const cancelInvoiceSchema = z.object({
   reason: z.string().trim().min(3, "Say why it is being cancelled"),
 });
 
+/**
+ * Raising a credit note.
+ *
+ * The reason is not optional and not a courtesy: GSTR-1 has a column for it,
+ * and it is printed on the note. Lines are optional — omitted means credit
+ * everything still outstanding on the invoice, which is the common case.
+ *
+ * Quantities are validated here for shape only. Whether a quantity is
+ * ACTUALLY creditable depends on the invoice and on any earlier note against
+ * it, which only `resolveCreditPicks` can know.
+ */
+export const creditNoteSchema = z.object({
+  reason: z.string().trim().min(3, "Say why it is being credited"),
+  lines: z
+    .array(
+      z.object({
+        index: z.number().int().min(0),
+        quantity: z.number().int().positive("Credit at least one"),
+      }),
+    )
+    .optional(),
+});
+
 /* ========================================================================== */
 /* STOCK AND PURCHASES                                                        */
 /* ========================================================================== */

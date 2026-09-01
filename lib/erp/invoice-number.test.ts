@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  creditNoteSeriesKey,
   financialYear,
+  formatCreditNoteNumber,
   formatInvoiceNumber,
+  formatSampleCreditNoteNumber,
+  isSampleInvoiceNumber,
   parseInvoiceNumber,
   seriesKey,
 } from "./invoice-number";
@@ -89,5 +93,37 @@ describe("parseInvoiceNumber", () => {
 
   it("tolerates surrounding whitespace, which spreadsheets add", () => {
     expect(parseInvoiceNumber("  IA.09.26.007 ")).not.toBeNull();
+  });
+});
+
+describe("sample numbers", () => {
+  it("marks a sample credit note as sample AND as a credit note", () => {
+    const n = formatSampleCreditNoteNumber(new Date(2026, 8, 4), 3);
+    expect(n).toBe("SMP.CN.09.26.003");
+    // The wipe and every "is this real?" check key off the SMP. prefix.
+    expect(isSampleInvoiceNumber(n)).toBe(true);
+  });
+});
+
+describe("the credit note series", () => {
+  it("is CN.MM.YY.NNN, its own consecutive series", () => {
+    // GST requires a credit note to carry its own serial, not an invoice one.
+    expect(formatCreditNoteNumber(new Date(2026, 8, 4), 1)).toBe("CN.09.26.001");
+    expect(formatCreditNoteNumber(new Date(2026, 8, 4), 42)).toBe("CN.09.26.042");
+  });
+
+  it("never shares a counter with the invoice series", () => {
+    /*
+      If it did, a credit note would consume an invoice number and leave a hole
+      in the invoice sequence — which is a question from the department.
+    */
+    const date = new Date(2026, 8, 4);
+    expect(creditNoteSeriesKey(date)).not.toBe(seriesKey(date));
+  });
+
+  it("resets monthly, like the invoice series", () => {
+    expect(creditNoteSeriesKey(new Date(2026, 8, 30))).not.toBe(
+      creditNoteSeriesKey(new Date(2026, 9, 1)),
+    );
   });
 });

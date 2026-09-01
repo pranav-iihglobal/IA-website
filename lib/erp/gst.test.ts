@@ -5,6 +5,7 @@ import {
   b2csCsv,
   buildGstReturn,
   buildHsnSummary,
+  cdnCsv,
   hsnCsv,
   isB2B,
   type ExportableInvoice,
@@ -252,5 +253,150 @@ describe("the HSN summary (Table 12)", () => {
     expect(csv).toContain("NOS");
     expect(csv).toContain("2000.00");
     expect(csv).not.toContain("₹");
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Credit notes — CDNR and CDNUR                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A credit note is its own section on the return.
+ *
+ * Putting one in B2B as a negative row would understate that section AND
+ * leave the note section empty — two wrong numbers from one mistake, and the
+ * portal reconciles the sections separately so both would be visible.
+ */
+
+function creditNote(over: Partial<ExportableInvoice> = {}): ExportableInvoice {
+  return invoice({
+    number: "CN.09.26.001",
+    documentType: "credit_note",
+    againstNumber: "IA.09.26.001",
+    reason: "Short delivery",
+    grandTotalPaise: -rupees(1050),
+    lines: [
+      {
+        gstRateBps: 500,
+        taxableValuePaise: -rupees(1000),
+        cgstPaise: -rupees(25),
+        sgstPaise: -rupees(25),
+        igstPaise: 0,
+      },
+    ],
+    ...over,
+  });
+}
+
+describe("credit notes land in their own section", () => {
+  it("goes to CDNR when the buyer is registered", () => {
+    const r = buildGstReturn([creditNote({ party: withGstin })]);
+    expect(r.cdnr).toHaveLength(1);
+    expect(r.cdnur).toHaveLength(0);
+    expect(r.b2b).toHaveLength(0);
+    expect(r.b2cs).toHaveLength(0);
+  });
+
+  it("goes to CDNUR when the buyer is not", () => {
+    const r = buildGstReturn([creditNote()]);
+    expect(r.cdnur).toHaveLength(1);
+    expect(r.cdnr).toHaveLength(0);
+    expect(r.b2cs).toHaveLength(0);
+  });
+
+  it("reports the magnitude, with the note type and the original number", () => {
+    // Stored negative so internal sums work; the portal wants it positive.
+    const row = buildGstReturn([creditNote({ party: withGstin })]).cdnr[0];
+    expect(row.taxableValuePaise).toBe(rupees(1000));
+    expect(row.cgstPaise).toBe(rupees(25));
+    expect(row.noteValuePaise).toBe(rupees(1050));
+    expect(row.noteType).toBe("C");
+    expect(row.againstNumber).toBe("IA.09.26.001");
+    expect(row.reason).toBe("Short delivery");
+  });
+
+  it("is excluded when cancelled, like any other document", () => {
+    const r = buildGstReturn([creditNote({ status: "cancelled" })]);
+    expect(r.cdnur).toHaveLength(0);
+    expect(r.excludedCancelled).toBe(1);
+  });
+});
+
+describe("credit notes net off the month's liability", () => {
+  it("a full credit of the only invoice leaves nothing owed", () => {
+    const r = buildGstReturn([invoice({ party: withGstin }), creditNote({ party: withGstin })]);
+    expect(r.totals.taxableValuePaise).toBe(0);
+    expect(r.totals.cgstPaise).toBe(0);
+    expect(r.totals.sgstPaise).toBe(0);
+    expect(r.totals.invoiceValuePaise).toBe(0);
+    // The supply is still reported. It happened; it was credited afterwards.
+    expect(r.b2b).toHaveLength(1);
+    expect(r.cdnr).toHaveLength(1);
+  });
+
+  it("a partial credit reduces the total rather than removing it", () => {
+    const half = creditNote({
+      grandTotalPaise: -rupees(525),
+      lines: [
+        {
+          gstRateBps: 500,
+          taxableValuePaise: -rupees(500),
+          cgstPaise: -rupees(12.5),
+          sgstPaise: -rupees(12.5),
+          igstPaise: 0,
+        },
+      ],
+    });
+    const r = buildGstReturn([invoice(), half]);
+    expect(r.totals.taxableValuePaise).toBe(rupees(500));
+  });
+});
+
+describe("the HSN summary", () => {
+  it("nets a credit note off the quantity and the value", () => {
+    /*
+      Table 12 covers everything, so a credit note belongs in it — and its
+      negative quantity is what makes the summary agree with the sections.
+    */
+    const rows = buildHsnSummary([
+      invoice({ lines: [{ ...line(500, rupees(1000)), hsn: "31010099", description: "FloraMax", quantity: 10 }] }),
+      creditNote({
+        lines: [
+          {
+            gstRateBps: 500,
+            hsn: "31010099",
+            description: "FloraMax",
+            quantity: -4,
+            taxableValuePaise: -rupees(400),
+            cgstPaise: -rupees(10),
+            sgstPaise: -rupees(10),
+            igstPaise: 0,
+          },
+        ],
+      }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].quantity).toBe(6);
+    expect(rows[0].taxableValuePaise).toBe(rupees(600));
+  });
+});
+
+describe("the CDN csv", () => {
+  it("names the buyer when registered and says B2CS when not", () => {
+    const r = buildGstReturn([creditNote({ party: withGstin }), creditNote({ number: "CN.09.26.002" })]);
+    const registered = cdnCsv(r.cdnr, true);
+    expect(registered.split("\n")[0]).toContain("GSTIN/UIN of Recipient");
+    expect(registered).toContain("24AABCA1234B1Z5");
+
+    const unregistered = cdnCsv(r.cdnur, false);
+    expect(unregistered.split("\n")[0]).toContain("UR Type");
+    expect(unregistered).toContain("B2CS");
+  });
+
+  it("writes rupees, the original number and the reason", () => {
+    const row = cdnCsv(buildGstReturn([creditNote()]).cdnur, false).split("\n")[1];
+    expect(row).toContain("1050.00");
+    expect(row).toContain("IA.09.26.001");
+    expect(row).toContain("Short delivery");
   });
 });

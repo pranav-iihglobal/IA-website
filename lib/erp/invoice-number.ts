@@ -111,7 +111,53 @@ export function formatSampleInvoiceNumber(date: Date, sequence: number): string 
   return `SMP.${mm}.${yy}.${String(sequence).padStart(3, "0")}`;
 }
 
+/**
+ * A sample credit note: SMP.CN.MM.YY.NNN.
+ *
+ * Still starts SMP., so `isSampleInvoiceNumber` catches it and it can never be
+ * mistaken for a real document — and the CN in the middle says which kind it
+ * is at a glance.
+ */
+export function formatSampleCreditNoteNumber(date: Date, sequence: number): string {
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yy = String(date.getFullYear() % 100).padStart(2, "0");
+  return `SMP.CN.${mm}.${yy}.${String(sequence).padStart(3, "0")}`;
+}
+
 /** True for a number this app issued as sample data. */
 export function isSampleInvoiceNumber(value: string): boolean {
   return /^SMP\./.test(value.trim());
+}
+
+/* -------------------------------------------------------------------------- */
+/* Credit notes                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Credit notes get their OWN series — CN.MM.YY.NNN.
+ *
+ * Not a preference: GST requires a credit note to carry its own consecutive
+ * serial number, distinct from the invoice series. Sharing one would also mean
+ * a credit note consuming an invoice number, leaving the invoice sequence with
+ * a hole in it.
+ */
+export function creditNoteSeriesKey(date: Date): string {
+  return `credit-${seriesKey(date)}`;
+}
+
+export function formatCreditNoteNumber(date: Date, sequence: number): string {
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yy = String(date.getFullYear() % 100).padStart(2, "0");
+  return `CN.${mm}.${yy}.${String(sequence).padStart(3, "0")}`;
+}
+
+export async function allocateCreditNoteNumber(
+  issuedAt: Date = new Date(),
+): Promise<{ number: string; sequence: number; financialYear: string }> {
+  const sequence = await nextInSeries(creditNoteSeriesKey(issuedAt));
+  return {
+    number: formatCreditNoteNumber(issuedAt, sequence),
+    sequence,
+    financialYear: financialYear(issuedAt),
+  };
 }

@@ -29,6 +29,9 @@ import type { SupplyType } from "./tax";
 
 export interface ExportableInvoice {
   number: string;
+  documentType?: "invoice" | "credit_note";
+  againstNumber?: string;
+  reason?: string;
   issuedAt: string | null;
   status: string;
   placeOfSupplyStateCode: string;
@@ -74,9 +77,37 @@ export interface B2CSRow {
   invoices: number;
 }
 
+/**
+ * A credit or debit note. CDNR when the buyer is registered, CDNUR when not.
+ *
+ * Reported POSITIVE on the return with a note type, which is what the portal
+ * expects — even though they are stored negative so every internal sum works
+ * without a special case.
+ */
+export interface CdnRow {
+  gstin: string;
+  party: string;
+  noteNo: string;
+  noteDate: string;
+  noteType: "C";
+  againstNumber: string;
+  reason: string;
+  placeOfSupply: string;
+  gstRateBps: number;
+  taxableValuePaise: number;
+  cgstPaise: number;
+  sgstPaise: number;
+  igstPaise: number;
+  noteValuePaise: number;
+}
+
 export interface GstReturn {
   b2b: B2BRow[];
   b2cs: B2CSRow[];
+  /** Credit notes to registered buyers. */
+  cdnr: CdnRow[];
+  /** Credit notes to unregistered buyers. */
+  cdnur: CdnRow[];
   totals: {
     taxableValuePaise: number;
     cgstPaise: number;
@@ -105,6 +136,8 @@ export function buildGstReturn(invoices: ExportableInvoice[]): GstReturn {
   const b2b: B2BRow[] = [];
   const b2csMap = new Map<string, B2CSRow>();
   const b2csInvoices = new Map<string, Set<string>>();
+  const cdnr: CdnRow[] = [];
+  const cdnur: CdnRow[] = [];
 
   for (const invoice of live) {
     /*
@@ -123,6 +156,36 @@ export function buildGstReturn(invoices: ExportableInvoice[]): GstReturn {
     }
 
     for (const [gstRateBps, sums] of [...byRate.entries()].sort((a, b) => a[0] - b[0])) {
+      /*
+        A credit note belongs in CDNR/CDNUR, never in B2B or B2CS. Putting one
+        in B2B as a negative row would understate that section AND leave the
+        note section empty — two wrong numbers from one mistake.
+
+        Values are flipped positive here: they are stored negative so every
+        internal sum works without a special case, and the portal wants the
+        magnitude with a note type beside it.
+      */
+      if (invoice.documentType === "credit_note") {
+        const row: CdnRow = {
+          gstin: invoice.party.gstin.trim().toUpperCase(),
+          party: invoice.party.businessName || invoice.party.name,
+          noteNo: invoice.number,
+          noteDate: isoDate(invoice.issuedAt),
+          noteType: "C",
+          againstNumber: invoice.againstNumber ?? "",
+          reason: invoice.reason ?? "",
+          placeOfSupply: invoice.placeOfSupplyStateCode,
+          gstRateBps,
+          taxableValuePaise: Math.abs(sums.taxable),
+          cgstPaise: Math.abs(sums.cgst),
+          sgstPaise: Math.abs(sums.sgst),
+          igstPaise: Math.abs(sums.igst),
+          noteValuePaise: Math.abs(invoice.grandTotalPaise),
+        };
+        (isB2B(invoice) ? cdnr : cdnur).push(row);
+        continue;
+      }
+
       if (isB2B(invoice)) {
         b2b.push({
           gstin: invoice.party.gstin.trim().toUpperCase(),
@@ -172,15 +235,26 @@ export function buildGstReturn(invoices: ExportableInvoice[]): GstReturn {
       a.placeOfSupply.localeCompare(b.placeOfSupply) || a.gstRateBps - b.gstRateBps,
   );
 
-  const all = [...b2b, ...b2cs];
+  const supplies = [...b2b, ...b2cs];
+  const notes = [...cdnr, ...cdnur];
+  /*
+    Credit notes SUBTRACT from the totals. They are held positive in their rows
+    because the portal wants magnitudes, so the sign has to come back here —
+    the liability for the month is supplies less credits.
+  */
+  const net = (pick: (r: { taxableValuePaise: number; cgstPaise: number; sgstPaise: number; igstPaise: number }) => number) =>
+    supplies.reduce((t, r) => t + pick(r), 0) - notes.reduce((t, r) => t + pick(r), 0);
+
   return {
     b2b,
     b2cs,
+    cdnr,
+    cdnur,
     totals: {
-      taxableValuePaise: all.reduce((t, r) => t + r.taxableValuePaise, 0),
-      cgstPaise: all.reduce((t, r) => t + r.cgstPaise, 0),
-      sgstPaise: all.reduce((t, r) => t + r.sgstPaise, 0),
-      igstPaise: all.reduce((t, r) => t + r.igstPaise, 0),
+      taxableValuePaise: net((r) => r.taxableValuePaise),
+      cgstPaise: net((r) => r.cgstPaise),
+      sgstPaise: net((r) => r.sgstPaise),
+      igstPaise: net((r) => r.igstPaise),
       // B2B rows repeat the invoice value per rate, so it is summed from the
       // invoices themselves rather than from the rows.
       invoiceValuePaise: live.reduce((t, i) => t + (i.grandTotalPaise ?? 0), 0),
@@ -355,6 +429,41 @@ export function hsnCsv(rows: HsnRow[]): string {
       paiseToRupeeString(r.cgstPaise),
       paiseToRupeeString(r.sgstPaise),
       "0",
+    ]),
+  );
+}
+
+/** CDNR and CDNUR share a shape; the section differs by whether there is a GSTIN. */
+export function cdnCsv(rows: CdnRow[], registered: boolean): string {
+  const head = registered
+    ? ["GSTIN/UIN of Recipient", "Receiver Name"]
+    : ["UR Type"];
+  return toCsv(
+    [
+      ...head,
+      "Note/Refund Voucher Number",
+      "Note/Refund Voucher date",
+      "Invoice/Advance Payment Voucher number",
+      "Note/Refund Voucher Value",
+      "Place Of Supply",
+      "Note Type",
+      "Rate",
+      "Taxable Value",
+      "Cess Amount",
+      "Reason For Issuing document",
+    ],
+    rows.map((r) => [
+      ...(registered ? [r.gstin, r.party] : ["B2CS"]),
+      r.noteNo,
+      r.noteDate,
+      r.againstNumber,
+      paiseToRupeeString(r.noteValuePaise),
+      r.placeOfSupply,
+      r.noteType,
+      rate(r.gstRateBps),
+      paiseToRupeeString(r.taxableValuePaise),
+      "0",
+      r.reason,
     ]),
   );
 }

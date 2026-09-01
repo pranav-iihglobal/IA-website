@@ -3,8 +3,8 @@ import { isValidObjectId } from "mongoose";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Invoice } from "@/lib/db/models/Invoice";
 import { recordAudit } from "@/lib/db/models/AuditLog";
-import { cancelInvoiceSchema, invoicePaymentSchema } from "@/lib/schemas";
-import { InvoiceError, cancelInvoice } from "@/lib/erp/invoice";
+import { cancelInvoiceSchema, creditNoteSchema, invoicePaymentSchema } from "@/lib/schemas";
+import { InvoiceError, cancelInvoice, issueCreditNote } from "@/lib/erp/invoice";
 import {
   currentEditor,
   errorResponse,
@@ -43,9 +43,13 @@ export async function GET(_request: NextRequest, { params }: Params) {
 /**
  * The only two things that may happen to an invoice after it is issued.
  *
- * Recording a payment, and cancelling. There is no edit: an issued invoice is
- * a record of what was filed, and the model refuses a financial change
- * regardless of what this route asks for.
+ * Recording a payment, cancelling, and crediting. There is no edit: an issued
+ * invoice is a record of what was filed, and the model refuses a financial
+ * change regardless of what this route asks for.
+ *
+ * Crediting is the odd one out — it does not touch this invoice at all. It
+ * creates a SECOND document that reverses part of it, which is exactly why
+ * corrections work this way rather than by editing.
  */
 export async function PATCH(request: NextRequest, { params }: Params) {
   const { id } = await params;
@@ -71,6 +75,37 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     try {
       const invoice = await cancelInvoice(id, parsed.data.reason, await currentEditor());
       return NextResponse.json({ id: String(invoice._id), status: invoice.status });
+    } catch (error) {
+      if (error instanceof InvoiceError) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+      return errorResponse(error);
+    }
+  }
+
+  if (action === "credit") {
+    /*
+      Write, not delete. A credit note ADDS a document rather than removing
+      one — the original stands, which is what a filed invoice has to do —
+      so it is not the irreversible act that cancelling is.
+    */
+    const unauthorized = await requirePermission("billing:write");
+    if (unauthorized) return unauthorized;
+
+    const parsed = creditNoteSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Please fix the highlighted fields", fields: fieldErrors(parsed.error.issues) },
+        { status: 400 },
+      );
+    }
+
+    try {
+      const note = await issueCreditNote(
+        { invoiceId: id, reason: parsed.data.reason, lines: parsed.data.lines },
+        await currentEditor(),
+      );
+      return NextResponse.json({ id: String(note._id), number: note.number }, { status: 201 });
     } catch (error) {
       if (error instanceof InvoiceError) {
         return NextResponse.json({ error: error.message }, { status: 400 });

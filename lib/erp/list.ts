@@ -16,6 +16,10 @@ const PAGE_SIZE = 25;
 export interface InvoiceRow {
   id: string;
   number: string;
+  /** "invoice" or "credit_note" — the list shows both, distinctly. */
+  documentType: string;
+  /** On a credit note, the invoice it reverses. Blank otherwise. */
+  againstNumber: string;
   financialYear: string;
   status: string;
   issuedAt: string | null;
@@ -42,6 +46,18 @@ export function buildInvoiceFilter(params: URLSearchParams): LeanDoc {
     filter.status = status;
   }
 
+  /*
+    Credit notes live in the same collection, so the default list shows both —
+    they are part of the month's paperwork and hiding them would make the
+    totals on screen disagree with the return. `kind` narrows to one or the
+    other when someone is looking for a specific document.
+  */
+  const kind = params.get("kind");
+  if (kind === "invoice" || kind === "credit_note") {
+    // Documents written before credit notes existed have no documentType.
+    filter.documentType = kind === "invoice" ? { $ne: "credit_note" } : "credit_note";
+  }
+
   const year = params.get("financialYear");
   if (year) filter.financialYear = year;
 
@@ -54,7 +70,14 @@ export function buildInvoiceFilter(params: URLSearchParams): LeanDoc {
   if (search) {
     // Same shape as every other list: an escaped, case-insensitive contains.
     const rx = searchRegex(search);
-    filter.$or = [{ number: rx }, { "party.name": rx }, { "party.businessName": rx }];
+    // againstNumber included so searching an invoice number also surfaces the
+    // credit notes raised against it.
+    filter.$or = [
+      { number: rx },
+      { againstNumber: rx },
+      { "party.name": rx },
+      { "party.businessName": rx },
+    ];
   }
 
   return filter;
@@ -69,7 +92,7 @@ export async function listInvoices(params: URLSearchParams): Promise<InvoiceList
   const [items, total] = await Promise.all([
     Invoice.find(filter)
       .select(
-        "number financialYear status issuedAt party grandTotalPaise payment isHistorical",
+        "number documentType againstNumber financialYear status issuedAt party grandTotalPaise payment isHistorical",
       )
       .sort({ issuedAt: -1, createdAt: -1 })
       .skip((page - 1) * PAGE_SIZE)
@@ -82,6 +105,8 @@ export async function listInvoices(params: URLSearchParams): Promise<InvoiceList
     items: (items as LeanDoc[]).map((i) => ({
       id: String(i._id),
       number: i.number ?? "",
+      documentType: i.documentType ?? "invoice",
+      againstNumber: i.againstNumber ?? "",
       financialYear: i.financialYear ?? "",
       status: i.status ?? "draft",
       issuedAt: i.issuedAt ? new Date(i.issuedAt).toISOString() : null,

@@ -28,7 +28,11 @@ import { Counter } from "../lib/db/models/Counter";
 import { StockItem } from "../lib/db/models/StockItem";
 import { Purchase } from "../lib/db/models/Purchase";
 import { computeInvoice, GUJARAT_STATE_CODE, supplyTypeFor } from "../lib/erp/tax";
-import { financialYear, formatSampleInvoiceNumber } from "../lib/erp/invoice-number";
+import {
+  financialYear,
+  formatSampleCreditNoteNumber,
+  formatSampleInvoiceNumber,
+} from "../lib/erp/invoice-number";
 import { formatRupees } from "../lib/money";
 import { buildStockItems, buildPurchases, SAMPLE_SKUS } from "./erp-sample-data";
 
@@ -147,6 +151,120 @@ async function seedInvoices(count: number) {
   return docs.length;
 }
 
+/**
+ * A few credit notes, so the screens that handle them have something to show.
+ *
+ * Written the same way a real one is: NEGATIVE amounts, the original's rates
+ * and prices, `againstLineIndex` on every line, and marked paid so none of
+ * them sits in the outstanding list. Seeding them any other way would mean the
+ * sample data disagreed with the code that produces the real thing, which is
+ * the one job sample data has.
+ */
+async function seedCreditNotes(count: number) {
+  // Against issued, non-credited invoices only — the same rule issueCreditNote
+  // enforces. Spread across the list rather than the newest few, so more than
+  // one month on the GST screen has a CDNR/CDNUR section.
+  const originals = await Invoice.find({
+    isSample: true,
+    status: "issued",
+    documentType: { $ne: "credit_note" },
+  })
+    .sort({ issuedAt: -1 })
+    .limit(count * 5)
+    .lean();
+
+  if (originals.length === 0) return 0;
+
+  const docs = [];
+  for (let i = 0; i < count && i * 5 < originals.length; i++) {
+    const original = originals[i * 5];
+    const originalLines = original.lines ?? [];
+    if (originalLines.length === 0) continue;
+
+    /*
+      Alternating whole and partial credits. A partial one is the case worth
+      having on screen — it is the reason credit notes exist rather than just
+      cancelling — so it must not be the one nobody ever sees.
+    */
+    const whole = i % 2 === 0;
+    const picks = whole
+      ? originalLines.map((l, index) => ({ index, quantity: l.quantity }))
+      : [{ index: 0, quantity: Math.max(1, Math.floor(originalLines[0].quantity / 2)) }];
+
+    const computed = computeInvoice(
+      picks.map((pick) => {
+        const line = originalLines[pick.index];
+        return {
+          description: line.description,
+          hsn: line.hsn,
+          quantity: -pick.quantity,
+          unitPricePaise: line.unitPricePaise,
+          gstRateBps: line.gstRateBps,
+        };
+      }),
+      original.supplyType ?? "intra",
+    );
+
+    // Three days after the invoice. A credit note dated before the sale it
+    // reverses is the kind of thing that reads as a bug on a report.
+    const issuedAt = new Date(
+      (original.issuedAt ? new Date(original.issuedAt) : new Date()).getTime() +
+        3 * 86_400_000,
+    );
+
+    docs.push({
+      documentType: "credit_note",
+      againstInvoiceId: original._id,
+      againstNumber: original.number,
+      reason: whole ? "Goods returned" : "Short delivery",
+      number: formatSampleCreditNoteNumber(issuedAt, i + 1),
+      financialYear: financialYear(issuedAt),
+      status: "issued",
+      issuedAt,
+      contactId: original.contactId,
+      party: original.party,
+      placeOfSupplyStateCode: original.placeOfSupplyStateCode,
+      supplyType: original.supplyType,
+      lines: computed.lines.map((l, n) => ({
+        productId: null,
+        againstLineIndex: picks[n].index,
+        description: l.description,
+        packLabel: originalLines[picks[n].index]?.packLabel ?? "",
+        hsn: l.hsn,
+        quantity: l.quantity,
+        unitPricePaise: l.unitPricePaise,
+        discountPaise: 0,
+        gstRateBps: l.gstRateBps,
+        taxableValuePaise: l.taxableValuePaise,
+        cgstPaise: l.cgstPaise,
+        sgstPaise: l.sgstPaise,
+        igstPaise: l.igstPaise,
+        lineTotalPaise: l.lineTotalPaise,
+      })),
+      subtotalPaise: computed.subtotalPaise,
+      cgstPaise: computed.cgstPaise,
+      sgstPaise: computed.sgstPaise,
+      igstPaise: computed.igstPaise,
+      totalTaxPaise: computed.totalTaxPaise,
+      roundOffPaise: computed.roundOffPaise,
+      grandTotalPaise: computed.grandTotalPaise,
+      amountInWords: computed.amountInWords,
+      // Never "unpaid": it reduces what is owed rather than adding to it.
+      payment: {
+        status: "paid",
+        paidPaise: computed.grandTotalPaise,
+        referenceNo: "",
+        paidAt: issuedAt,
+      },
+      isSample: true,
+      createdBy: "erp-sample",
+    });
+  }
+
+  if (docs.length > 0) await Invoice.insertMany(docs);
+  return docs.length;
+}
+
 async function main() {
   const [command, arg] = process.argv.slice(2);
 
@@ -191,20 +309,28 @@ async function main() {
     ]);
 
     const invoices = await seedInvoices(count);
+    // After the invoices: a credit note needs something to be raised against.
+    const creditNotes = await seedCreditNotes(Math.max(1, Math.floor(count / 12)));
     const stock = await StockItem.insertMany(buildStockItems());
     const purchases = await Purchase.insertMany(buildPurchases());
 
     console.log(
-      `\n  Seeded ${invoices} invoices, ${stock.length} stock items, ` +
-        `${purchases.length} purchases — all marked sample.\n`,
+      `\n  Seeded ${invoices} invoices, ${creditNotes} credit notes, ` +
+        `${stock.length} stock items, ${purchases.length} purchases — ` +
+        `all marked sample.\n`,
     );
   } else if (command === "doctor" || command === "count") {
-    const [total, sample, real, unpaid, cancelled] = await Promise.all([
+    const [total, sample, real, unpaid, cancelled, credits] = await Promise.all([
       Invoice.countDocuments({}),
       Invoice.countDocuments({ isSample: true }),
       Invoice.countDocuments({ isSample: { $ne: true } }),
-      Invoice.countDocuments({ status: "issued", "payment.status": { $ne: "paid" } }),
+      Invoice.countDocuments({
+        status: "issued",
+        documentType: { $ne: "credit_note" },
+        "payment.status": { $ne: "paid" },
+      }),
       Invoice.countDocuments({ status: "cancelled" }),
+      Invoice.countDocuments({ documentType: "credit_note" }),
     ]);
 
     const [{ owed = 0, billed = 0 } = {}] = await Invoice.aggregate<{
@@ -227,6 +353,7 @@ async function main() {
     console.log(`  Invoices : ${total}   (${sample} sample, ${real} real)`);
     console.log(`    issued but not fully paid   ${unpaid}`);
     console.log(`    cancelled                   ${cancelled}`);
+    console.log(`    credit notes                ${credits}`);
     console.log(`  Billed   : ${formatRupees(billed)}`);
     console.log(`  Owed     : ${formatRupees(owed)}`);
 

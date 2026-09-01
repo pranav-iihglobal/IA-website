@@ -22,6 +22,10 @@ export interface ProfileInvoiceLine {
 export interface ProfileInvoice {
   id: string;
   number: string;
+  /** "invoice" or "credit_note". A credit note is not an order. */
+  documentType: string;
+  /** On a credit note, the invoice it reverses. */
+  againstNumber: string;
   issuedAt: string | null;
   status: string;
   grandTotalPaise: number;
@@ -52,6 +56,8 @@ export interface Trading {
   products: ProductTally[];
   /** Present but not counted — shown so a cancellation is not a mystery. */
   cancelledCount: number;
+  /** How many credit notes are netted into the figures above. */
+  creditNoteCount: number;
 }
 
 /**
@@ -66,11 +72,20 @@ export interface Trading {
  * someone bought something they did not. It is reported as a count instead, so
  * the row on screen and the total underneath do not appear to contradict each
  * other.
+ *
+ * CREDIT NOTES COUNT FOR MONEY BUT NOT FOR ORDERS. Their amounts are stored
+ * negative, so they net out of invoiced, received and the product tally by
+ * simply being summed — that is the whole reason for the sign. But a credit
+ * note is not a purchase: counting one as an order would say a customer bought
+ * twice when they bought once and sent half of it back, and letting one set
+ * `lastOrderAt` would make a customer look Active because of a REFUND.
  */
 export function summariseTrading(invoices: ProfileInvoice[]): Trading {
   const counted = invoices.filter((i) => i.status !== "cancelled");
+  const orders = counted.filter((i) => i.documentType !== "credit_note");
 
-  const dates = counted
+  // Order dates only. A refund is not a visit to the shop.
+  const dates = orders
     .map((i) => i.issuedAt)
     .filter((d): d is string => Boolean(d))
     .sort();
@@ -81,7 +96,7 @@ export function summariseTrading(invoices: ProfileInvoice[]): Trading {
   const lastOrderAt = dates.length ? dates[dates.length - 1] : null;
 
   return {
-    orders: counted.length,
+    orders: orders.length,
     invoicedPaise,
     receivedPaise,
     /*
@@ -99,6 +114,7 @@ export function summariseTrading(invoices: ProfileInvoice[]): Trading {
     // "what they buy" while being absent from the totals beside it.
     products: tallyProducts(counted.flatMap((i) => i.lines ?? [])),
     cancelledCount: invoices.length - counted.length,
+    creditNoteCount: counted.length - orders.length,
   };
 }
 
@@ -130,13 +146,17 @@ export async function getContactProfile(
   if (!contact) return null;
 
   const docs = await Invoice.find({ contactId: id })
-    .select("number issuedAt status grandTotalPaise payment isHistorical lines")
+    .select(
+      "number documentType againstNumber issuedAt status grandTotalPaise payment isHistorical lines",
+    )
     .sort({ issuedAt: -1 })
     .lean();
 
   const invoices: ProfileInvoice[] = (docs as LeanDoc[]).map((i) => ({
     id: String(i._id),
     number: i.number ?? "",
+    documentType: i.documentType ?? "invoice",
+    againstNumber: i.againstNumber ?? "",
     issuedAt: i.issuedAt ? new Date(i.issuedAt).toISOString() : null,
     status: i.status ?? "draft",
     grandTotalPaise: i.grandTotalPaise ?? 0,

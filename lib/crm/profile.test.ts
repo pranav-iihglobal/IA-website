@@ -16,6 +16,8 @@ function invoice(over: Partial<ProfileInvoice> = {}): ProfileInvoice {
   return {
     id: "1",
     number: "IA.09.26.001",
+    documentType: "invoice",
+    againstNumber: "",
     issuedAt: "2026-09-01T00:00:00.000Z",
     status: "issued",
     grandTotalPaise: rupees(1000),
@@ -151,5 +153,75 @@ describe("what they buy", () => {
 
   it("survives a line with nothing on it", () => {
     expect(tallyProducts([])).toEqual([]);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Credit notes on a profile                                                  */
+/* -------------------------------------------------------------------------- */
+
+/** A credit note as it is stored: negative, and marked paid. */
+function creditNote(over: Partial<ProfileInvoice> = {}): ProfileInvoice {
+  return invoice({
+    id: "cn",
+    number: "CN.09.26.001",
+    documentType: "credit_note",
+    againstNumber: "IA.09.26.001",
+    grandTotalPaise: -rupees(400),
+    paidPaise: -rupees(400),
+    ...over,
+  });
+}
+
+describe("credit notes on a profile", () => {
+  it("nets off what was invoiced and what was received", () => {
+    // The whole reason amounts are stored negative: this is a plain sum.
+    const t = summariseTrading([invoice(), creditNote()]);
+    expect(t.invoicedPaise).toBe(rupees(600));
+    expect(t.receivedPaise).toBe(rupees(600));
+    expect(t.outstandingPaise).toBe(0);
+  });
+
+  it("is not counted as an order", () => {
+    /*
+      A customer who bought once and returned half did not buy twice. Counting
+      it would inflate order counts by exactly the number of corrections.
+    */
+    const t = summariseTrading([invoice(), creditNote()]);
+    expect(t.orders).toBe(1);
+    expect(t.creditNoteCount).toBe(1);
+  });
+
+  it("does not move the last-order date", () => {
+    /*
+      Status is derived from the last order. If a refund set that date, a
+      dormant customer would read as Active because they sent goods BACK.
+    */
+    const t = summariseTrading([
+      invoice({ issuedAt: "2026-01-05T00:00:00.000Z" }),
+      creditNote({ issuedAt: "2026-09-01T00:00:00.000Z" }),
+    ]);
+    expect(t.lastOrderAt).toBe("2026-01-05T00:00:00.000Z");
+  });
+
+  it("reduces the product tally rather than adding a second entry", () => {
+    const t = summariseTrading([
+      invoice({
+        lines: [{ description: "FloraMax — 25g", quantity: 10, lineTotalPaise: rupees(1000) }],
+      }),
+      creditNote({
+        lines: [{ description: "FloraMax — 25g", quantity: -4, lineTotalPaise: -rupees(400) }],
+      }),
+    ]);
+    expect(t.products).toHaveLength(1);
+    expect(t.products[0].quantity).toBe(6);
+    expect(t.products[0].valuePaise).toBe(rupees(600));
+  });
+
+  it("counts for nothing once cancelled", () => {
+    const t = summariseTrading([invoice(), creditNote({ status: "cancelled" })]);
+    expect(t.invoicedPaise).toBe(rupees(1000));
+    expect(t.creditNoteCount).toBe(0);
+    expect(t.cancelledCount).toBe(1);
   });
 });

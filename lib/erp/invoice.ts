@@ -5,7 +5,7 @@ import { Product } from "@/lib/db/models/Product";
 import { Contact } from "@/lib/db/models/Contact";
 import { recordAudit } from "@/lib/db/models/AuditLog";
 import type { LeanDoc } from "@/lib/db/lean";
-import { allocateInvoiceNumber } from "./invoice-number";
+import { allocateCreditNoteNumber, allocateInvoiceNumber } from "./invoice-number";
 import {
   computeInvoice,
   supplyTypeFor,
@@ -273,4 +273,250 @@ export async function cancelInvoice(
   });
 
   return invoice;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Credit notes                                                               */
+/* -------------------------------------------------------------------------- */
+
+export interface CreditNoteRequest {
+  /** The invoice being reversed. */
+  invoiceId: string;
+  reason: string;
+  /**
+   * Which lines, and how many of each. Omit to reverse the whole invoice.
+   * Keyed by the line's index on the original, so a partial credit cannot
+   * invent a line that was never sold.
+   */
+  lines?: { index: number; quantity: number }[];
+  issuedAt?: Date;
+}
+
+/** One line of the original, reversed: which line, and how many. */
+export interface CreditPick {
+  index: number;
+  quantity: number;
+}
+
+/**
+ * Work out what this credit note actually reverses.
+ *
+ * Pure, and the reason it is pure is that every rule worth getting right lives
+ * here: an over-credit is not a display bug, it is a smaller GST liability on
+ * a filed return, and that is the direction nobody audits.
+ *
+ * Three things it will not allow:
+ *
+ * 1. Crediting more of a line than was invoiced.
+ * 2. Naming the same line twice to get around (1). The quantities are summed
+ *    per line BEFORE the check, so two picks of five against a line of five is
+ *    one pick of ten and is refused.
+ * 3. Crediting what an earlier credit note already took. `alreadyCredited`
+ *    comes from the notes already raised against this invoice; the headroom is
+ *    what was invoiced less what has gone.
+ *
+ * With no lines named it reverses the whole invoice — meaning the REMAINING
+ * quantity of every line, not the original quantity, so "credit the rest"
+ * after a partial credit is one action rather than arithmetic done by hand.
+ */
+export function resolveCreditPicks(
+  originalLines: { quantity: number }[],
+  requested: CreditPick[] | undefined,
+  alreadyCredited: Map<number, number> = new Map(),
+): CreditPick[] {
+  const headroom = (index: number) =>
+    (originalLines[index]?.quantity ?? 0) - (alreadyCredited.get(index) ?? 0);
+
+  if (!requested || requested.length === 0) {
+    const whole = originalLines
+      .map((_, index) => ({ index, quantity: headroom(index) }))
+      .filter((pick) => pick.quantity > 0);
+    if (whole.length === 0) {
+      throw new InvoiceError("This invoice has already been credited in full.");
+    }
+    return whole;
+  }
+
+  // Summed per line first, so naming a line twice cannot slip past the check.
+  const merged = new Map<number, number>();
+  for (const pick of requested) {
+    if (!originalLines[pick.index]) {
+      throw new InvoiceError(`Line ${pick.index + 1} is not on that invoice.`);
+    }
+    if (!Number.isInteger(pick.quantity) || pick.quantity <= 0) {
+      throw new InvoiceError(
+        `Line ${pick.index + 1}: credit quantity must be a whole number above zero.`,
+      );
+    }
+    merged.set(pick.index, (merged.get(pick.index) ?? 0) + pick.quantity);
+  }
+
+  return [...merged.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([index, quantity]) => {
+      const left = headroom(index);
+      if (quantity > left) {
+        const invoiced = originalLines[index].quantity;
+        throw new InvoiceError(
+          left === invoiced
+            ? `Line ${index + 1}: cannot credit ${quantity} when only ${invoiced} were invoiced.`
+            : `Line ${index + 1}: only ${left} of ${invoiced} are left to credit — the rest already has been.`,
+        );
+      }
+      return { index, quantity };
+    });
+}
+
+/**
+ * How much of each line the credit notes already raised against this invoice
+ * have taken. Cancelled notes do not count — they took nothing.
+ */
+async function creditedSoFar(invoiceId: string): Promise<Map<number, number>> {
+  const notes = await Invoice.find({
+    againstInvoiceId: invoiceId,
+    documentType: "credit_note",
+    status: "issued",
+  })
+    .select("lines.againstLineIndex lines.quantity")
+    .lean();
+
+  const taken = new Map<number, number>();
+  for (const note of notes) {
+    for (const line of note.lines ?? []) {
+      const index = line.againstLineIndex;
+      if (typeof index !== "number") continue;
+      // Stored negative; what was taken is the magnitude.
+      taken.set(index, (taken.get(index) ?? 0) + Math.abs(line.quantity ?? 0));
+    }
+  }
+  return taken;
+}
+
+/**
+ * Raise a credit note against an issued invoice.
+ *
+ * The correction mechanism the plan always specified. Cancelling voids a whole
+ * invoice; a credit note reverses part of one — a short delivery, a returned
+ * canister, a price agreed down after the fact — and leaves the original
+ * standing, which is what a filed document has to do.
+ *
+ * The lines are the ORIGINAL's lines with negated quantities. Nothing is
+ * re-priced and no rate is re-read: reversing a sale at today's rate rather
+ * than the rate it was sold at would be a different transaction. That is the
+ * same snapshot rule the invoice itself lives by, applied backwards.
+ */
+export async function issueCreditNote(
+  request: CreditNoteRequest,
+  actor: string,
+): Promise<HydratedDocument<InvoiceDoc>> {
+  await connectToDatabase();
+
+  const original = await Invoice.findById(request.invoiceId).lean();
+  if (!original) throw new InvoiceError("That invoice does not exist.");
+  if (original.documentType === "credit_note") {
+    throw new InvoiceError("You cannot credit a credit note.");
+  }
+  if (original.status !== "issued") {
+    throw new InvoiceError(
+      original.status === "cancelled"
+        ? "That invoice is cancelled. There is nothing left to credit."
+        : "Only an issued invoice can be credited.",
+    );
+  }
+  if (original.isHistorical) {
+    throw new InvoiceError(
+      "That invoice was filed before this system. Credit it the way it was filed.",
+    );
+  }
+  if (!request.reason.trim()) {
+    throw new InvoiceError("A credit note needs a reason — it is printed on it.");
+  }
+
+  const originalLines = original.lines ?? [];
+  const picks = resolveCreditPicks(
+    originalLines,
+    request.lines,
+    await creditedSoFar(String(original._id)),
+  );
+
+  const taxInput: InvoiceLineInput[] = picks.map((pick) => {
+    const line = originalLines[pick.index];
+    return {
+      description: line.description,
+      hsn: line.hsn,
+      // NEGATIVE. See the documentType comment on the model.
+      quantity: -pick.quantity,
+      unitPricePaise: line.unitPricePaise,
+      // The rate as it was SOLD at, never as it is today.
+      gstRateBps: line.gstRateBps,
+    };
+  });
+
+  const computed = computeInvoice(taxInput, original.supplyType ?? "intra");
+  const issuedAt = request.issuedAt ?? new Date();
+  const allocated = await allocateCreditNoteNumber(issuedAt);
+
+  const note = await Invoice.create({
+    documentType: "credit_note",
+    againstInvoiceId: original._id,
+    againstNumber: original.number,
+    reason: request.reason.trim(),
+    number: allocated.number,
+    financialYear: allocated.financialYear,
+    status: "issued",
+    issuedAt,
+    contactId: original.contactId,
+    // The party as it was on the original, not as the contact reads today.
+    party: original.party,
+    placeOfSupplyStateCode: original.placeOfSupplyStateCode,
+    supplyType: original.supplyType,
+    lines: computed.lines.map((line, i) => ({
+      productId: originalLines[picks[i].index]?.productId ?? null,
+      againstLineIndex: picks[i].index,
+      description: line.description,
+      packLabel: originalLines[picks[i].index]?.packLabel ?? "",
+      hsn: line.hsn,
+      quantity: line.quantity,
+      unitPricePaise: line.unitPricePaise,
+      discountPaise: 0,
+      gstRateBps: line.gstRateBps,
+      taxableValuePaise: line.taxableValuePaise,
+      cgstPaise: line.cgstPaise,
+      sgstPaise: line.sgstPaise,
+      igstPaise: line.igstPaise,
+      lineTotalPaise: line.lineTotalPaise,
+    })),
+    subtotalPaise: computed.subtotalPaise,
+    cgstPaise: computed.cgstPaise,
+    sgstPaise: computed.sgstPaise,
+    igstPaise: computed.igstPaise,
+    totalTaxPaise: computed.totalTaxPaise,
+    roundOffPaise: computed.roundOffPaise,
+    grandTotalPaise: computed.grandTotalPaise,
+    amountInWords: computed.amountInWords,
+    /*
+      A credit note is not "unpaid". It reduces what is owed, and leaving it
+      unpaid would put a negative row in the outstanding list forever.
+    */
+    payment: { status: "paid", paidPaise: computed.grandTotalPaise, referenceNo: "", paidAt: issuedAt },
+    isSample: Boolean(original.isSample),
+    createdBy: actor,
+  });
+
+  await recordAudit({
+    actor,
+    action: "credit",
+    entity: "Invoice",
+    entityId: String(note._id),
+    after: {
+      number: note.number,
+      against: original.number,
+      grandTotalPaise: note.grandTotalPaise,
+      reason: note.reason,
+    },
+    note: `credits ${original.number}`,
+  });
+
+  return note;
 }

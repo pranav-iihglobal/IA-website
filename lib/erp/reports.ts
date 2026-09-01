@@ -44,12 +44,17 @@ export async function invoicesForPeriod(
     */
     isSample: { $ne: true },
   })
-    .select("number issuedAt status placeOfSupplyStateCode supplyType party grandTotalPaise lines")
+    .select(
+      "number documentType againstNumber reason issuedAt status placeOfSupplyStateCode supplyType party grandTotalPaise lines",
+    )
     .sort({ issuedAt: 1, number: 1 })
     .lean();
 
   return (docs as LeanDoc[]).map((i) => ({
     number: i.number ?? "",
+    documentType: i.documentType ?? "invoice",
+    againstNumber: i.againstNumber ?? "",
+    reason: i.reason ?? "",
     issuedAt: i.issuedAt ? new Date(i.issuedAt).toISOString() : null,
     status: i.status ?? "issued",
     placeOfSupplyStateCode: i.placeOfSupplyStateCode ?? "24",
@@ -120,7 +125,16 @@ const OUTSTANDING_ROW_CAP = 500;
 export async function outstandingTotal(): Promise<{ owedPaise: number; count: number }> {
   await connectToDatabase();
   const [row] = await Invoice.aggregate<{ owed: number; count: number }>([
-    { $match: { status: "issued", "payment.status": { $ne: "paid" } } },
+    {
+      $match: {
+        status: "issued",
+        // Belt and braces: a credit note is written already paid, so it never
+        // reaches here — but "what is owed" must not be able to go negative
+        // because one was written any other way.
+        documentType: { $ne: "credit_note" },
+        "payment.status": { $ne: "paid" },
+      },
+    },
     {
       $project: {
         owed: {
@@ -140,6 +154,8 @@ export async function outstandingInvoices(): Promise<OutstandingRow[]> {
 
   const docs = await Invoice.find({
     status: "issued",
+    // Same reason as outstandingTotal: the list and the total must agree.
+    documentType: { $ne: "credit_note" },
     "payment.status": { $ne: "paid" },
   })
     .select("number issuedAt party grandTotalPaise payment contactId")
@@ -185,11 +201,27 @@ export interface DashboardFigures {
   monthPurchasesPaise: number;
 }
 
-/** Sum of grand totals for issued invoices in a window. */
+/**
+ * Sum of grand totals for issued documents in a window.
+ *
+ * Credit notes are INCLUDED in the total and EXCLUDED from the count. Their
+ * amounts are negative, so summing them is exactly right — revenue net of
+ * corrections is the honest figure. But "invoices this month" is a count of
+ * sales, and a credit note is not one; counting it would make a month with
+ * two corrections look busier than one without.
+ */
 async function revenueBetween(from: Date, to: Date): Promise<{ total: number; count: number }> {
   const [row] = await Invoice.aggregate<{ total: number; count: number }>([
     { $match: { status: "issued", issuedAt: { $gte: from, $lt: to } } },
-    { $group: { _id: null, total: { $sum: "$grandTotalPaise" }, count: { $sum: 1 } } },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$grandTotalPaise" },
+        count: {
+          $sum: { $cond: [{ $eq: ["$documentType", "credit_note"] }, 0, 1] },
+        },
+      },
+    },
   ]);
   return { total: row?.total ?? 0, count: row?.count ?? 0 };
 }
@@ -211,7 +243,11 @@ export async function dashboardFigures(now = new Date()): Promise<DashboardFigur
       revenueBetween(fyStart, thisMonth.to),
       outstandingTotal(),
       // Just the oldest, for the "oldest N days" line — not the whole list.
-      Invoice.findOne({ status: "issued", "payment.status": { $ne: "paid" } })
+      Invoice.findOne({
+        status: "issued",
+        documentType: { $ne: "credit_note" },
+        "payment.status": { $ne: "paid" },
+      })
         .select("issuedAt")
         .sort({ issuedAt: 1 })
         .lean(),

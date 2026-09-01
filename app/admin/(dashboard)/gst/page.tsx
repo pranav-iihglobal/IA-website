@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { invoicesForPeriod, sampleInvoicesInPeriod } from "@/lib/erp/reports";
-import { ASSUMED_UQC, buildGstReturn, buildHsnSummary } from "@/lib/erp/gst";
+import {
+  ASSUMED_UQC,
+  buildGstReturn,
+  buildHsnSummary,
+  type CdnRow,
+} from "@/lib/erp/gst";
 import { formatRate } from "@/lib/erp/tax";
 import { formatINR, formatRupees } from "@/lib/money";
 import { SELLER } from "@/lib/content";
@@ -13,8 +18,11 @@ export const dynamic = "force-dynamic";
  * What the CA files.
  *
  * B2B listed per invoice per rate, B2CS summarised per place of supply and
- * rate — the two sections GSTR-1 asks for. A GSTIN decides which section a
- * sale lands in; see lib/erp/gst.ts.
+ * rate, CDNR and CDNUR for credit notes, and Table 12 by HSN. A GSTIN decides
+ * which of each pair a document lands in; see lib/erp/gst.ts.
+ *
+ * The headline figures are NET — supplies less credit notes — because that is
+ * the month's liability. The credit note tables below show what was taken off.
  *
  * The tables and the CSV download come from the same buildGstReturn(), so
  * what is checked on screen is what is filed.
@@ -38,7 +46,12 @@ export default async function GstPage({
   const built = buildGstReturn(invoices);
   const hsn = buildHsnSummary(invoices);
   const stamp = `year=${year}&month=${month}`;
-  const empty = built.b2b.length === 0 && built.b2cs.length === 0;
+  const empty =
+    built.b2b.length === 0 &&
+    built.b2cs.length === 0 &&
+    built.cdnr.length === 0 &&
+    built.cdnur.length === 0;
+  const notes = built.cdnr.length + built.cdnur.length;
 
   const th = "py-2 pr-3 text-left text-[11px] font-bold uppercase tracking-wider text-ink-faint";
   const td = "py-2 pr-3 text-sm text-ink";
@@ -77,6 +90,20 @@ export default async function GstPage({
           </strong>{" "}
           Seeded data never appears in a GST return. That is why the totals here
           are lower than the invoice list for this month.
+        </p>
+      )}
+
+      {/*
+        Said, because a total that is lower than the invoices add up to looks
+        like a bug unless the reason is on the page.
+      */}
+      {notes > 0 && (
+        <p className="admin-card px-4 py-2.5 text-sm text-ink">
+          <strong className="font-semibold">
+            {notes} credit note{notes === 1 ? "" : "s"}
+          </strong>{" "}
+          in this month. The figures above are net of them — the supply is still
+          reported in B2B or B2CS, and the credit is reported separately below.
         </p>
       )}
 
@@ -176,6 +203,26 @@ export default async function GstPage({
             </table>
           </section>
 
+          {built.cdnr.length > 0 && (
+            <CdnSection
+              title="CDNR"
+              subtitle="Credit notes to buyers with a GSTIN, listed individually — they reverse the input credit claimed against the original invoice."
+              rows={built.cdnr}
+              registered
+              href={`/api/admin/gst?${stamp}&section=cdnr`}
+            />
+          )}
+
+          {built.cdnur.length > 0 && (
+            <CdnSection
+              title="CDNUR"
+              subtitle="Credit notes to unregistered buyers."
+              rows={built.cdnur}
+              registered={false}
+              href={`/api/admin/gst?${stamp}&section=cdnur`}
+            />
+          )}
+
           <section className="admin-card overflow-x-auto p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-display text-base font-bold text-ink-strong">
@@ -254,6 +301,77 @@ function Figure({ label, value }: { label: string; value: string }) {
         {value}
       </p>
     </div>
+  );
+}
+
+/**
+ * CDNR and CDNUR. One component, because the sections differ only by whether
+ * the buyer is named — the rows are the same shape and the portal treats them
+ * the same way.
+ *
+ * Values are POSITIVE here. They are stored negative so every internal sum
+ * works without a special case; buildGstReturn flips them, because the portal
+ * wants a magnitude beside a note type.
+ */
+function CdnSection({
+  title,
+  subtitle,
+  rows,
+  registered,
+  href,
+}: {
+  title: string;
+  subtitle: string;
+  rows: CdnRow[];
+  registered: boolean;
+  href: string;
+}) {
+  const th = "py-2 pr-3 text-left text-[11px] font-bold uppercase tracking-wider text-ink-faint";
+  const td = "py-2 pr-3 text-sm text-ink";
+  const num = `${td} text-right tabular-nums`;
+
+  return (
+    <section className="admin-card overflow-x-auto p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-base font-bold text-ink-strong">
+          {title} — {rows.length} row{rows.length === 1 ? "" : "s"}
+        </h2>
+        <Download href={href} />
+      </div>
+      <p className="mt-1 text-xs text-ink-soft">{subtitle}</p>
+      <table className="mt-3 w-full min-w-[720px] border-collapse">
+        <thead>
+          <tr className="border-b border-line">
+            {registered && <th className={th}>GSTIN</th>}
+            <th className={th}>Party</th>
+            <th className={th}>Note</th>
+            <th className={th}>Date</th>
+            <th className={th}>Against</th>
+            <th className={th}>Reason</th>
+            <th className={`${th} text-right`}>Rate</th>
+            <th className={`${th} text-right`}>Taxable</th>
+            <th className={`${th} text-right`}>Tax</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={`${r.noteNo}-${r.gstRateBps}-${i}`} className="border-b border-line-soft">
+              {registered && <td className={`${td} font-mono text-xs`}>{r.gstin}</td>}
+              <td className={td}>{r.party}</td>
+              <td className={td}>{r.noteNo}</td>
+              <td className={td}>{r.noteDate}</td>
+              <td className={td}>{r.againstNumber}</td>
+              <td className={td}>{r.reason}</td>
+              <td className={num}>{formatRate(r.gstRateBps)}</td>
+              <td className={num}>{formatINR(r.taxableValuePaise)}</td>
+              <td className={num}>
+                {formatINR(r.cgstPaise + r.sgstPaise + r.igstPaise)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
   );
 }
 

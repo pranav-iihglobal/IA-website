@@ -646,6 +646,9 @@ export function StatusPill({ status }: { status: string }) {
     cancelled: "bg-surface-strong/40 text-ink-faint ring-line-soft",
     issued: "bg-accent-soft/60 text-ink-muted ring-laurel",
     filed: "bg-surface-strong/35 text-ink-strong ring-line",
+    // A credit note is not an alarm — it is ordinary paperwork — but it must
+    // never be mistaken for an invoice at a glance.
+    "credit note": "bg-alloy/15 text-ink-strong ring-alloy/40",
 
     // Derived customer states — see STATUS_LABELS in lib/crm/shape.ts.
     Active: "bg-accent-soft/60 text-ink-muted ring-laurel",
@@ -667,6 +670,7 @@ export function StatusPill({ status }: { status: string }) {
     cancelled: "bg-camel-dark/50",
     issued: "bg-olive",
     filed: "bg-camel-dark/60",
+    "credit note": "bg-alloy",
 
     Active: "bg-olive",
     "At risk": "bg-alloy",
