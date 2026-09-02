@@ -15,7 +15,8 @@ import type { ProfileInvoice, Trading } from "@/lib/crm/profile";
  *
  * The CRM could change a record but never show one — the list opened straight
  * into a form. This is the read view: who they are and what they have bought,
- * with editing one click away in the same overlay every other module uses.
+ * with editing one click away, on the same kind of page every other module
+ * uses.
  *
  * No charts. Three SKUs and a handful of orders per customer means a chart
  * here would be two points and a lot of white space, taking the room the

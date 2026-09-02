@@ -17,9 +17,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
  *     and landed on the unfiltered list, because nothing read `filter`. A
  *     dead link that looks alive is worse than no link.
  *
- * The overlay state (`?edit=`, `?new=`) has been in the URL since it was
- * built, with a comment explaining why. This applies the same reasoning to
- * the list underneath it.
+ * Adding and editing were `?edit=` / `?new=` overlay params, in the URL from
+ * the day they were built with a comment explaining why. They are their own
+ * PAGES now, which is the same reasoning taken further; this keeps the list
+ * state underneath them addressable in the same way.
  *
  * PUSH FOR FILTER AND PAGE, REPLACE FOR THE SEARCH TEXT. A filter or a page
  * is a deliberate step and Back should undo it. Typing is continuous, and

@@ -21,7 +21,7 @@ import { useListState } from "./useListState";
 /**
  * The invoices screen.
  *
- * Deliberately the same shape as ContactWorkspace — list, URL-driven overlay,
+ * Deliberately the same shape as ContactWorkspace — list, URL-driven state,
  * server-rendered first page, first fetch skipped when the server already
  * answered. A second layout for the same job would be a second thing to keep
  * consistent.

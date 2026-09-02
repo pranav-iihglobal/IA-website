@@ -22,7 +22,7 @@ import type { ContactList } from "@/lib/crm/list";
 import { contactListQuery, listQueryKey, type Scope } from "@/lib/crm/scopes";
 
 /**
- * The list + overlay pairing every CRM screen is built from.
+ * The list every CRM screen is built from.
  *
  * Customers, dealers and leads are the same collection filtered three ways,
  * so they are the same component with a different `scope` rather than three
