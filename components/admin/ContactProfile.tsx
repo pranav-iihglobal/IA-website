@@ -409,7 +409,10 @@ export function ContactProfile({
                   {invoices.map((inv) => (
                     <li key={inv.id} className="flex items-baseline gap-3 py-2">
                       <Link
-                        href={`/admin/invoices/${inv.id}/print`}
+                        /* The record, not the printable document. What is
+                           still owed on an order is a question about its
+                           history, and the paperwork cannot answer it. */
+                        href={`/admin/invoices/${inv.id}`}
                         className="min-w-0 flex-1 truncate text-sm font-semibold text-ink hover:underline"
                       >
                         {inv.number || "(no number)"}
