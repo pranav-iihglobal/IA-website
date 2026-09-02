@@ -221,7 +221,7 @@ export function ImageUploader({
                   type="button"
                   onClick={() => remove(index)}
                   aria-label="Remove image"
-                  className="absolute right-2 top-2 rounded-full bg-raised/90 p-1.5 text-ink-muted opacity-0 shadow-sm transition-opacity hover:text-cta focus-visible:opacity-100 group-hover:opacity-100"
+                  className="admin-hover-reveal admin-tap-square absolute right-1 top-1 flex items-center justify-center rounded-full bg-raised/90 text-ink-muted shadow-sm hover:text-cta"
                 >
                   <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
                     <path d="M6.3 5A1 1 0 0 0 5 6.3L8.6 10 5 13.7A1 1 0 1 0 6.3 15L10 11.4l3.7 3.6a1 1 0 0 0 1.3-1.3L11.4 10 15 6.3A1 1 0 0 0 13.7 5L10 8.6 6.3 5Z" />
@@ -241,7 +241,7 @@ export function ImageUploader({
                       ),
                     )
                   }
-                  className="admin-input px-2 py-1 text-xs"
+                  className="admin-input px-2 py-1"
                 />
                 <input
                   value={img.alt.gu ?? ""}
@@ -255,7 +255,7 @@ export function ImageUploader({
                       ),
                     )
                   }
-                  className="admin-input px-2 py-1 text-xs"
+                  className="admin-input px-2 py-1"
                 />
                 {!img.isPrimary && (
                   <button

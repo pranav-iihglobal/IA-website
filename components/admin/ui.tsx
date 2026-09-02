@@ -831,7 +831,7 @@ export function RepeatableList({
               type="button"
               onClick={() => onRemove(index)}
               aria-label={`Remove item ${index + 1}`}
-              className="mt-0.5 shrink-0 rounded-lg p-1.5 text-ink-soft opacity-0 transition-all hover:bg-alloy/10 hover:text-cta focus-visible:opacity-100 group-hover/item:opacity-100"
+              className="admin-hover-reveal admin-tap-square mt-0.5 flex shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-alloy/10 hover:text-cta"
             >
               <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
                 <path d="M8 2h4a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-.4l-.7 9.1A2 2 0 0 1 12.9 17H7.1a2 2 0 0 1-2-1.9L4.4 6H4a1 1 0 0 1 0-2h3V3a1 1 0 0 1 1-1Zm1 2h2V4H9Zm-2.6 2 .7 8.9a.5.5 0 0 0 .5.4h5.8a.5.5 0 0 0 .5-.4l.7-8.9H6.4Z" />
@@ -887,14 +887,17 @@ export function SearchInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="admin-input pl-9 pr-9"
+        className="admin-input pl-9 pr-12"
       />
       {value && (
         <button
           type="button"
           onClick={() => onChange("")}
           aria-label="Clear search"
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink-strong"
+          /* admin-tap-square, like every other control. This was ~22px, sitting
+             right where the text cursor lands — the one target in the panel
+             that broke the flat-44px rule at globals.css:879. */
+          className="admin-tap-square absolute right-0 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink-strong"
         >
           <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
             <path d="M6.3 5A1 1 0 0 0 5 6.3L8.6 10 5 13.7A1 1 0 1 0 6.3 15L10 11.4l3.7 3.6a1 1 0 0 0 1.3-1.3L11.4 10 15 6.3A1 1 0 0 0 13.7 5L10 8.6 6.3 5Z" />
@@ -905,7 +908,19 @@ export function SearchInput({
   );
 }
 
-/** Segmented status filter — one tap, no dropdown. */
+/**
+ * Segmented status filter — one tap, no dropdown.
+ *
+ * SCROLLS SIDEWAYS ON A NARROW SCREEN, and that is the whole point of the
+ * markup below. It used to be `inline-flex shrink-0` with no wrap and no
+ * scroll, so on a 390px phone Stock's five pills needed about 490px in a 358px
+ * column, nothing clipped them, and the WHOLE PAGE gained a horizontal
+ * scrollbar. Stock, Purchases and Invoices were all affected.
+ *
+ * Not a wrap — the rounded track becomes a two-line lozenge, and Stock's
+ * labels take three lines out of the busiest screen. Not a select on mobile —
+ * that throws away "one tap, no dropdown", which is why this control exists.
+ */
 export function FilterTabs({
   value,
   onChange,
@@ -915,23 +930,46 @@ export function FilterTabs({
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
 }) {
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  /*
+    Bring the selected pill into view. Without it, arriving with a filter
+    already set shows a strip where nothing appears selected — the selection is
+    simply off the right-hand edge.
+  */
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({
+      inline: "nearest",
+      block: "nearest",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    });
+  }, [value]);
+
   return (
     /* Buttons with aria-pressed, not role="tab": there are no tab panels
-       here, so the tablist pattern would lie to a screen reader. */
+       here, so the tablist pattern would lie to a screen reader.
+
+       No tabIndex on the scroller — it would add a phantom stop, and tabbing
+       to an off-screen pill scrolls it into view natively anyway. */
     <div
       role="group"
       aria-label="Filter by status"
-      className="inline-flex shrink-0 rounded-full bg-surface-muted p-1 ring-1 ring-line-soft/70"
+      className="admin-filter-tabs flex w-full min-w-0 gap-0.5 overflow-x-auto rounded-full bg-surface-muted p-1 ring-1 ring-line-soft/70 sm:inline-flex sm:w-auto"
     >
       {options.map((option) => {
         const active = value === option.value;
         return (
           <button
             key={option.value}
+            ref={active ? activeRef : undefined}
             type="button"
             aria-pressed={active}
             onClick={() => onChange(option.value)}
-            className={`admin-tap inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+            /* shrink-0 moved here from the container: the pills must not
+               compress, but the track must be free to. */
+            className={`admin-tap inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
               active
                 ? "bg-raised text-ink-strong shadow-sm"
                 : "text-ink-muted hover:text-ink-strong"

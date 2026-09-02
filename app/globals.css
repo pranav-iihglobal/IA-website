@@ -571,7 +571,21 @@ a:hover > .logo-wiggle {
   border: 1px solid var(--admin-line);
   background: #fff;
   padding: 0.55rem 0.75rem;
-  font-size: 0.875rem;
+  /*
+    16px, not 14. iOS Safari zooms the viewport on focus of any input below
+    16px and does not zoom back out — on every field in the panel, on the
+    device the directors enter data from. Capping zoom in the viewport meta
+    would also stop it, and would be a WCAG 1.4.4 failure; app/layout.tsx
+    keeps maximumScale at 5 deliberately.
+
+    Height does not move: `min-height: 2.75rem` below already governs. Nor does
+    width: the 44rem cap further down is in rem, tied to the root size.
+
+    WATCH OUT — this rule is inside `@layer components`, so a Tailwind
+    `text-xs` on the same element BEATS it. Any input carrying its own
+    font-size has to be fixed at the call site.
+  */
+  font-size: 1rem;
   color: var(--color-russet-dark);
   transition:
     border-color 0.18s ease,
@@ -877,6 +891,50 @@ select.admin-input {
 }
 
 /*
+  Controls that appear on hover — remove-this-line, remove-this-image.
+
+  A class rather than inline `opacity-0 group-hover:opacity-100`, so the
+  `@media (hover: none)` block below can reach them. Written inline they were
+  invisible on touch: on a phone there was no visible way to delete an invoice
+  line you had just added by mistake.
+*/
+.admin-hover-reveal {
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.group\/item:hover .admin-hover-reveal,
+.group:hover .admin-hover-reveal,
+.admin-hover-reveal:focus-visible {
+  opacity: 1;
+}
+
+/*
+  The filter strip, when it is wider than the screen.
+
+  No scrollbar — a 10px bar under a 44px pill row is noise, and the fade at the
+  right edge says "more this way" more quietly. Snap so a pill does not come to
+  rest half cut off. Below sm only: from sm up the strip is inline and fits.
+*/
+.admin-filter-tabs {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+}
+.admin-filter-tabs::-webkit-scrollbar {
+  display: none;
+}
+.admin-filter-tabs > * {
+  scroll-snap-align: start;
+}
+@media (max-width: 639px) {
+  .admin-filter-tabs {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
+  }
+}
+
+/*
   Tap targets — 44px minimum, at every width.
 
   Gating this on `(hover: none)` or `(pointer: coarse)` would keep desktop
@@ -902,7 +960,8 @@ select.admin-input {
 /* Quiet-until-hover would leave a row's only controls permanently half-faded
    where hovering is not possible. */
 @media (hover: none) {
-  .admin-row-actions {
+  .admin-row-actions,
+  .admin-hover-reveal {
     opacity: 1;
   }
 }
@@ -913,6 +972,7 @@ select.admin-input {
   .admin-input,
   .admin-nav-link,
   .admin-nav-group svg,
+  .admin-hover-reveal,
   .admin-row,
   .admin-row-actions {
     transition: none;

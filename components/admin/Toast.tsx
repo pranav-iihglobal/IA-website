@@ -127,7 +127,7 @@ function ToastItem({
         type="button"
         onClick={onDismiss}
         aria-label="Dismiss"
-        className="shrink-0 rounded p-0.5 opacity-50 transition-opacity hover:opacity-100"
+        className="admin-tap-square -my-2 -mr-2 flex shrink-0 items-center justify-center rounded opacity-50 transition-opacity hover:opacity-100"
       >
         <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
           <path d="M6.3 5A1 1 0 0 0 5 6.3L8.6 10 5 13.7A1 1 0 1 0 6.3 15L10 11.4l3.7 3.6a1 1 0 0 0 1.3-1.3L11.4 10 15 6.3A1 1 0 0 0 13.7 5L10 8.6 6.3 5Z" />
