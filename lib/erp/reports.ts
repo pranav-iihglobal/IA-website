@@ -172,10 +172,13 @@ export type OutstandingSort = "oldest" | "largest";
 
 export async function outstandingInvoices(
   sort: OutstandingSort = "oldest",
+  /** One customer only, for their own outstanding page. */
+  contactId?: string,
 ): Promise<OutstandingRow[]> {
   await connectToDatabase();
 
   const docs = await Invoice.find({
+    ...(contactId ? { contactId } : {}),
     status: "issued",
     // Same reason as outstandingTotal: the list and the total must agree.
     documentType: { $ne: "credit_note" },
