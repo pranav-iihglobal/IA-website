@@ -264,6 +264,7 @@ export function TestimonialForm({
             />
             <TextField
               label="Video link"
+              kind="url"
               value={values.video.url}
               onChange={(v) => update("video", { ...values.video, url: v })}
               placeholder="https://…"
@@ -381,7 +382,9 @@ export function TestimonialForm({
             />
             <TextField
               label="Rating (1–5, optional)"
-              type="number"
+              kind="integer"
+              min={1}
+              max={5}
               value={values.rating ?? ""}
               onChange={(v) => update("rating", v)}
               error={errors.rating}
@@ -399,7 +402,8 @@ export function TestimonialForm({
             />
             <TextField
               label="Display order"
-              type="number"
+              kind="integer"
+              min={0}
               value={values.displayOrder}
               onChange={(v) => update("displayOrder", v)}
               hint="Lower numbers appear first."

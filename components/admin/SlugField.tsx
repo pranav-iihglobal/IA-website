@@ -61,10 +61,20 @@ export function SlugField({
         )}
       </div>
 
+      {/*
+        A raw input rather than TextField, so the field-kind presets do not
+        reach it — the attributes are spelled out instead. A slug is lowercase
+        by construction; autocapitalising or autocorrecting one turns a URL
+        into a word.
+      */}
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={error || taken ? true : undefined}
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck={false}
+        autoComplete="off"
         className="admin-input mt-1.5"
       />
 

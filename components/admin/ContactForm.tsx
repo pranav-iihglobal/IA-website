@@ -160,6 +160,7 @@ export function ContactForm({
         )}
         <TextField
           label="Mobile"
+          kind="phone"
           value={values.phone}
           onChange={(v) => set({ phone: v })}
           error={errors.phone}
@@ -167,6 +168,7 @@ export function ContactForm({
         />
         <TextField
           label="Their reference"
+          kind="code"
           value={values.contactId}
           onChange={(v) => set({ contactId: v })}
           error={errors.contactId}
@@ -207,6 +209,7 @@ export function ContactForm({
         />
         <TextField
           label="PIN"
+          kind="pin"
           value={values.pin}
           onChange={(v) => set({ pin: v })}
           error={errors.pin}
@@ -225,8 +228,9 @@ export function ContactForm({
         <div className="grid gap-3 sm:grid-cols-2">
           <TextField
             label="GSTIN"
+            kind="gstin"
             value={String(values.dealer?.gstin ?? "")}
-            onChange={(v) => setGroup("dealer", { gstin: v.toUpperCase() })}
+            onChange={(v) => setGroup("dealer", { gstin: v })}
             error={errors["dealer.gstin"]}
             required
             hint="Decides CGST+SGST vs IGST when this dealer is invoiced."
@@ -239,7 +243,8 @@ export function ContactForm({
           />
           <TextField
             label="Credit days"
-            type="number"
+            kind="integer"
+            min={0}
             value={String(values.dealer?.creditDays ?? "")}
             onChange={(v) => setGroup("dealer", { creditDays: Number(v) || 0 })}
             error={errors["dealer.creditDays"]}
@@ -382,8 +387,9 @@ export function ContactForm({
             <div className="mt-2.5">
               <TextField
                 label="GSTIN"
+                kind="gstin"
                 value={String(values.dealer?.gstin ?? "")}
-                onChange={(v) => setGroup("dealer", { gstin: v.toUpperCase() })}
+                onChange={(v) => setGroup("dealer", { gstin: v })}
                 error={errors["dealer.gstin"]}
                 required
               />

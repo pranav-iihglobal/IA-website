@@ -9,7 +9,13 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type Ref,
 } from "react";
+import {
+  fieldAttributes,
+  type FieldInputProps,
+  type FieldKind,
+} from "@/lib/admin/field-kinds";
 import type { Bi } from "@/lib/content";
 
 /** Shared admin form primitives — see the .admin-* classes in globals.css. */
@@ -195,10 +201,18 @@ export function Section({
   );
 }
 
-export function FieldError({ message }: { message?: string }) {
+export function FieldError({ id, message }: { id?: string; message?: string }) {
   if (!message) return null;
   return (
-    <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-cta">
+    /*
+      No role="alert". A rejected save sets several errors at once, which would
+      be several interruptions, and role="alert" is reliable on mount but flaky
+      when React swaps the text of a node already on screen — exactly the
+      "error changed" case. The announcement comes from focusing the first
+      invalid field, whose label and message are read together via
+      aria-describedby.
+    */
+    <p id={id} className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-cta">
       <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" fill="currentColor" aria-hidden="true">
         <path
           fillRule="evenodd"
@@ -282,10 +296,16 @@ export function TextField({
   error,
   success,
   hint,
-  type = "text",
+  kind,
+  type,
   placeholder,
   required,
   prefix,
+  ref,
+  onBlur,
+  disabled,
+  readOnly,
+  ...attrs
 }: {
   label: string;
   value: string | number;
@@ -294,14 +314,37 @@ export function TextField({
   /** Live confirmation, shown inline. For explanation use `hint`. */
   success?: string;
   hint?: string;
+  /**
+   * What sort of data this holds — see lib/admin/field-kinds.ts. Sets the
+   * keyboard, the casing and the autocorrect behaviour in one word, so a
+   * field cannot end up with the numeric pad but no autocapitalise rule.
+   */
+  kind?: FieldKind;
   type?: string;
   placeholder?: string;
   required?: boolean;
   /** Static text shown inside the field, e.g. a currency symbol. */
   prefix?: string;
-}) {
+  /** For focusing the first invalid field after a rejected save. */
+  ref?: Ref<HTMLInputElement>;
+  onBlur?: () => void;
+  disabled?: boolean;
+  readOnly?: boolean;
+} & FieldInputProps) {
   const id = useId();
   const hintId = `${id}-hint`;
+  const errorId = `${id}-error`;
+
+  const preset = fieldAttributes(kind, { type, ...attrs });
+
+  /*
+    Both, not either. This pointed at the hint alone, so a screen reader was
+    told what the field was for and never told that what you typed was
+    rejected — on a form whose only other signal is a colour change.
+  */
+  const describedBy = [hint && hintId, error && errorId]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     /*
@@ -315,25 +358,49 @@ export function TextField({
       </Label>
       <div className="relative mt-1.5">
         {prefix && (
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-soft">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft">
             {prefix}
           </span>
         )}
         <input
+          {...preset}
           id={id}
-          type={type}
+          ref={ref}
+          type={preset.type ?? "text"}
           value={value}
           placeholder={placeholder}
+          disabled={disabled}
+          readOnly={readOnly}
+          /*
+            aria-required, never the `required` attribute. Once a sheet is a
+            real <form>, native required blocks submit with an unstyled bubble
+            in the browser's language rather than this panel's, showing only
+            the first offender — and a required control inside BiField's
+            `hidden sm:block` half makes the form permanently unsubmittable in
+            Chrome with no visible cause. Client-side zod does this job.
+          */
+          aria-required={required || undefined}
           aria-invalid={error ? true : undefined}
-          aria-describedby={hint ? hintId : undefined}
+          aria-describedby={describedBy || undefined}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+          /*
+            A focused number input changes its value on a scroll wheel. On an
+            invoice that is a silently wrong amount, so the field gives up
+            focus rather than the number.
+          */
+          onWheel={
+            preset.type === "number"
+              ? (e) => e.currentTarget.blur()
+              : undefined
+          }
           className={`admin-input ${prefix ? "pl-7" : ""}`}
         />
       </div>
       {/* Errors and confirmations stay inline and visible. Something you must
           fix, or proof that what you typed worked, is not what an icon is
           for. */}
-      <FieldError message={error} />
+      <FieldError id={errorId} message={error} />
       {!error && <FieldSuccess message={success} />}
     </div>
   );
@@ -346,6 +413,9 @@ export function SelectField({
   options,
   error,
   hint,
+  required,
+  disabled,
+  ref,
 }: {
   label: string;
   value: string;
@@ -353,21 +423,32 @@ export function SelectField({
   options: { value: string; label: string }[];
   error?: string;
   hint?: string;
+  /** Was missing entirely, so a mandatory select could not be marked at all. */
+  required?: boolean;
+  disabled?: boolean;
+  ref?: Ref<HTMLSelectElement>;
 }) {
   const id = useId();
   const hintId = `${id}-hint`;
+  const errorId = `${id}-error`;
+  const describedBy = [hint && hintId, error && errorId]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className="admin-field">
-      <Label hint={hint} hintId={hintId} htmlFor={id}>
+      <Label required={required} hint={hint} hintId={hintId} htmlFor={id}>
         {label}
       </Label>
       <div className="relative mt-1.5">
         <select
           id={id}
+          ref={ref}
           value={value}
+          disabled={disabled}
+          aria-required={required || undefined}
           aria-invalid={error ? true : undefined}
-          aria-describedby={hint ? hintId : undefined}
+          aria-describedby={describedBy || undefined}
           onChange={(e) => onChange(e.target.value)}
           className="admin-input appearance-none pr-9"
         >
@@ -386,7 +467,7 @@ export function SelectField({
           <path d="M5.5 7.5 10 12l4.5-4.5H5.5Z" />
         </svg>
       </div>
-      <FieldError message={error} />
+      <FieldError id={errorId} message={error} />
     </div>
   );
 }

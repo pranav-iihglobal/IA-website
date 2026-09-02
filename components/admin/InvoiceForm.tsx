@@ -225,13 +225,15 @@ export function InvoiceForm({
                 )}
                 <TextField
                   label="Quantity"
-                  type="number"
+                  kind="quantity"
+                  min={1}
                   value={line.quantity}
                   onChange={(quantity) => setLine(i, { quantity })}
                 />
                 <TextField
-                  label="Price each ₹"
-                  type="number"
+                  label="Price each"
+                  kind="money"
+                  prefix="₹"
                   hint={
                     pack
                       ? `Suggested from the product. Change it if the price was negotiated.`
@@ -241,8 +243,9 @@ export function InvoiceForm({
                   onChange={(unitPrice) => setLine(i, { unitPrice })}
                 />
                 <TextField
-                  label="Discount ₹"
-                  type="number"
+                  label="Discount"
+                  kind="money"
+                  prefix="₹"
                   value={line.discount}
                   onChange={(discount) => setLine(i, { discount })}
                 />

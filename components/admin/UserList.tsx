@@ -321,7 +321,7 @@ export function UserList({
           <form onSubmit={add} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_14rem_auto] lg:items-end">
             <TextField
               label="Google email"
-              type="email"
+              kind="email"
               required
               value={email}
               onChange={setEmail}

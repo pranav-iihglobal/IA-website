@@ -315,18 +315,19 @@ export function StockWorkspace({
         <div className="space-y-4">
           <TextField label="Name" value={values.name} onChange={(name) => set({ name })} error={fieldErrors.name} />
           <div className="grid gap-4 sm:grid-cols-2">
-            <TextField label="SKU" value={values.sku} onChange={(sku) => set({ sku })} />
+            <TextField label="SKU" kind="code" value={values.sku} onChange={(sku) => set({ sku })} />
             <SelectField label="Kind" value={values.kind} onChange={(kind) => set({ kind })} options={KINDS} />
-            <TextField label="On hand" type="number" value={values.onHand} onChange={(onHand) => set({ onHand })} error={fieldErrors.onHand} />
+            <TextField label="On hand" kind="quantity" value={values.onHand} onChange={(onHand) => set({ onHand })} error={fieldErrors.onHand} />
             <TextField label="Unit" hint="sachet, canister, kg, piece" value={values.unit} onChange={(unit) => set({ unit })} />
             <TextField
               label="Reorder level"
-              type="number"
+              kind="integer"
+              min={0}
               hint="Zero means no alert. Otherwise it flags at or below this."
               value={values.reorderLevel}
               onChange={(reorderLevel) => set({ reorderLevel })}
             />
-            <TextField label="Unit cost ₹" type="number" value={values.unitCost} onChange={(unitCost) => set({ unitCost })} />
+            <TextField label="Unit cost" kind="money" prefix="₹" value={values.unitCost} onChange={(unitCost) => set({ unitCost })} />
             <TextField label="Supplier" value={values.supplier} onChange={(supplier) => set({ supplier })} />
             <TextField label="Location" value={values.location} onChange={(location) => set({ location })} />
           </div>

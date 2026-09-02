@@ -487,7 +487,7 @@ export function ProductForm({
               <div className="grid gap-4 sm:grid-cols-2">
                 <TextField
                   label="Amount per acre"
-                  type="number"
+                  kind="decimal"
                   value={values.dosage.amountPerAcre ?? ""}
                   onChange={(v) => update("dosage", { ...values.dosage, amountPerAcre: v })}
                 />
@@ -851,15 +851,19 @@ export function ProductForm({
             description="Stored for future invoicing. Dealer prices are never shown on the public site."
           >
             <div className="grid gap-4 sm:grid-cols-3">
-              <TextField label="SKU" value={values.sku} onChange={(v) => update("sku", v)} />
+              <TextField label="SKU"
+                kind="code" value={values.sku} onChange={(v) => update("sku", v)} />
               <TextField
                 label="HSN code"
+                kind="code"
                 value={values.hsnCode}
                 onChange={(v) => update("hsnCode", v)}
               />
               <TextField
                 label="GST %"
-                type="number"
+                kind="decimal"
+                min={0}
+                max={28}
                 value={values.gstRatePercent}
                 onChange={(v) => update("gstRatePercent", v)}
               />
@@ -903,7 +907,7 @@ export function ProductForm({
                       />
                       <TextField
                         label="Net qty"
-                        type="number"
+                        kind="decimal"
                         value={values.packSizes[i].netQuantity ?? ""}
                         onChange={(v) =>
                           update(
@@ -927,8 +931,9 @@ export function ProductForm({
                         }
                       />
                       <TextField
-                        label="MRP ₹"
-                        type="number"
+                        label="MRP"
+                        kind="money"
+                        prefix="₹"
                         value={values.packSizes[i].mrp ?? ""}
                         onChange={(v) =>
                           update(
@@ -940,8 +945,9 @@ export function ProductForm({
                         }
                       />
                       <TextField
-                        label="Farmer ₹"
-                        type="number"
+                        label="Farmer"
+                        kind="money"
+                        prefix="₹"
                         hint="What a farmer actually pays. Usually below MRP."
                         value={values.packSizes[i].farmerPrice ?? ""}
                         onChange={(v) =>
@@ -954,8 +960,9 @@ export function ProductForm({
                         }
                       />
                       <TextField
-                        label="Dealer ₹"
-                        type="number"
+                        label="Dealer"
+                        kind="money"
+                        prefix="₹"
                         value={values.packSizes[i].dealerPrice ?? ""}
                         onChange={(v) =>
                           update(
@@ -967,8 +974,9 @@ export function ProductForm({
                         }
                       />
                       <TextField
-                        label="Cost ₹"
-                        type="number"
+                        label="Cost"
+                        kind="money"
+                        prefix="₹"
                         hint="What the pack costs to make and fill. Never shown publicly."
                         value={values.packSizes[i].cost ?? ""}
                         onChange={(v) =>
@@ -1123,7 +1131,8 @@ export function ProductForm({
               />
               <TextField
                 label="Display order"
-                type="number"
+                kind="integer"
+                min={0}
                 value={values.displayOrder}
                 onChange={(v) => update("displayOrder", v)}
                 hint="Lower numbers appear first."

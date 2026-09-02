@@ -528,13 +528,15 @@ export function InvoiceWorkspace({
             ]}
           />
           <TextField
-            label="Amount received ₹"
-            type="number"
+            label="Amount received"
+            kind="money"
+            prefix="₹"
             value={payment.paid}
             onChange={(paid) => setPayment({ ...payment, paid })}
           />
           <TextField
             label="Reference"
+            kind="code"
             hint="UPI reference, cheque number, or how it arrived."
             value={payment.referenceNo}
             onChange={(referenceNo) => setPayment({ ...payment, referenceNo })}
@@ -645,7 +647,7 @@ export function InvoiceWorkspace({
                   <div className="w-28">
                     <TextField
                       label="Credit"
-                      type="number"
+                      kind="quantity"
                       value={line.quantity}
                       onChange={(quantity) =>
                         setCreditLines(

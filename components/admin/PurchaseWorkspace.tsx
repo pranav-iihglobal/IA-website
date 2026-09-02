@@ -365,23 +365,23 @@ export function PurchaseWorkspace({
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField label="Supplier" value={values.supplier} onChange={(supplier) => set({ supplier })} error={fieldErrors.supplier} />
             <TextField
-              label="Supplier GSTIN"
+              label="Supplier GSTIN" kind="gstin"
               hint="Without one there is no input credit to claim."
               value={values.supplierGstin}
-              onChange={(supplierGstin) => set({ supplierGstin: supplierGstin.toUpperCase() })}
+              onChange={(supplierGstin) => set({ supplierGstin })}
             />
-            <TextField label="Their bill number" value={values.billNo} onChange={(billNo) => set({ billNo })} />
+            <TextField label="Their bill number" kind="code" value={values.billNo} onChange={(billNo) => set({ billNo })} />
             <TextField label="Bill date" type="date" value={values.billDate} onChange={(billDate) => set({ billDate })} />
             <SelectField label="Category" value={values.category} onChange={(category) => set({ category })} options={CATEGORIES} />
             <TextField label="Description" value={values.description} onChange={(description) => set({ description })} />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <TextField label="Taxable value ₹" type="number" value={values.taxableValue} onChange={(taxableValue) => set({ taxableValue })} />
-            <TextField label="CGST ₹" type="number" value={values.cgst} onChange={(cgst) => set({ cgst })} />
-            <TextField label="SGST ₹" type="number" value={values.sgst} onChange={(sgst) => set({ sgst })} />
-            <TextField label="IGST ₹" type="number" value={values.igst} onChange={(igst) => set({ igst })} />
-            <TextField label="Bill total ₹" type="number" value={values.total} onChange={(total) => set({ total })} />
+            <TextField label="Taxable value" kind="money" prefix="₹" value={values.taxableValue} onChange={(taxableValue) => set({ taxableValue })} />
+            <TextField label="CGST" kind="money" prefix="₹" value={values.cgst} onChange={(cgst) => set({ cgst })} />
+            <TextField label="SGST" kind="money" prefix="₹" value={values.sgst} onChange={(sgst) => set({ sgst })} />
+            <TextField label="IGST" kind="money" prefix="₹" value={values.igst} onChange={(igst) => set({ igst })} />
+            <TextField label="Bill total" kind="money" prefix="₹" value={values.total} onChange={(total) => set({ total })} />
           </div>
 
           {mismatch && (
@@ -404,7 +404,7 @@ export function PurchaseWorkspace({
                 { value: "paid", label: "Paid" },
               ]}
             />
-            <TextField label="Paid ₹" type="number" value={values.paid} onChange={(paid) => set({ paid })} />
+            <TextField label="Paid" kind="money" prefix="₹" value={values.paid} onChange={(paid) => set({ paid })} />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
