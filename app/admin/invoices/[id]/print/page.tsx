@@ -9,6 +9,7 @@ import { formatRate } from "@/lib/erp/tax";
 import { formatIstDateLong } from "@/lib/time";
 import type { LeanDoc } from "@/lib/db/lean";
 import { PrintButton } from "@/components/admin/PrintButton";
+import { whatsappHref } from "@/lib/crm/contact-links";
 
 export const dynamic = "force-dynamic";
 
@@ -54,11 +55,20 @@ export default async function InvoicePrintPage({
   const count = (quantity: number) => (isCredit ? Math.abs(quantity ?? 0) : quantity);
 
   return (
-    <div className="mx-auto w-full max-w-[820px] bg-white p-8 text-[13px] text-black print:p-0">
+    /*
+      p-4 on a phone, p-8 from sm. Two inches of white margin on a 358px
+      screen left the document itself about 290px wide — on the one screen
+      where this is actually pulled up, in front of a customer.
+    */
+    <div className="mx-auto w-full max-w-[820px] bg-white p-4 text-[13px] text-black sm:p-8 print:p-0">
       <style>{`
         @media print {
           @page { size: A4; margin: 14mm; }
           .no-print { display: none !important; }
+          /* The scroll container is a screen affordance; on paper the table
+             must lay out at its natural width, not inside a 640px box. */
+          .lines-scroll { overflow: visible !important; }
+          .lines-table { min-width: 0 !important; }
         }
       `}</style>
 
@@ -66,7 +76,24 @@ export default async function InvoicePrintPage({
         <a href="/admin/invoices" className="text-sm font-semibold underline">
           ← Back to invoices
         </a>
-        <PrintButton />
+        <div className="flex flex-wrap items-center gap-2">
+          {/*
+            The funnel is WhatsApp, so getting the customer the NUMBER and the
+            AMOUNT is one tap — no PDF library, no public link, no decision
+            for anybody to take. The document itself still goes as a printed
+            PDF; whether it should instead be a signed, expiring public link
+            is a security question for the directors and is deliberately not
+            answered here.
+          */}
+          <ShareOnWhatsApp
+            phone={doc.party?.phone ?? ""}
+            name={doc.party?.businessName || doc.party?.name || ""}
+            number={doc.number ?? ""}
+            amount={money(doc.grandTotalPaise ?? 0)}
+            isCredit={isCredit}
+          />
+          <PrintButton />
+        </div>
       </div>
 
       {!SELLER.gstin && (
@@ -159,7 +186,13 @@ export default async function InvoicePrintPage({
         </div>
       </section>
 
-      <table className="mt-4 w-full border-collapse text-[12px]">
+      {/*
+        The one table in the admin that never got its own scroll container.
+        Eight columns crushed into 358px, or the whole page scrolling
+        sideways — on a document meant to be read aloud to somebody.
+      */}
+      <div className="lines-scroll -mx-4 mt-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+      <table className="lines-table w-full min-w-[640px] border-collapse text-[12px]">
         <thead>
           <tr className="border-b-2 border-black text-left">
             <th className="py-2 pr-2">#</th>
@@ -197,6 +230,7 @@ export default async function InvoicePrintPage({
           ))}
         </tbody>
       </table>
+      </div>
 
       <div className="mt-4 flex flex-wrap justify-between gap-6">
         {/* The rate-wise summary a tax invoice carries, and GSTR-1 wants. */}
@@ -368,4 +402,49 @@ function summariseByRate(lines: LeanDoc[]) {
     rows.set(key, row);
   }
   return [...rows.values()].sort((a, b) => a.gstRateBps - b.gstRateBps);
+}
+
+/**
+ * Send the customer the number and the amount, on the channel they use.
+ *
+ * Not the document — that still goes as a printed PDF. This is the message
+ * that always precedes it, typed out by hand every time: "your bill
+ * IA.09.26.014 comes to ₹4,250".
+ *
+ * Absent, rather than disabled, when the snapshot holds no usable number.
+ * The party is a SNAPSHOT taken at issue, so an older invoice may carry a
+ * number in a shape dialable() will not guess at, and a link that rings the
+ * wrong person is worse than no link.
+ */
+function ShareOnWhatsApp({
+  phone,
+  name,
+  number,
+  amount,
+  isCredit,
+}: {
+  phone: string;
+  name: string;
+  number: string;
+  amount: string;
+  isCredit: boolean;
+}) {
+  const href = whatsappHref(
+    phone,
+    isCredit
+      ? `Namaste ${name}, this is IKSARVA Agritech. Credit note ${number} for ${amount} has been raised against your bill. The document follows.`
+      : `Namaste ${name}, this is IKSARVA Agritech. Your invoice ${number} comes to ${amount}. The bill follows. Thank you.`,
+  );
+  if (!href) return null;
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex min-h-11 items-center rounded-full border border-black px-4 text-sm font-semibold"
+    >
+      Send on WhatsApp
+    </a>
+  );
 }
