@@ -555,7 +555,18 @@ export const versionField = z.number().int().nonnegative().optional();
 
 export const contactSchema = z.object({
   version: versionField,
-  contactId: z.string().trim().default(""),
+  /*
+    Blank means "allocate one on save" — see lib/crm/contact-id.ts. Typed ids
+    are still accepted, uppercased, because the real contacts carry ids from
+    paper (IKS-D-2403 among them) and the import rule is report, never guess:
+    no format regex, only a length that rules out a pasted sentence.
+  */
+  contactId: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .max(24, "An id is at most 24 characters")
+    .default(""),
   kind: z.enum(["lead", "customer"]).default("lead"),
   channel: z.enum(["b2c", "b2b", ""]).default(""),
 

@@ -20,6 +20,9 @@ import { searchRegex } from "@/lib/search";
  */
 const SEARCH_FIELDS = [
   "contactId",
+  // The ids a converted lead used to carry. A regex against an array field
+  // matches any element, so IKS-L-012 still finds the customer it became.
+  "formerIds",
   "name",
   "nameGu",
   "businessName",

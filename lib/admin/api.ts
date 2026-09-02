@@ -106,17 +106,38 @@ export async function currentEditor(): Promise<string> {
   }
 }
 
+/**
+ * What to say when a unique index refuses a write, by the field it guards.
+ *
+ * Mongo names the index in `keyPattern`; the message names the thing the
+ * person typed. Anything not listed gets the honest generic line rather than
+ * "that slug" — which is what every duplicate used to be called, including
+ * a contact id.
+ */
+const DUPLICATE_MESSAGES: Record<string, string> = {
+  slug: "That slug is already used by another item. Choose a different one.",
+  contactId: "That id is already on another contact. Leave it blank to have one allocated.",
+  gstin: "Another record already carries that GSTIN.",
+};
+
 /** Map thrown errors to a useful response instead of a generic 500. */
 export function errorResponse(error: unknown): NextResponse {
-  // Duplicate unique key (slug)
+  // Duplicate unique key
   if (
     error &&
     typeof error === "object" &&
     "code" in error &&
     (error as { code: unknown }).code === 11000
   ) {
+    const pattern = (error as { keyPattern?: Record<string, unknown> }).keyPattern ?? {};
+    const field = Object.keys(pattern).find((key) => key in DUPLICATE_MESSAGES);
     return NextResponse.json(
-      { error: "That slug is already used by another item. Choose a different one." },
+      {
+        error: field
+          ? DUPLICATE_MESSAGES[field]
+          : "Another record already has that value. Choose a different one.",
+        ...(field ? { fields: { [field]: DUPLICATE_MESSAGES[field] } } : {}),
+      },
       { status: 409 },
     );
   }

@@ -48,6 +48,7 @@ export default async function ContactProfilePage({
     // from the list at the same moment.
     version: typeof c.__v === "number" ? c.__v : 0,
     contactId: c.contactId ?? "",
+    formerIds: (c.formerIds ?? []).map((v: unknown) => String(v)),
     kind: c.kind ?? "lead",
     channel: c.channel ?? "",
     name: c.name ?? "",

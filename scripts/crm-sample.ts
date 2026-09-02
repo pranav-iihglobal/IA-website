@@ -19,6 +19,13 @@ import { loadEnv } from "./load-env";
 import { connectToDatabase } from "../lib/db/connect";
 import { Contact } from "../lib/db/models/Contact";
 import { Invoice } from "../lib/db/models/Invoice";
+import { peekSeries } from "../lib/db/models/Counter";
+import {
+  contactSeriesKey,
+  isAllocatedSeries,
+  parseContactId,
+  type ContactSeriesLetter,
+} from "../lib/crm/contact-id";
 import { buildContacts } from "./crm-sample-data";
 
 loadEnv();
@@ -88,6 +95,8 @@ async function main() {
         console.log(`\n  ${stale} customers have no channel set — those appear on NEITHER`);
         console.log("  the Customers nor the Dealers screen. Set channel to b2c or b2b.");
       }
+
+      await contactIdReport();
     }
 
     /*
@@ -135,6 +144,75 @@ async function main() {
   }
 
   await mongoose.connection.close();
+}
+
+/**
+ * Contact ids: are they unique, is the index there, are the counters ahead
+ * of what has been typed by hand?
+ *
+ * Reported, never repaired. Every line here is a change to somebody else's
+ * database, and the right moment for each is a decision, not a side effect
+ * of asking what is in it.
+ */
+async function contactIdReport() {
+  console.log("\n  Contact ids");
+
+  const blank = await Contact.countDocuments({
+    isSample: { $ne: true },
+    $or: [{ contactId: "" }, { contactId: null }],
+  });
+  if (blank > 0) {
+    console.log(`    ${blank} real contacts have no id yet — each is allocated one on its next save.`);
+  }
+
+  const duplicates = await Contact.aggregate<{ _id: string; count: number }>([
+    { $match: { contactId: { $type: "string", $gt: "" } } },
+    { $group: { _id: "$contactId", count: { $sum: 1 } } },
+    { $match: { count: { $gt: 1 } } },
+    { $sort: { _id: 1 } },
+    { $limit: 40 },
+  ]);
+  if (duplicates.length > 0) {
+    console.log(`    ⚠ ${duplicates.length} ids are on more than one contact:`);
+    for (const d of duplicates) console.log(`      ${d._id}  ×${d.count}`);
+    console.log("    The unique index cannot be built until these are resolved by hand.");
+  }
+
+  const indexes = await Contact.collection.indexes();
+  const unique = indexes.find((i) => i.name === "contactId_unique_when_set");
+  if (!unique) {
+    console.log("    ⚠ The unique index on contactId is not on this cluster. Mongoose creates");
+    console.log("      it on first connect only when nothing conflicts. Build it with:");
+    console.log(
+      '      db.contacts.createIndex({ contactId: 1 }, { unique: true, name: "contactId_unique_when_set",',
+    );
+    console.log('        partialFilterExpression: { contactId: { $type: "string", $gt: "" } } })');
+  }
+
+  /*
+    A counter behind the highest id already typed would hand out a number
+    that is taken. Compare each real series against the ids on file.
+  */
+  const ids = (await Contact.find({ isSample: { $ne: true }, contactId: { $gt: "" } })
+    .select("contactId")
+    .lean()) as { contactId?: string }[];
+  const highest: Record<ContactSeriesLetter, number> = { C: 0, B: 0, L: 0 };
+  for (const doc of ids) {
+    const parsed = parseContactId(doc.contactId ?? "");
+    if (parsed && isAllocatedSeries(parsed)) {
+      highest[parsed.letter] = Math.max(highest[parsed.letter], parsed.sequence);
+    }
+  }
+  for (const letter of ["C", "B", "L"] as const) {
+    const at = await peekSeries(contactSeriesKey(letter));
+    const line = `    ${contactSeriesKey(letter).padEnd(12)} counter ${at}, highest on file ${highest[letter]}`;
+    if (at < highest[letter]) {
+      console.log(`${line}  ⚠ BEHIND — the next allocation would reuse an id.`);
+      console.log(`      Seed it: db.counters.updateOne({ _id: "${contactSeriesKey(letter)}" }, { $max: { seq: ${highest[letter]} } }, { upsert: true })`);
+    } else {
+      console.log(line);
+    }
+  }
 }
 
 main().catch((error) => {

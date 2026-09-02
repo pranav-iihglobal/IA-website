@@ -346,12 +346,16 @@ export function ContactForm({
               error={errors.email}
             />
             <TextField
-              label="Their reference"
+              label="Id"
               kind="code"
               value={values.contactId}
               onChange={(v) => set({ contactId: v })}
               error={errors.contactId}
-              hint="IKS-C-034, IKS-B-001 — the id already used on paperwork."
+              hint={
+                values.contactId
+                  ? "Printed on their paperwork. Change it only to match what is on paper."
+                  : "Leave blank and one is allocated on save — IKS-L-013, the next in the series."
+              }
             />
           </div>
         </Section>

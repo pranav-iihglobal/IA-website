@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/db/connect";
 import { Contact } from "@/lib/db/models/Contact";
 import { contactSchema } from "@/lib/schemas";
 import { listContacts } from "@/lib/crm/list";
+import { allocateContactId } from "@/lib/crm/contact-id";
 import {
   currentEditor,
   errorResponse,
@@ -48,8 +49,19 @@ export async function POST(request: NextRequest) {
     }
 
     await connectToDatabase();
+    /*
+      Blank means allocate. The id comes from the atomic Counter, in the
+      series for this kind of contact, so two people saving a lead at once
+      get two ids — see lib/crm/contact-id.ts. A typed id is kept as typed:
+      it is what is on their paperwork.
+    */
+    const contactId =
+      parsed.data.contactId ||
+      (await allocateContactId(parsed.data.kind, parsed.data.channel));
+    const record = { ...parsed.data, contactId };
+
     const created = await Contact.create({
-      ...parsed.data,
+      ...record,
       // Never trusted from the client — anything created here is real.
       isSample: false,
       updatedBy: await currentEditor(),
@@ -59,10 +71,14 @@ export async function POST(request: NextRequest) {
       action: "create",
       entity: "Contact",
       entityId: String(created._id),
-      after: parsed.data as Record<string, unknown>,
+      // `record`, not `parsed.data`: the allocated id must be in the log.
+      after: record as Record<string, unknown>,
     });
 
-    return NextResponse.json({ id: String(created._id) }, { status: 201 });
+    return NextResponse.json(
+      { id: String(created._id), contactId: created.contactId },
+      { status: 201 },
+    );
   } catch (error) {
     return errorResponse(error);
   }

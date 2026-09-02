@@ -10,6 +10,8 @@
  * shaped but deliberately invalid.
  */
 
+import { formatContactId } from "../lib/crm/contact-id";
+
 /* Real place names from the districts IKSARVA actually sells into, so the
    lists look and sort like the real thing rather than like Lorem Ipsum. */
 const PLACES: { district: string; region: string; talukas: string[] }[] = [
@@ -70,12 +72,19 @@ export function buildContacts(total: number) {
     const lastOrderDays = Math.floor(rnd() * 400);
     const orders = 1 + Math.floor(rnd() * 5);
 
+    /*
+      SMP-, not IKS-. An id that looks real is eventually read out to somebody
+      as if it were — the same reason sample invoices are SMP.09.26.007 and
+      never IA. — and now that real ids are allocated from a counter and
+      unique, a sample IKS-C-009 would also be a real collision waiting for
+      the first real customer to reach 009. Each series counts from 001.
+    */
     docs.push({
       contactId: isDealer
-        ? `IKS-B-${String(i + 1).padStart(3, "0")}`
+        ? formatContactId("B", i + 1, "SMP")
         : isCustomer
-          ? `IKS-C-${String(i + 1).padStart(3, "0")}`
-          : `IKS-L-${String(i + 1).padStart(4, "0")}`,
+          ? formatContactId("C", i - dealerCount + 1, "SMP")
+          : formatContactId("L", i - dealerCount - customerCount + 1, "SMP"),
       kind,
       channel: isDealer ? "b2b" : isCustomer ? "b2c" : "",
       name,

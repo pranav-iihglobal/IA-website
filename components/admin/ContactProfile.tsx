@@ -32,6 +32,8 @@ export interface ProfileContact {
   /** Mongoose __v — sent back on save, so a stale write is refused. */
   version: number;
   contactId: string;
+  /** Ids this record carried before conversion — see Contact.formerIds. */
+  formerIds: string[];
   kind: string;
   channel: string;
   name: string;
@@ -239,6 +241,11 @@ export function ContactProfile({
             )}
             {contact.contactId && (
               <span className="text-ink-faint">{contact.contactId}</span>
+            )}
+            {contact.formerIds.length > 0 && (
+              // The id they had as a lead. Still on the sample register and
+              // the paperwork, so it is shown as well as searched.
+              <span className="text-ink-faint">was {contact.formerIds.join(", ")}</span>
             )}
             {isDealer && <StatusPill status="dealer" />}
             {contact.isSample && <StatusPill status="sample" />}

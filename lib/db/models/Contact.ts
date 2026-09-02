@@ -69,10 +69,21 @@ const contactSchema = new Schema(
     /**
      * Their own identifier — IKS-C-034, IKS-B-001, IKS-L-012, IKS-D-2403.
      * Printed on documents and known to the team, so it is kept rather than
-     * replaced with a Mongo id. Sparse because a brand new lead captured from
-     * the website has not been assigned one yet.
+     * replaced with a Mongo id.
+     *
+     * Allocated on save when left blank (lib/crm/contact-id.ts), and unique
+     * when set — the partial index below, because a plain unique index would
+     * refuse the second contact with no id at all. Uppercased so IKS-c-034
+     * and IKS-C-034 cannot be two records.
      */
-    contactId: { type: String, trim: true, default: "", index: true },
+    contactId: { type: String, trim: true, uppercase: true, default: "" },
+    /**
+     * Ids this contact used to carry. A lead converted to a customer is
+     * given a customer id, and the lead id it had — on the sample register,
+     * on the paperwork — has to go on finding it. Searched alongside
+     * contactId; never edited from the form.
+     */
+    formerIds: { type: [String], default: [] },
 
     kind: {
       type: String,
@@ -222,6 +233,25 @@ const contactSchema = new Schema(
 contactSchema.index({ kind: 1, channel: 1, updatedAt: -1 });
 contactSchema.index({ kind: 1, "lead.followUpStatus": 1, followUpAt: 1 });
 contactSchema.index({ district: 1, kind: 1 });
+/*
+  One id, one contact — but only where there IS an id. Records still
+  waiting for one all hold "", and a plain unique index would refuse the
+  second of them. The partial filter keeps the guarantee to ids that are set.
+
+  On a live cluster Mongoose creates this only if nothing conflicts; a
+  collection already holding two IKS-L-012s cannot take the index at all.
+  `npm run crm-sample -- doctor` lists the duplicates and prints the
+  createIndex command — reported, never repaired by surprise.
+*/
+contactSchema.index(
+  { contactId: 1 },
+  {
+    unique: true,
+    name: "contactId_unique_when_set",
+    partialFilterExpression: { contactId: { $type: "string", $gt: "" } },
+  },
+);
+contactSchema.index({ formerIds: 1 });
 
 export type ContactDoc = InferSchemaType<typeof contactSchema>;
 

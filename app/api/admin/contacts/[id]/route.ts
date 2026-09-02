@@ -4,6 +4,7 @@ import { connectToDatabase } from "@/lib/db/connect";
 import { Contact } from "@/lib/db/models/Contact";
 import { Invoice } from "@/lib/db/models/Invoice";
 import { contactNoteSchema, contactSchema, followUpActionSchema } from "@/lib/schemas";
+import { allocateContactId, seriesChanges } from "@/lib/crm/contact-id";
 import type { LeanDoc } from "@/lib/db/lean";
 import {
   currentEditor,
@@ -160,7 +161,37 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     await connectToDatabase();
     // Read first, so the audit entry holds the change rather than the record.
-    const before = await Contact.findById(id).lean();
+    const before = (await Contact.findById(id).lean()) as LeanDoc | null;
+    if (!before) return badId();
+
+    /*
+      Conversion gives the record its new id.
+
+      A lead converted to a customer moves from the L series to the C (or B)
+      series, and gets the next number there — the id it carried stays on
+      the record as a former id, still searchable, because it is on the
+      sample register and the paperwork. This is the ONE place that sees
+      both the old kind and the new, so it is where the allocation lives;
+      the form never touches contactId on convert.
+
+      A blank id on an ordinary edit is allocated too: a record from before
+      allocation existed, being edited for the first time since.
+    */
+    const converted = seriesChanges(
+      { kind: before.kind ?? "lead", channel: before.channel ?? "" },
+      parsed.data,
+    );
+    const previousId: string = before.contactId ?? "";
+    const contactId =
+      converted || !parsed.data.contactId
+        ? await allocateContactId(parsed.data.kind, parsed.data.channel)
+        : parsed.data.contactId;
+    const record = { ...parsed.data, contactId };
+    const formerIds =
+      converted && previousId && previousId !== contactId
+        ? { $addToSet: { formerIds: previousId } }
+        : {};
+
     /*
       Matched on the version the form loaded with, so a save cannot silently
       overwrite somebody else's. See lib/admin/concurrency.ts.
@@ -168,7 +199,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const updated = await Contact.findOneAndUpdate(
       versionedFilter(id, (parsed.data as { version?: unknown }).version),
       {
-        ...parsed.data,
+        ...record,
         /*
           Editing a seeded record makes it real. Otherwise a director fixes up
           a sample row, treats it as a customer, and the next `wipe` silently
@@ -176,6 +207,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         */
         isSample: false,
         updatedBy: await currentEditor(),
+        ...formerIds,
       },
       { returnDocument: "after", runValidators: true },
     );
@@ -188,10 +220,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       entity: "Contact",
       entityId: id,
       before: before as Record<string, unknown> | null,
-      after: parsed.data as Record<string, unknown>,
+      after: record as Record<string, unknown>,
     });
 
-    return NextResponse.json({ id: String(updated._id) });
+    return NextResponse.json({ id: String(updated._id), contactId: updated.contactId });
   } catch (error) {
     return errorResponse(error);
   }
