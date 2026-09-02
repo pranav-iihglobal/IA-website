@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { EntitySelect } from "./EntityPicker";
+import { EntityCombo, EntitySelect } from "./EntityPicker";
 import { FieldGroup, RepeatableList, SelectField, TextField } from "./ui";
 import { formatINR, rupeesToPaise } from "@/lib/money";
 import {
@@ -139,8 +139,10 @@ export function InvoiceForm({
   return (
     <div className="space-y-5">
       <FieldGroup label="Customer">
-        <EntitySelect
+        <EntityCombo
           label="Bill to"
+          required
+          placeholder="Search by name, village or id"
           options={parties.map((p) => ({ id: p.id, label: p.name, hint: p.hint }))}
           value={values.contactId}
           onChange={(contactId) => set({ contactId })}

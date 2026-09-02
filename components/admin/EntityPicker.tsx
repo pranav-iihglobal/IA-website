@@ -183,6 +183,154 @@ export function EntityPicker({
   );
 }
 
+/**
+ * Searchable single-select, for a list too long to scroll.
+ *
+ * `EntitySelect` below is a native <select>, which is right for three products
+ * and wrong for two thousand customers: on a phone that is a two-thousand-item
+ * wheel, on the first field of the highest-stakes form, in the field. It also
+ * renders only `label`, throwing `hint` away — so two farmers with the same
+ * name were indistinguishable at the moment of choosing who to invoice.
+ *
+ * Plain buttons rather than the ARIA combobox pattern, matching EntityPicker
+ * above: a half-built combobox lies to a screen reader more than a labelled
+ * list of buttons does.
+ */
+const MATCH_LIMIT = 50;
+
+export function EntityCombo({
+  label,
+  options,
+  value,
+  onChange,
+  error,
+  required,
+  placeholder = "Search…",
+}: {
+  label: string;
+  options: PickerOption[];
+  value: string;
+  onChange: (id: string) => void;
+  error?: string;
+  required?: boolean;
+  placeholder?: string;
+}) {
+  const [query, setQuery] = useState("");
+  const chosen = useMemo(
+    () => options.find((o) => o.id === value),
+    [options, value],
+  );
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return options
+      .filter(
+        (o) =>
+          o.label.toLowerCase().includes(q) ||
+          (o.hint ?? "").toLowerCase().includes(q),
+      )
+      .slice(0, MATCH_LIMIT);
+  }, [options, query]);
+
+  function pick(id: string) {
+    onChange(id);
+    setQuery("");
+  }
+
+  return (
+    <div className="admin-field">
+      <span className="admin-label inline-flex items-center text-sm font-semibold text-ink-strong">
+        {label}
+        {required && <span className="ml-0.5 text-alloy">*</span>}
+      </span>
+
+      {chosen ? (
+        <div className="mt-1.5 flex items-center gap-3 rounded-xl border border-line-soft bg-surface-muted/40 px-3 py-2">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-ink-strong">
+              {chosen.label}
+            </p>
+            {/* The hint is the whole point — it is what tells two farmers of
+                the same name apart. */}
+            {chosen.hint && (
+              <p className="truncate text-xs text-ink-soft">{chosen.hint}</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="admin-tap shrink-0 rounded-lg px-3 text-xs font-semibold text-ink-muted hover:text-ink-strong"
+          >
+            Change
+          </button>
+        </div>
+      ) : (
+        <div className="mt-1.5">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              // Choosing from a list is not submitting the form around it.
+              e.preventDefault();
+              if (matches[0]) pick(matches[0].id);
+            }}
+            placeholder={placeholder}
+            aria-label={label}
+            aria-invalid={error ? true : undefined}
+            aria-required={required || undefined}
+            autoComplete="off"
+            enterKeyHint="search"
+            data-no-implicit-submit
+            className="admin-input"
+          />
+
+          {matches.length > 0 && (
+            <ul className="mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-line-soft/70 bg-raised">
+              {matches.map((option) => (
+                <li key={option.id}>
+                  <button
+                    type="button"
+                    onClick={() => pick(option.id)}
+                    className="admin-tap flex w-full flex-col items-start px-3 py-2 text-left transition-colors hover:bg-surface-muted"
+                  >
+                    <span className="text-sm font-semibold text-ink-strong">
+                      {option.label}
+                    </span>
+                    {option.hint && (
+                      <span className="text-xs text-ink-soft">{option.hint}</span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Says so rather than silently showing the first fifty of hundreds. */}
+          {matches.length === MATCH_LIMIT && (
+            <p className="mt-1.5 text-xs text-ink-soft">
+              Showing the first {MATCH_LIMIT}. Keep typing to narrow it down.
+            </p>
+          )}
+          {query.trim() && matches.length === 0 && (
+            <p className="mt-1.5 text-xs text-ink-soft">
+              Nothing matches &ldquo;{query.trim()}&rdquo;.
+            </p>
+          )}
+          {!query.trim() && (
+            <p className="mt-1.5 text-xs text-ink-soft">
+              {options.length} to choose from — type a name, a village or an id.
+            </p>
+          )}
+        </div>
+      )}
+
+      {error && <p className="mt-1.5 text-xs font-semibold text-cta">{error}</p>}
+    </div>
+  );
+}
+
 /** Single-select variant used for one product reference per row. */
 export function EntitySelect({
   label,
