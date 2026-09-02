@@ -129,7 +129,6 @@ export default async function ContactProfilePage({
   return (
     <ContactProfile
       contact={contact}
-      products={productOptions.map((p) => ({ id: p.id, label: p.name, hint: p.hint }))}
       invoices={data.invoices}
       trading={data.trading}
       sampling={sampling}

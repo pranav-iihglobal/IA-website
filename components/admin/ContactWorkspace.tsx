@@ -1,10 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   BetaStar,
-  Button,
   EmptyState,
   ErrorBanner,
   FilterTabs,
@@ -14,17 +13,10 @@ import {
   SearchInput,
 } from "./ui";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { FormSheet } from "./FormSheet";
 import { useToast } from "./Toast";
-import { clearChanged } from "@/lib/admin/field-errors";
 import { formatRupees } from "@/lib/money";
 import { telHref, whatsappHref } from "@/lib/crm/contact-links";
-import { useDuplicateContacts } from "./useDuplicateContacts";
 import { useListState } from "./useListState";
-import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
-import { contactSchema } from "@/lib/schemas";
-import { ContactForm, type ContactFormValues, emptyContact } from "./ContactForm";
-import type { PickerOption } from "./EntityPicker";
 import { STATUS_LABELS, type ContactRow } from "@/lib/crm/shape";
 import type { ContactList } from "@/lib/crm/list";
 import { contactListQuery, listQueryKey, type Scope } from "@/lib/crm/scopes";
@@ -37,40 +29,35 @@ import { contactListQuery, listQueryKey, type Scope } from "@/lib/crm/scopes";
  * near-identical copies — the divergence between three hand-maintained lists
  * is exactly how the spreadsheets ended up inconsistent.
  *
- * Which record is open lives in the URL (`?new=1` or `?edit=<id>`), not in
- * component state. That is what makes the browser Back button close the sheet
- * instead of leaving the page, and lets a row be linked to directly.
+ * Adding and editing are their own PAGES — /admin/<scope>/new and
+ * /admin/contacts/<id>/edit — rather than a dialog over this list. Thirty-one
+ * fields in a scrolling box was the worst version of that form, and the CMS
+ * half of this panel had shown the better one all along. This screen is now
+ * only a list: search, filter, page, and the two row actions that are one tap
+ * each.
+ *
+ * Search, filter and page still live in the URL — see useListState.
  */
 
 export type { Scope };
 
 /*
-  What each list is called and what a new record starts as. The QUERY behind
-  each one lives in lib/crm/scopes.ts, because the page runs it too.
+  What each list is called. The QUERY behind it lives in lib/crm/scopes.ts,
+  because the page runs it too, and what a NEW record starts as lives in
+  NewContactPage, because the form is its own route now.
 */
-const SCOPE: Record<
-  Scope,
-  {
-    title: string;
-    noun: string;
-    /** Applied to a newly created record so it lands in this list. */
-    defaults: Partial<ContactFormValues>;
-  }
-> = {
+const SCOPE: Record<Scope, { title: string; noun: string }> = {
   customers: {
     title: "Customers",
     noun: "customer",
-    defaults: { kind: "customer", channel: "b2c" },
   },
   dealers: {
     title: "Dealers",
     noun: "dealer",
-    defaults: { kind: "customer", channel: "b2b" },
   },
   leads: {
     title: "Leads",
     noun: "lead",
-    defaults: { kind: "lead" },
   },
 };
 
@@ -181,19 +168,13 @@ export function ContactWorkspace({
   initialQuery,
   /** The module's beta note, if it has one. Renders a star beside the title. */
   beta,
-  /** The catalogue, for the sampled-products picker. */
-  products = [],
 }: {
   scope: Scope;
   initialData?: ContactList;
   initialQuery?: string;
   beta?: string | null;
-  products?: PickerOption[];
 }) {
   const config = SCOPE[scope];
-  const router = useRouter();
-  const pathname = usePathname();
-  const params = useSearchParams();
   const { toast } = useToast();
 
   // Seeded from the HTML, so the first page is on screen before this
@@ -217,24 +198,6 @@ export function ContactWorkspace({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<ContactRow | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [dirty, setDirty] = useState(false);
-  const [formValues, setFormValues] = useState<ContactFormValues | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  const editId = params.get("edit");
-  /*
-    Advisory only, and it must not fire against the record being edited — a
-    contact reporting itself as its own duplicate would train people to ignore
-    the warning entirely.
-  */
-  const duplicates = useDuplicateContacts(formValues?.phone ?? "", editId ?? undefined);
-  // The row as it was loaded, for the version it carried.
-  const editingRow = useMemo(
-    () => (editId ? rows.find((r) => r.id === editId) : undefined),
-    [editId, rows],
-  );
-  const creating = params.get("new") === "1";
-  const sheetOpen = Boolean(editId) || creating;
 
   /** Everything that decides which rows this list shows — see lib/crm/scopes. */
   const query = useMemo(
@@ -277,90 +240,6 @@ export function ContactWorkspace({
     }
     void load();
   }, [load, query]);
-
-  const closeSheet = useCallback(() => {
-    // Back rather than a push, so closing does not pile up history entries.
-    const next = new URLSearchParams(params.toString());
-    next.delete("edit");
-    next.delete("new");
-    const qs = next.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [params, pathname, router]);
-
-  // Load the record being edited. Creating starts from the scope's defaults.
-  const loadedFor = useRef<string | null>(null);
-  useEffect(() => {
-    if (!sheetOpen) {
-      loadedFor.current = null;
-      setFormValues(null);
-      setFieldErrors({});
-      setDirty(false);
-      return;
-    }
-    const key = editId ?? "new";
-    if (loadedFor.current === key) return;
-    loadedFor.current = key;
-    setFieldErrors({});
-    setDirty(false);
-
-    if (creating) {
-      setFormValues({ ...emptyContact(), ...config.defaults });
-      return;
-    }
-    setFormValues(null);
-    void (async () => {
-      try {
-        const res = await fetch(`/api/admin/contacts/${editId}`, { cache: "no-store" });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Could not open that record");
-        setFormValues({ ...emptyContact(), ...data });
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not open that record");
-        closeSheet();
-      }
-    })();
-    /* closeSheet is a genuine dependency — it closes over the search params,
-       so a stale one would clear the wrong query string. Re-running is free:
-       loadedFor guards against fetching the same record twice. */
-  }, [sheetOpen, editId, creating, config.defaults, closeSheet]);
-
-  async function save(values: ContactFormValues) {
-    const check = validateWith(contactSchema, values);
-    if (!check.ok) {
-      setFieldErrors(check.errors);
-      requestAnimationFrame(() => focusFirstInvalid());
-      return;
-    }
-
-    setSaving(true);
-    setFieldErrors({});
-    try {
-      const res = await fetch(
-        editId ? `/api/admin/contacts/${editId}` : "/api/admin/contacts",
-        {
-          method: editId ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          // Only on an edit; a create has no version to conflict with.
-          body: JSON.stringify(editId ? { ...values, version: editingRow?.version } : values),
-        },
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.fields) setFieldErrors(data.fields);
-        throw new Error(data.error ?? "Could not save");
-      }
-      setDirty(false);
-      closeSheet();
-      toast(editId ? `${values.name} saved` : `${values.name} added`);
-      await load();
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Could not save";
-      setError(message);
-      toast(message, "error");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   /**
    * Clear or postpone a follow-up without opening the edit sheet.
@@ -443,9 +322,11 @@ export function ContactWorkspace({
             </p>
           )}
         </div>
-        <Button onClick={() => router.push(`${pathname}?new=1`, { scroll: false })}>
+        {/* A link, not a button: it goes to a page now, so it should
+            middle-click, open in a tab and prefetch like any other. */}
+        <Link href={`/admin/${scope}/new`} className="admin-btn admin-btn-primary admin-tap">
           Add {config.noun}
-        </Button>
+        </Link>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -582,52 +463,6 @@ export function ContactWorkspace({
           />
         </>
       )}
-
-      <FormSheet
-        open={sheetOpen}
-        busy={saving || (sheetOpen && !formValues)}
-        dirty={dirty}
-        onClose={closeSheet}
-        onSubmit={() => formValues && save(formValues)}
-        wide
-        title={creating ? `Add ${config.noun}` : `Edit ${config.noun}`}
-        description={
-          creating ? undefined : formValues?.contactId || undefined
-        }
-        footer={
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={closeSheet} className="flex-1 sm:flex-none">
-              Cancel
-            </Button>
-            <Button
-              onClick={() => formValues && save(formValues)}
-              disabled={saving || !formValues}
-              className="flex-1 sm:flex-none"
-            >
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </div>
-        }
-      >
-        {formValues && (
-          <ContactForm
-            scope={scope}
-            products={products}
-            contactId={editId ?? undefined}
-            duplicates={duplicates}
-            values={formValues}
-            errors={fieldErrors}
-            onChange={(next) => {
-              // Errors for the fields just edited go now, not at the next save.
-              setFieldErrors((current) =>
-                clearChanged(current, formValues ?? {}, next),
-              );
-              setFormValues(next);
-              setDirty(true);
-            }}
-          />
-        )}
-      </FormSheet>
 
       <ConfirmDialog
         open={Boolean(deleting)}

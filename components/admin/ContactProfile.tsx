@@ -1,22 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Button, ErrorBanner, StatusPill } from "./ui";
-import { FormSheet } from "./FormSheet";
-import { useToast } from "./Toast";
-import { clearChanged } from "@/lib/admin/field-errors";
-import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
-import { contactSchema } from "@/lib/schemas";
-import { ContactForm, emptyContact, type ContactFormValues } from "./ContactForm";
+import { StatusPill } from "./ui";
 import type { SampledProduct } from "@/lib/crm/profile";
-import { useDuplicateContacts } from "./useDuplicateContacts";
 import { ContactNotes, type ContactNote } from "./ContactNotes";
-import type { PickerOption } from "./EntityPicker";
 import { telHref, whatsappHref } from "@/lib/crm/contact-links";
 import { STATUS_LABELS } from "@/lib/crm/shape";
-import { scopeFor } from "@/lib/crm/scopes";
 import { formatINR, formatRupees } from "@/lib/money";
 import type { ProfileInvoice, Trading } from "@/lib/crm/profile";
 
@@ -182,8 +172,6 @@ export function ContactProfile({
   canSeeMoney,
   canBill = false,
   sampling,
-  /** The catalogue, for the sampled-products picker. */
-  products = [],
   backHref,
   backLabel,
 }: {
@@ -198,97 +186,14 @@ export function ContactProfile({
   canBill?: boolean;
   /** What was sampled, and whether it converted. Absent for a record with none. */
   sampling?: Sampling;
-  products?: PickerOption[];
   backHref: string;
   backLabel: string;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const params = useSearchParams();
-  const { toast } = useToast();
 
   const [notes, setNotes] = useState(initialNotes);
-  const [saving, setSaving] = useState(false);
-  const [dirty, setDirty] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [values, setValues] = useState<ContactFormValues | null>(null);
-  // Excludes this record, so editing it never reports it against itself.
-  const duplicates = useDuplicateContacts(values?.phone ?? "", contact.id);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  const editing = params.get("edit") === "1";
-
-  const closeSheet = useCallback(() => {
-    const next = new URLSearchParams(params.toString());
-    next.delete("edit");
-    const qs = next.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [params, pathname, router]);
-
-  useEffect(() => {
-    if (!editing) {
-      setValues(null);
-      setFieldErrors({});
-      setDirty(false);
-      return;
-    }
-    if (values) return;
-    void (async () => {
-      try {
-        const res = await fetch(`/api/admin/contacts/${contact.id}`, {
-          cache: "no-store",
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Could not open that record");
-        setValues({ ...emptyContact(), ...data });
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not open that record");
-        closeSheet();
-      }
-    })();
-  }, [editing, values, contact.id, closeSheet]);
-
-  async function save(next: ContactFormValues) {
-    const check = validateWith(contactSchema, next);
-    if (!check.ok) {
-      setFieldErrors(check.errors);
-      requestAnimationFrame(() => focusFirstInvalid());
-      return;
-    }
-
-    setSaving(true);
-    setFieldErrors({});
-    try {
-      const res = await fetch(`/api/admin/contacts/${contact.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...next, version: contact.version }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.fields) setFieldErrors(data.fields);
-        throw new Error(data.error ?? "Could not save");
-      }
-      setDirty(false);
-      closeSheet();
-      toast(`${next.name} saved`);
-      // The page is server-rendered, so a refresh is what re-derives the
-      // trading figures rather than patching them by hand on the client.
-      router.refresh();
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Could not save";
-      setError(message);
-      toast(message, "error");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   const isDealer = contact.channel === "b2b";
   const title = contact.businessName || contact.name;
-  // Derived from the record, never from the URL, so the form always matches
-  // the kind of thing being edited.
-  const scope = scopeFor(contact.kind, contact.channel);
 
   return (
     <div className="space-y-5">
@@ -298,8 +203,6 @@ export function ContactProfile({
       >
         ← {backLabel}
       </Link>
-
-      <ErrorBanner message={error} />
 
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
@@ -332,11 +235,12 @@ export function ContactProfile({
             </Link>
           )}
           {canEdit && (
-            <Button
-              onClick={() => router.push(`${pathname}?edit=1`, { scroll: false })}
+            <Link
+              href={`/admin/contacts/${contact.id}/edit`}
+              className="admin-btn admin-btn-primary admin-tap"
             >
               Edit
-            </Button>
+            </Link>
           )}
         </div>
       </header>
@@ -571,44 +475,6 @@ export function ContactProfile({
         </div>
       </div>
 
-      <FormSheet
-        open={editing}
-        title={`Edit ${title}`}
-        busy={saving}
-        dirty={dirty}
-        onClose={closeSheet}
-        onSubmit={() => values && save(values)}
-        wide
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={closeSheet}>
-              Cancel
-            </Button>
-            <Button onClick={() => values && save(values)} disabled={saving || !values}>
-              Save
-            </Button>
-          </div>
-        }
-      >
-        {values && (
-          <ContactForm
-            scope={scope}
-            products={products}
-            contactId={contact.id}
-            duplicates={duplicates}
-            values={values}
-            onChange={(next) => {
-              // Errors for the fields just edited go now, not at the next save.
-              setFieldErrors((current) =>
-                clearChanged(current, values ?? {}, next),
-              );
-              setValues(next);
-              setDirty(true);
-            }}
-            errors={fieldErrors}
-          />
-        )}
-      </FormSheet>
     </div>
   );
 }
