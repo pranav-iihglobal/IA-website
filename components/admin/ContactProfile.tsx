@@ -228,7 +228,7 @@ export function ContactProfile({
           */}
           {canBill && (
             <Link
-              href={`/admin/invoices?new=1&party=${contact.id}`}
+              href={`/admin/invoices/new?party=${contact.id}`}
               className="admin-btn admin-tap border border-line bg-raised/70 text-ink hover:border-olive hover:bg-surface-muted"
             >
               Raise an invoice

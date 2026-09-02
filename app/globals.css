@@ -1120,93 +1120,6 @@ select.admin-input {
 }
 
 /* ==========================================================================
-   Admin form sheet — a dialog on desktop, a bottom drawer on mobile.
-
-   Unlayered on purpose, like the wizard rule above: these have to beat the
-   browser's own <dialog> defaults (margin:auto, max-width, a fixed border)
-   and Tailwind's utilities, and @layer would put them behind both.
-   ========================================================================== */
-/*
-  Tokens, not brand colours.
-
-  This was `--color-cornsilk-light` on `--color-russet-dark`, neither of which
-  the dark theme redefines — so in dark mode the sheet stayed a cream card
-  while everything inside it rendered off-white text on it. The whole sheet
-  was unreadable on a phone set to dark, which is the default on most of them
-  after sunset.
-*/
-dialog.form-sheet {
-  padding: 0;
-  border: 0;
-  background: var(--color-surface);
-  color: var(--color-ink);
-  overflow: visible;
-}
-dialog.form-sheet::backdrop {
-  background: rgb(95 47 20 / 0.45);
-}
-
-/* Mobile: pinned to the bottom, full width, as tall as it needs up to most
-   of the screen. `margin-top: auto` inside the max-height box is what makes
-   it sit at the bottom rather than the middle. */
-@media (max-width: 639px) {
-  dialog.form-sheet {
-    width: 100%;
-    max-width: 100%;
-    margin: auto auto 0;
-    max-height: 92dvh;
-    border-radius: 1rem 1rem 0 0;
-    animation: form-sheet-up 220ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-}
-
-/* Desktop: a centred card. */
-@media (min-width: 640px) {
-  dialog.form-sheet {
-    margin: auto;
-    max-height: 86vh;
-    border-radius: 1rem;
-    box-shadow: 0 24px 60px rgb(95 47 20 / 0.28);
-    animation: form-sheet-in 160ms ease-out;
-  }
-}
-
-/*
-  The discard prompt, stacked on the sheet it protects.
-
-  Its own element rather than a div inside the sheet, so it gets the focus
-  trap, Escape and inertness the sheet itself gets — see FormSheet. Centred at
-  every width because it is two buttons, not a form.
-*/
-dialog.discard-prompt {
-  padding: 0;
-  border: 0;
-  margin: auto;
-  max-width: calc(100vw - 2rem);
-  border-radius: 1rem;
-  background: var(--color-surface);
-  color: var(--color-ink);
-  box-shadow: 0 24px 60px rgb(0 0 0 / 0.35);
-}
-dialog.discard-prompt::backdrop {
-  background: rgb(0 0 0 / 0.4);
-}
-
-@keyframes form-sheet-up {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-@keyframes form-sheet-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.98); }
-  to { opacity: 1; transform: none; }
-}
-
-/* Someone who asked not to be moved should not be. */
-@media (prefers-reduced-motion: reduce) {
-  dialog.form-sheet { animation: none; }
-}
-
-/* ==========================================================================
    ADMIN — DARK THEME
 
    Scoped to .admin-ui and driven by the device setting. The public site is
@@ -1311,15 +1224,6 @@ dialog.discard-prompt::backdrop {
   /* Cards sit ON the page, so their border does more work than their shadow. */
   .admin-ui .admin-card {
     border-color: var(--admin-line-soft);
-  }
-
-  /* The form sheet is a surface, not a page. */
-  dialog.form-sheet {
-    background: #262220;
-    color: var(--color-ink);
-  }
-  dialog.form-sheet::backdrop {
-    background: rgb(0 0 0 / 0.66);
   }
 }
 

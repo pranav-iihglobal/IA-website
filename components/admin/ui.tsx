@@ -139,8 +139,13 @@ function InfoTip({
           after:-inset-3.5 grows the tap target from the icon's 16px to 44px
           without moving anything around it — the same minimum every other
           control in this panel holds to.
+
+          z-10 with it, measured rather than assumed: the field's own input is
+          later in the DOM, so where the two overlapped the input painted on
+          top and ate the lower half of this target. It was 44 wide and 30
+          tall, and only three of the four directions worked.
         */
-        className="admin-infotip relative ml-1 inline-flex h-4 w-4 shrink-0 translate-y-[1px] items-center justify-center rounded-full text-ink-faint transition-colors after:absolute after:-inset-3.5 after:content-[''] hover:text-accent"
+        className="admin-infotip relative z-10 ml-1 inline-flex h-4 w-4 shrink-0 translate-y-[1px] items-center justify-center rounded-full text-ink-faint transition-colors after:absolute after:-inset-3.5 after:content-[''] hover:text-accent"
       >
         <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor">
           <path

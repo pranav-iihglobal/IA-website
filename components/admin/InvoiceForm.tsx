@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { EntityCombo, EntitySelect } from "./EntityPicker";
 import {
-  FieldGroup,
   RepeatableList,
+  Section,
   SelectField,
   TextareaField,
   TextField,
@@ -25,7 +25,11 @@ import type { LastPrice } from "@/lib/erp/history";
 import { formatIstDateLong } from "@/lib/time";
 
 /**
- * Raising an invoice.
+ * The pieces the invoice form is made of.
+ *
+ * Split into steps because raising an invoice is now a page — see
+ * RaiseInvoiceForm. The customer, the lines and the figures are three
+ * separate decisions, and the last of them is irreversible.
  *
  * The totals under the lines are computed by `computeInvoice()` — THE SAME
  * FUNCTION the server runs at issue, imported directly rather than
@@ -68,6 +72,55 @@ export function emptyInvoice(): InvoiceFormValues {
   };
 }
 
+/**
+ * The figures, from what has been typed so far.
+ *
+ * Pure, and it runs `computeInvoice()` — THE SAME FUNCTION the server runs at
+ * issue, imported directly rather than reimplemented, because lib/erp/tax.ts
+ * has no server dependencies. So the figure on screen and the figure written
+ * down cannot drift: there is only one of them.
+ *
+ * Lines that are not yet complete are left OUT rather than counted as zero. A
+ * half-typed line must not make the total look settled when it is not.
+ */
+export function invoicePreview(
+  values: InvoiceFormValues,
+  products: BillableProduct[],
+): { invoice: ReturnType<typeof computeInvoice>; counted: number } | null {
+  const byId = new Map(products.map((p) => [p.id, p]));
+  const ready = values.lines
+    .map((line) => {
+      const product = byId.get(line.productId);
+      const quantity = Number(line.quantity);
+      const unitPricePaise = rupeesToPaise(line.unitPrice);
+      if (
+        !product ||
+        product.gstRateBps === null ||
+        !Number.isInteger(quantity) ||
+        quantity <= 0 ||
+        unitPricePaise === null
+      ) {
+        return null;
+      }
+      return {
+        description: product.name,
+        hsn: product.hsnCode,
+        quantity,
+        unitPricePaise,
+        discountPaise: rupeesToPaise(line.discount) ?? 0,
+        gstRateBps: product.gstRateBps,
+      };
+    })
+    .filter((l): l is NonNullable<typeof l> => l !== null);
+
+  if (ready.length === 0) return null;
+  const supplyType = supplyTypeFor(
+    GUJARAT_STATE_CODE,
+    values.placeOfSupplyStateCode,
+  );
+  return { invoice: computeInvoice(ready, supplyType), counted: ready.length };
+}
+
 /** Indian state codes, as GSTR-1 wants them. Gujarat first, then by code. */
 const STATE_CODES: { code: string; name: string }[] = [
   { code: "24", name: "Gujarat" },
@@ -84,17 +137,22 @@ const STATE_CODES: { code: string; name: string }[] = [
   { code: "07", name: "Delhi" },
 ];
 
-export function InvoiceForm({
+/**
+ * Step one: who the invoice is made out to, and where it is supplied.
+ *
+ * The place of supply belongs here rather than with the lines, because it
+ * decides CGST+SGST against IGST for the whole document — it is a fact about
+ * the customer, not about what they bought.
+ */
+export function InvoiceCustomerStep({
   values,
   onChange,
-  products,
   parties,
   errors = {},
   onPartyAdded,
 }: {
   values: InvoiceFormValues;
   onChange: (next: InvoiceFormValues) => void;
-  products: BillableProduct[];
   parties: BillableParty[];
   errors?: Record<string, string>;
   /** A customer created from inside this form, for the picker to offer. */
@@ -102,8 +160,6 @@ export function InvoiceForm({
 }) {
   const [addingParty, setAddingParty] = useState<string | null>(null);
   const set = (patch: Partial<InvoiceFormValues>) => onChange({ ...values, ...patch });
-  const setLine = (index: number, patch: Partial<InvoiceLineValues>) =>
-    set({ lines: values.lines.map((l, i) => (i === index ? { ...l, ...patch } : l)) });
 
   const party = parties.find((p) => p.id === values.contactId);
   /*
@@ -111,261 +167,275 @@ export function InvoiceForm({
     means most invoices here are the previous one again — see lib/erp/history.
   */
   const history = usePartyHistory(values.contactId);
-  const lastPrice = useMemo(
-    () =>
-      new Map(
-        history.prices.map((p) => [`${p.productId}::${p.packLabel}`, p]),
-      ),
-    [history.prices],
-  );
-  const byId = useMemo(
-    () => new Map(products.map((p) => [p.id, p])),
-    [products],
-  );
-
-  /*
-    The preview. Lines that are not yet complete are simply left out rather
-    than counted as zero — a half-typed line must not make the total look
-    settled when it is not.
-  */
-  const preview = useMemo(() => {
-    const ready = values.lines
-      .map((line) => {
-        const product = byId.get(line.productId);
-        const quantity = Number(line.quantity);
-        const unitPricePaise = rupeesToPaise(line.unitPrice);
-        if (
-          !product ||
-          product.gstRateBps === null ||
-          !Number.isInteger(quantity) ||
-          quantity <= 0 ||
-          unitPricePaise === null
-        ) {
-          return null;
-        }
-        return {
-          description: product.name,
-          hsn: product.hsnCode,
-          quantity,
-          unitPricePaise,
-          discountPaise: rupeesToPaise(line.discount) ?? 0,
-          gstRateBps: product.gstRateBps,
-        };
-      })
-      .filter((l): l is NonNullable<typeof l> => l !== null);
-
-    if (ready.length === 0) return null;
-    const supplyType = supplyTypeFor(
-      GUJARAT_STATE_CODE,
-      values.placeOfSupplyStateCode,
-    );
-    return { invoice: computeInvoice(ready, supplyType), counted: ready.length };
-  }, [values.lines, values.placeOfSupplyStateCode, byId]);
-
-  const incomplete = values.lines.length - (preview?.counted ?? 0);
   /** Any line with something in it — the guard on replacing them wholesale. */
   const hasTypedLines = values.lines.some(
     (l) => l.productId || l.unitPrice || l.discount,
   );
 
   return (
-    <div className="space-y-5">
-      <FieldGroup label="Customer">
-        <EntityCombo
-          label="Bill to"
-          required
-          placeholder="Search by name, village or id"
-          options={parties.map((p) => ({ id: p.id, label: p.name, hint: p.hint }))}
-          value={values.contactId}
-          onChange={(contactId) => set({ contactId })}
-          error={errors.contactId}
-          /*
-            A walk-in who is not on file yet. The alternative was abandoning a
-            half-filled invoice to go and create them, which is why sales get
-            written on paper instead.
-          */
-          onCreate={onPartyAdded ? (name) => setAddingParty(name) : undefined}
-          createLabel="Add"
-        />
-        {addingParty !== null && onPartyAdded && (
-          <QuickAddCustomer
-            name={addingParty}
-            onCancel={() => setAddingParty(null)}
-            onAdded={(party) => {
-              onPartyAdded(party);
-              set({ contactId: party.id });
-              setAddingParty(null);
-            }}
-          />
-        )}
-        {party && (
-          <p className="mt-1.5 text-xs font-semibold text-ink-soft">
-            {party.gstin
-              ? `GSTIN ${party.gstin} — a B2B sale, listed individually on GSTR-1.`
-              : "No GSTIN — a B2C sale, summarised as B2CS on the return."}
-          </p>
-        )}
-        {/*
-          "Same as last time?" is how most of these sales start. It REPLACES
-          the lines rather than appending — repeating an order onto a form
-          that already has lines would double an order silently — so it is
-          offered only while the form is still untouched.
-        */}
-        {history.lastOrder && history.lastOrder.lines.length > 0 && !hasTypedLines && (
-          <button
-            type="button"
-            onClick={() =>
-              set({
-                lines: history.lastOrder!.lines.map((l) => ({
-                  productId: l.productId,
-                  packLabel: l.packLabel,
-                  quantity: String(l.quantity),
-                  unitPrice: l.unitPrice,
-                  discount: l.discount,
-                })),
-              })
-            }
-            className="admin-tap mt-2 inline-flex items-center rounded-full border border-line px-4 text-xs font-semibold text-ink hover:border-olive"
-          >
-            Repeat their last order —{" "}
-            {history.lastOrder.lines.length} line
-            {history.lastOrder.lines.length === 1 ? "" : "s"} from{" "}
-            {history.lastOrder.number}
-          </button>
-        )}
-        <SelectField
-          label="Place of supply"
-          hint="A state, not a PIN code. It decides CGST+SGST against IGST."
-          value={values.placeOfSupplyStateCode}
-          onChange={(placeOfSupplyStateCode) => set({ placeOfSupplyStateCode })}
-          options={STATE_CODES.map((s) => ({
-            value: s.code,
-            label: `${s.code} — ${s.name}`,
-          }))}
-          error={errors.placeOfSupplyStateCode}
-        />
-      </FieldGroup>
-
-      <FieldGroup label="Lines" hint="The GST rate comes from the product record.">
-        <RepeatableList
-          items={values.lines}
-          emptyLabel="No lines yet."
-          addLabel="Add line"
-          onAdd={() => set({ lines: [...values.lines, emptyInvoiceLine()] })}
-          onRemove={(i) => set({ lines: values.lines.filter((_, idx) => idx !== i) })}
-          renderItem={(i) => {
-            const line = values.lines[i];
-            const product = byId.get(line.productId);
-            const pack = product?.packs.find((p) => p.label === line.packLabel);
-
-            return (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <EntitySelect
-                  label="Product"
-                  options={products.map((p) => ({
-                    id: p.id,
-                    label: p.blockedReason ? `${p.name} — not ready` : p.name,
-                  }))}
-                  value={line.productId}
-                  onChange={(productId) => {
-                    // Choosing a product resets the pack, because last pack's
-                    // label almost certainly does not exist on the new one.
-                    const next = byId.get(productId);
-                    const only = next?.packs.length === 1 ? next.packs[0] : undefined;
-                    setLine(i, {
-                      productId,
-                      packLabel: only?.label ?? "",
-                      unitPrice: suggestPrice(only, party),
-                    });
-                  }}
-                />
-                {product?.blockedReason && (
-                  <p className="sm:col-span-2 text-xs font-semibold text-cta">
-                    {product.blockedReason}
-                  </p>
-                )}
-                {product && product.packs.length > 0 && (
-                  <SelectField
-                    label="Pack"
-                    value={line.packLabel}
-                    onChange={(packLabel) =>
-                      setLine(i, {
-                        packLabel,
-                        unitPrice: suggestPrice(
-                          product.packs.find((p) => p.label === packLabel),
-                          party,
-                        ),
-                      })
-                    }
-                    options={[
-                      { value: "", label: "Choose a pack…" },
-                      ...product.packs.map((p) => ({ value: p.label, label: p.label })),
-                    ]}
-                  />
-                )}
-                <TextField
-                  label="Quantity"
-                  kind="quantity"
-                  min={1}
-                  value={line.quantity}
-                  onChange={(quantity) => setLine(i, { quantity })}
-                />
-                <div>
-                  <TextField
-                    label="Price each"
-                    kind="money"
-                    prefix="₹"
-                    hint={
-                      pack
-                        ? `Suggested from the product. Change it if the price was negotiated.`
-                        : undefined
-                    }
-                    value={line.unitPrice}
-                    onChange={(unitPrice) => setLine(i, { unitPrice })}
-                  />
-                  {/*
-                    "What did we charge them last time?" is asked on every
-                    negotiated sale, and the answer was already in the
-                    invoices with no way to reach it without opening another
-                    screen. One tap applies it; it is never applied on its
-                    own, because the suggested price is the product's current
-                    one and quietly overriding that would hide a price rise.
-                  */}
-                  <LastSold
-                    price={lastPrice.get(`${line.productId}::${line.packLabel}`)}
-                    current={line.unitPrice}
-                    onUse={(unitPrice) => setLine(i, { unitPrice })}
-                  />
-                </div>
-                <TextField
-                  label="Discount"
-                  kind="money"
-                  prefix="₹"
-                  value={line.discount}
-                  onChange={(discount) => setLine(i, { discount })}
-                />
-                {product && product.gstRateBps !== null && (
-                  <p className="sm:col-span-2 text-xs font-semibold text-ink-soft">
-                    GST {formatRate(product.gstRateBps)} · HSN {product.hsnCode} —
-                    from the product record, not editable here.
-                  </p>
-                )}
-              </div>
-            );
+    <Section title="Customer" description="Who the invoice is made out to.">
+      <EntityCombo
+        label="Bill to"
+        required
+        placeholder="Search by name, village or id"
+        options={parties.map((p) => ({ id: p.id, label: p.name, hint: p.hint }))}
+        value={values.contactId}
+        onChange={(contactId) => set({ contactId })}
+        error={errors.contactId}
+        /*
+          A walk-in who is not on file yet. The alternative was abandoning a
+          half-filled invoice to go and create them, which is why sales get
+          written on paper instead.
+        */
+        onCreate={onPartyAdded ? (name) => setAddingParty(name) : undefined}
+        createLabel="Add"
+      />
+      {addingParty !== null && onPartyAdded && (
+        <QuickAddCustomer
+          name={addingParty}
+          onCancel={() => setAddingParty(null)}
+          onAdded={(party) => {
+            onPartyAdded(party);
+            set({ contactId: party.id });
+            setAddingParty(null);
           }}
         />
-      </FieldGroup>
+      )}
+      {party && (
+        <p className="mt-1.5 text-xs font-semibold text-ink-soft">
+          {party.gstin
+            ? `GSTIN ${party.gstin} — a B2B sale, listed individually on GSTR-1.`
+            : "No GSTIN — a B2C sale, summarised as B2CS on the return."}
+        </p>
+      )}
+      {/*
+        "Same as last time?" is how most of these sales start. It REPLACES
+        the lines rather than appending — repeating an order onto a form
+        that already has lines would double an order silently — so it is
+        offered only while the form is still untouched.
+      */}
+      {history.lastOrder && history.lastOrder.lines.length > 0 && !hasTypedLines && (
+        <button
+          type="button"
+          onClick={() =>
+            set({
+              lines: history.lastOrder!.lines.map((l) => ({
+                productId: l.productId,
+                packLabel: l.packLabel,
+                quantity: String(l.quantity),
+                unitPrice: l.unitPrice,
+                discount: l.discount,
+              })),
+            })
+          }
+          className="admin-tap mt-2 inline-flex items-center rounded-full border border-line px-4 text-xs font-semibold text-ink hover:border-olive"
+        >
+          Repeat their last order —{" "}
+          {history.lastOrder.lines.length} line
+          {history.lastOrder.lines.length === 1 ? "" : "s"} from{" "}
+          {history.lastOrder.number}
+        </button>
+      )}
+      <SelectField
+        label="Place of supply"
+        hint="A state, not a PIN code. It decides CGST+SGST against IGST."
+        value={values.placeOfSupplyStateCode}
+        onChange={(placeOfSupplyStateCode) => set({ placeOfSupplyStateCode })}
+        options={STATE_CODES.map((s) => ({
+          value: s.code,
+          label: `${s.code} — ${s.name}`,
+        }))}
+        error={errors.placeOfSupplyStateCode}
+    />    </Section>
+  );
+}
 
-      <FieldGroup label="Notes">
+/**
+ * Step two: what was sold.
+ *
+ * The GST rate is shown and never editable. The rate lives on the product
+ * record and the server reads it from there regardless of what this form
+ * sends, so an input here would be a lie about where the number comes from.
+ * The PRICE is editable, because a negotiated price is a real thing.
+ */
+export function InvoiceLinesStep({
+  values,
+  onChange,
+  products,
+  party,
+  errors = {},
+}: {
+  values: InvoiceFormValues;
+  onChange: (next: InvoiceFormValues) => void;
+  products: BillableProduct[];
+  /** Decides which price is suggested, and whose history is read. */
+  party?: BillableParty;
+  errors?: Record<string, string>;
+}) {
+  const set = (patch: Partial<InvoiceFormValues>) => onChange({ ...values, ...patch });
+  const setLine = (index: number, patch: Partial<InvoiceLineValues>) =>
+    set({ lines: values.lines.map((l, i) => (i === index ? { ...l, ...patch } : l)) });
+
+  const history = usePartyHistory(values.contactId);
+  const lastPrice = useMemo(
+    () => new Map(history.prices.map((p) => [`${p.productId}::${p.packLabel}`, p])),
+    [history.prices],
+  );
+  const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
+
+  return (
+    <Section
+      title="Lines"
+      description="The GST rate and the HSN code come from the product record."
+    >
+      {errors.lines && (
+        <p className="text-sm font-semibold text-cta">{errors.lines}</p>
+      )}
+      <RepeatableList
+        items={values.lines}
+        emptyLabel="No lines yet."
+        addLabel="Add line"
+        onAdd={() => set({ lines: [...values.lines, emptyInvoiceLine()] })}
+        onRemove={(i) => set({ lines: values.lines.filter((_, idx) => idx !== i) })}
+        renderItem={(i) => {
+          const line = values.lines[i];
+          const product = byId.get(line.productId);
+          const pack = product?.packs.find((p) => p.label === line.packLabel);
+
+          return (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <EntitySelect
+              label="Product"
+              options={products.map((p) => ({
+                id: p.id,
+                label: p.blockedReason ? `${p.name} — not ready` : p.name,
+              }))}
+              value={line.productId}
+              onChange={(productId) => {
+                // Choosing a product resets the pack, because last pack's
+                // label almost certainly does not exist on the new one.
+                const next = byId.get(productId);
+                const only = next?.packs.length === 1 ? next.packs[0] : undefined;
+                setLine(i, {
+                  productId,
+                  packLabel: only?.label ?? "",
+                  unitPrice: suggestPrice(only, party),
+                });
+              }}
+            />
+            {product?.blockedReason && (
+              <p className="sm:col-span-2 text-xs font-semibold text-cta">
+                {product.blockedReason}
+              </p>
+            )}
+            {product && product.packs.length > 0 && (
+              <SelectField
+                label="Pack"
+                value={line.packLabel}
+                onChange={(packLabel) =>
+                  setLine(i, {
+                    packLabel,
+                    unitPrice: suggestPrice(
+                      product.packs.find((p) => p.label === packLabel),
+                      party,
+                    ),
+                  })
+                }
+                options={[
+                  { value: "", label: "Choose a pack…" },
+                  ...product.packs.map((p) => ({ value: p.label, label: p.label })),
+                ]}
+              />
+            )}
+            <TextField
+              label="Quantity"
+              kind="quantity"
+              min={1}
+              value={line.quantity}
+              onChange={(quantity) => setLine(i, { quantity })}
+            />
+            <div>
+              <TextField
+                label="Price each"
+                kind="money"
+                prefix="₹"
+                hint={
+                  pack
+                    ? `Suggested from the product. Change it if the price was negotiated.`
+                    : undefined
+                }
+                value={line.unitPrice}
+                onChange={(unitPrice) => setLine(i, { unitPrice })}
+              />
+              {/*
+                "What did we charge them last time?" is asked on every
+                negotiated sale, and the answer was already in the
+                invoices with no way to reach it without opening another
+                screen. One tap applies it; it is never applied on its
+                own, because the suggested price is the product's current
+                one and quietly overriding that would hide a price rise.
+              */}
+              <LastSold
+                price={lastPrice.get(`${line.productId}::${line.packLabel}`)}
+                current={line.unitPrice}
+                onUse={(unitPrice) => setLine(i, { unitPrice })}
+              />
+            </div>
+            <TextField
+              label="Discount"
+              kind="money"
+              prefix="₹"
+              value={line.discount}
+              onChange={(discount) => setLine(i, { discount })}
+            />
+            {product && product.gstRateBps !== null && (
+              <p className="sm:col-span-2 text-xs font-semibold text-ink-soft">
+                GST {formatRate(product.gstRateBps)} · HSN {product.hsnCode} —
+                from the product record, not editable here.
+              </p>
+            )}
+          </div>
+        );
+        }}
+      />
+    </Section>
+  );
+}
+
+/**
+   * Step three: the figures, and one last look before they are filed.
+   *
+   * An invoice is issued ONCE. The model refuses a financial change afterwards
+   * and a correction is a credit note, so this step exists to be read rather
+   * than filled in — the only field on it is what gets printed on the document.
+   */
+  export function InvoiceTotals({
+    values,
+    onChange,
+    preview,
+    errors = {},
+  }: {
+    values: InvoiceFormValues;
+    onChange: (next: InvoiceFormValues) => void;
+    preview: ReturnType<typeof invoicePreview>;
+    errors?: Record<string, string>;
+  }) {
+    const set = (patch: Partial<InvoiceFormValues>) => onChange({ ...values, ...patch });
+    const incomplete = values.lines.length - (preview?.counted ?? 0);
+
+    return (
+      <Section
+        title="Review"
+        description="What will be written down. Nothing here can be edited after the invoice is issued — a correction is a credit note."
+      >
+        <InvoiceFigures preview={preview?.invoice ?? null} incomplete={incomplete} />
         <TextareaField
-          label="Anything to print on the invoice"
-          value={values.notes}
-          onChange={(notes) => set({ notes })}
+        label="Anything to print on the invoice"
+        value={values.notes}
+        onChange={(notes) => set({ notes })}
+        error={errors.notes}
         />
-      </FieldGroup>
-
-      <InvoiceTotals preview={preview?.invoice ?? null} incomplete={incomplete} />
-    </div>
+    </Section>
   );
 }
 
@@ -392,7 +462,7 @@ function suggestPrice(
 }
 
 /** The figures, exactly as they will be written down. */
-function InvoiceTotals({
+function InvoiceFigures({
   preview,
   incomplete,
 }: {

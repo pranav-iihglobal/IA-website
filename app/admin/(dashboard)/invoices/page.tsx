@@ -5,10 +5,6 @@ import { requirePageAccess } from "@/lib/admin/page-guard";
 import { betaNote, can } from "@/lib/auth/permissions";
 import { invoiceListQuery, listInvoices } from "@/lib/erp/list";
 import { listQueryKey } from "@/lib/crm/scopes";
-import {
-  getBillableParties,
-  getBillableProducts,
-} from "@/lib/admin/invoice-options";
 
 export const metadata = { title: "Invoices" };
 export const dynamic = "force-dynamic";
@@ -22,9 +18,8 @@ export default async function AdminInvoicesPage({
   const beta = betaNote("billing");
 
   /*
-    The list the URL asks for, plus the two option lists the form needs, in
-    one render. Three round trips to Mumbai in parallel rather than a page
-    that paints and then goes back for everything — see lib/crm/list.ts.
+    Just the list. The catalogue and the customer list moved to the form's
+    own route, /admin/invoices/new, which is where they are needed.
 
     Built from the URL rather than fixed to page 1, so a shared or bookmarked
     link renders the rows it names instead of rendering the unfiltered list
@@ -40,44 +35,17 @@ export default async function AdminInvoicesPage({
     filter: one("filter"),
     page: Number(one("page")) || 1,
   });
-  const [initialData, products, parties] = await Promise.all([
-    listInvoices(query),
-    getBillableProducts(),
-    getBillableParties(),
-  ]);
-
-  const unpriced = products.filter((p) => p.blockedReason);
+  const initialData = await listInvoices(query);
 
   return (
-    <>
-
-      {/*
-        Said here rather than discovered halfway through raising an invoice.
-        A product with no rate or HSN is refused by the server, and finding
-        that out after typing six lines is a poor way to learn it.
-      */}
-      {unpriced.length > 0 && (
-        <p className="admin-card mb-4 px-4 py-2.5 text-sm text-ink">
-          <strong className="font-semibold">
-            {unpriced.length} product{unpriced.length === 1 ? "" : "s"} cannot be
-            invoiced yet:
-          </strong>{" "}
-          {unpriced.map((p) => `${p.name} (${p.blockedReason?.toLowerCase()})`).join(" ")}{" "}
-          Set them under Products.
-        </p>
-      )}
-
-      <Suspense fallback={<ListPageSkeleton rows={5} />}>
-        <InvoiceWorkspace
-          beta={beta}
-          initialData={initialData}
-          initialQuery={listQueryKey(query)}
-          products={products}
-          parties={parties}
-          canWrite={can(me, "billing:write")}
-          canCancel={can(me, "billing:delete")}
-        />
-      </Suspense>
-    </>
+    <Suspense fallback={<ListPageSkeleton rows={5} />}>
+      <InvoiceWorkspace
+        beta={beta}
+        initialData={initialData}
+        initialQuery={listQueryKey(query)}
+        canWrite={can(me, "billing:write")}
+        canCancel={can(me, "billing:delete")}
+      />
+    </Suspense>
   );
 }
