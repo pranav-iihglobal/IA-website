@@ -15,6 +15,7 @@ import {
 } from "./ui";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { FormSheet } from "./FormSheet";
+import { useToast } from "./Toast";
 import { ContactForm, type ContactFormValues, emptyContact } from "./ContactForm";
 import { STATUS_LABELS, type ContactRow } from "@/lib/crm/shape";
 import type { ContactList } from "@/lib/crm/list";
@@ -106,6 +107,7 @@ export function ContactWorkspace({
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const { toast } = useToast();
 
   // Seeded from the HTML, so the first page is on screen before this
   // component has run a single fetch.
@@ -252,9 +254,12 @@ export function ContactWorkspace({
       }
       setDirty(false);
       closeSheet();
+      toast(editId ? `${values.name} saved` : `${values.name} added`);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save");
+      const message = e instanceof Error ? e.message : "Could not save";
+      setError(message);
+      toast(message, "error");
     } finally {
       setSaving(false);
     }
@@ -269,10 +274,13 @@ export function ContactWorkspace({
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? "Could not delete");
       }
+      toast(`${deleting.name} deleted`);
       setDeleting(null);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not delete");
+      const message = e instanceof Error ? e.message : "Could not delete";
+      setError(message);
+      toast(message, "error");
     } finally {
       setSaving(false);
     }

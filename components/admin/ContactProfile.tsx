@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button, ErrorBanner, StatusPill } from "./ui";
 import { FormSheet } from "./FormSheet";
+import { useToast } from "./Toast";
 import { ContactForm, emptyContact, type ContactFormValues } from "./ContactForm";
 import { ContactNotes, type ContactNote } from "./ContactNotes";
 import { STATUS_LABELS } from "@/lib/crm/shape";
@@ -136,6 +137,7 @@ export function ContactProfile({
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const { toast } = useToast();
 
   const [notes, setNotes] = useState(initialNotes);
   const [saving, setSaving] = useState(false);
@@ -192,11 +194,14 @@ export function ContactProfile({
       }
       setDirty(false);
       closeSheet();
+      toast(`${next.name} saved`);
       // The page is server-rendered, so a refresh is what re-derives the
       // trading figures rather than patching them by hand on the client.
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save");
+      const message = e instanceof Error ? e.message : "Could not save";
+      setError(message);
+      toast(message, "error");
     } finally {
       setSaving(false);
     }

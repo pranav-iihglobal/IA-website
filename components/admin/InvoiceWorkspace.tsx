@@ -17,6 +17,7 @@ import {
   TextField,
 } from "./ui";
 import { FormSheet } from "./FormSheet";
+import { useToast } from "./Toast";
 import {
   InvoiceForm,
   emptyInvoice,
@@ -88,6 +89,7 @@ export function InvoiceWorkspace({
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const { toast } = useToast();
 
   const [rows, setRows] = useState<InvoiceRow[]>(initialData?.items ?? []);
   const [total, setTotal] = useState(initialData?.total ?? 0);
@@ -202,9 +204,23 @@ export function InvoiceWorkspace({
       }
       setDirty(false);
       closeSheet();
+      /*
+        The number is the whole point. It is allocated at issue, printed on the
+        document and filed — and until now this threw it away and closed the
+        sheet in silence, so the only way to know an invoice existed was to
+        find it in the list.
+      */
+      toast(`Invoice ${data.number} issued`, "success", {
+        action: {
+          label: "Print",
+          onClick: () => router.push(`/admin/invoices/${data.id}/print`),
+        },
+      });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not raise the invoice");
+      const message = e instanceof Error ? e.message : "Could not raise the invoice";
+      setError(message);
+      toast(message, "error");
     } finally {
       setSaving(false);
     }
@@ -226,10 +242,13 @@ export function InvoiceWorkspace({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Could not record the payment");
+      toast(`Payment recorded against ${paying.number}`);
       setPaying(null);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not record the payment");
+      const message = e instanceof Error ? e.message : "Could not record the payment";
+      setError(message);
+      toast(message, "error");
     } finally {
       setSaving(false);
     }
@@ -246,11 +265,15 @@ export function InvoiceWorkspace({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Could not cancel");
+      // Says it kept its number, because that is the part people doubt.
+      toast(`${cancelling.number} cancelled — it keeps its number`);
       setCancelling(null);
       setCancelReason("");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not cancel");
+      const message = e instanceof Error ? e.message : "Could not cancel";
+      setError(message);
+      toast(message, "error");
     } finally {
       setSaving(false);
     }
@@ -318,12 +341,21 @@ export function InvoiceWorkspace({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Could not raise the credit note");
+      const against = crediting.number;
+      toast(`Credit note ${data.number} raised against ${against}`, "success", {
+        action: {
+          label: "Print",
+          onClick: () => router.push(`/admin/invoices/${data.id}/print`),
+        },
+      });
       setCrediting(null);
       setCreditLines(null);
       setCreditReason("");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not raise the credit note");
+      const message = e instanceof Error ? e.message : "Could not raise the credit note";
+      setError(message);
+      toast(message, "error");
     } finally {
       setSaving(false);
     }

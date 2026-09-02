@@ -14,6 +14,7 @@ import {
 } from "./ui";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { FormSheet } from "./FormSheet";
+import { useToast } from "./Toast";
 import { formatRupees, paiseToRupeeString, rupeesToPaise } from "@/lib/money";
 
 /**
@@ -85,6 +86,7 @@ export function StockWorkspace({
   canWrite: boolean;
   canDelete: boolean;
 }) {
+  const { toast } = useToast();
   const [rows, setRows] = useState(initialItems);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("");
@@ -172,10 +174,13 @@ export function StockWorkspace({
         if (data.fields) setFieldErrors(data.fields);
         throw new Error(data.error ?? "Could not save");
       }
+      toast(editing ? `${values.name} saved` : `${values.name} added`);
       close();
       await reload();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save");
+      const message = e instanceof Error ? e.message : "Could not save";
+      setError(message);
+      toast(message, "error");
     } finally {
       setSaving(false);
     }
@@ -192,10 +197,13 @@ export function StockWorkspace({
     try {
       const res = await fetch(`/api/admin/stock/${deleting.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Could not delete");
+      toast(`${deleting.name} deleted`);
       setDeleting(null);
       await reload();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not delete");
+      const message = e instanceof Error ? e.message : "Could not delete";
+      setError(message);
+      toast(message, "error");
     } finally {
       setSaving(false);
     }
