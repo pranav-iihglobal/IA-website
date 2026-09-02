@@ -126,16 +126,11 @@ export function errorResponse(error: unknown): NextResponse {
   return NextResponse.json({ error: message }, { status: 500 });
 }
 
-/** Flatten zod issues into { "path.to.field": "message" } for the form. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function fieldErrors(issues: any[]): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const issue of issues) {
-    const key = issue.path.join(".") || "_";
-    if (!out[key]) out[key] = issue.message;
-  }
-  return out;
-}
+/*
+  Re-exported so every route keeps importing it from here, while the forms can
+  reach the same function without dragging next/server into the browser.
+*/
+export { fieldErrors } from "./field-errors";
 
 /** Push changes live immediately instead of waiting for ISR to expire. */
 export function revalidateProduct(slug?: string) {

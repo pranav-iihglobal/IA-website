@@ -406,6 +406,64 @@ export function TextField({
   );
 }
 
+/**
+ * Multi-line text, with the same label, hint and error treatment as the rest.
+ *
+ * There was no such primitive, which is why every multi-line field in the
+ * panel was hand-rolled — and why the contact "Standing notes" box has no
+ * error slot and no label association. The two that mattered most were the
+ * invoice cancellation reason, which goes to the audit log, and the
+ * credit-note reason, which is PRINTED ON THE NOTE and filed with the return.
+ * Both were single-line inputs.
+ */
+export function TextareaField({
+  label,
+  value,
+  onChange,
+  error,
+  hint,
+  placeholder,
+  required,
+  rows = 3,
+  ref,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  hint?: string;
+  placeholder?: string;
+  required?: boolean;
+  rows?: number;
+  ref?: Ref<HTMLTextAreaElement>;
+}) {
+  const id = useId();
+  const hintId = `${id}-hint`;
+  const errorId = `${id}-error`;
+  const describedBy = [hint && hintId, error && errorId].filter(Boolean).join(" ");
+
+  return (
+    <div className="admin-field">
+      <Label required={required} hint={hint} hintId={hintId} htmlFor={id}>
+        {label}
+      </Label>
+      <textarea
+        id={id}
+        ref={ref}
+        rows={rows}
+        value={value}
+        placeholder={placeholder}
+        aria-required={required || undefined}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy || undefined}
+        onChange={(e) => onChange(e.target.value)}
+        className="admin-input mt-1.5"
+      />
+      <FieldError id={errorId} message={error} />
+    </div>
+  );
+}
+
 export function SelectField({
   label,
   value,

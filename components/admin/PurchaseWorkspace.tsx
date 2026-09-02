@@ -10,12 +10,15 @@ import {
   SearchInput,
   SelectField,
   StatusPill,
+  TextareaField,
   TextField,
   Toggle,
 } from "./ui";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { FormSheet } from "./FormSheet";
 import { useToast } from "./Toast";
+import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
+import { purchaseSchema } from "@/lib/schemas";
 import { formatINR, formatRupees, paiseToRupeeString, rupeesToPaise } from "@/lib/money";
 
 /**
@@ -214,6 +217,19 @@ export function PurchaseWorkspace({
   }
 
   async function save() {
+    /*
+      The same schema the route runs, before the round trip. An early exit
+      only — the server still checks, and a client stricter than the server
+      would be a form that cannot be saved.
+    */
+    const check = validateWith(purchaseSchema, { ...values, billDate: values.billDate || null });
+    if (!check.ok) {
+      setFieldErrors(check.errors);
+      // Next paint, once the errors have rendered their aria-invalid.
+      requestAnimationFrame(() => focusFirstInvalid());
+      return;
+    }
+
     setSaving(true);
     setFieldErrors({});
     try {
@@ -501,7 +517,7 @@ export function PurchaseWorkspace({
             checked={values.inputCreditEligible}
             onChange={(inputCreditEligible) => set({ inputCreditEligible })}
           />
-          <TextField label="Notes" value={values.notes} onChange={(notes) => set({ notes })} />
+          <TextareaField label="Notes" value={values.notes} onChange={(notes) => set({ notes })} />
         </div>
       </FormSheet>
 

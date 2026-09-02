@@ -10,11 +10,14 @@ import {
   SearchInput,
   SelectField,
   StatusPill,
+  TextareaField,
   TextField,
 } from "./ui";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { FormSheet } from "./FormSheet";
 import { useToast } from "./Toast";
+import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
+import { stockItemSchema } from "@/lib/schemas";
 import { formatRupees, paiseToRupeeString, rupeesToPaise } from "@/lib/money";
 
 /**
@@ -178,6 +181,19 @@ export function StockWorkspace({
   }
 
   async function save() {
+    /*
+      The same schema the route runs, before the round trip. An early exit
+      only — the server still checks, and a client stricter than the server
+      would be a form that cannot be saved.
+    */
+    const check = validateWith(stockItemSchema, values);
+    if (!check.ok) {
+      setFieldErrors(check.errors);
+      // Next paint, once the errors have rendered their aria-invalid.
+      requestAnimationFrame(() => focusFirstInvalid());
+      return;
+    }
+
     setSaving(true);
     setFieldErrors({});
     try {
@@ -376,7 +392,7 @@ export function StockWorkspace({
             <TextField label="Supplier" value={values.supplier} onChange={(supplier) => set({ supplier })} />
             <TextField label="Location" value={values.location} onChange={(location) => set({ location })} />
           </div>
-          <TextField label="Notes" value={values.notes} onChange={(notes) => set({ notes })} />
+          <TextareaField label="Notes" value={values.notes} onChange={(notes) => set({ notes })} />
           {rupeesToPaise(values.unitCost) !== null && Number(values.onHand) > 0 && (
             <p className="text-xs font-semibold text-ink-soft">
               Value at cost:{" "}

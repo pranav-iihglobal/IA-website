@@ -2,7 +2,13 @@
 
 import { useMemo } from "react";
 import { EntityCombo, EntitySelect } from "./EntityPicker";
-import { FieldGroup, RepeatableList, SelectField, TextField } from "./ui";
+import {
+  FieldGroup,
+  RepeatableList,
+  SelectField,
+  TextareaField,
+  TextField,
+} from "./ui";
 import { formatINR, rupeesToPaise } from "@/lib/money";
 import {
   computeInvoice,
@@ -264,7 +270,7 @@ export function InvoiceForm({
       </FieldGroup>
 
       <FieldGroup label="Notes">
-        <TextField
+        <TextareaField
           label="Anything to print on the invoice"
           value={values.notes}
           onChange={(notes) => set({ notes })}

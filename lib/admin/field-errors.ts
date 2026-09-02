@@ -1,4 +1,30 @@
 /**
+ * The shape a rejected save takes: `{ "dealer.gstin": "That is not a valid…" }`.
+ *
+ * Lives here rather than in lib/admin/api.ts because that file imports
+ * next/server, next/cache, @/auth and the Mongoose models — none of which a
+ * client component can pull in. Both the API routes and the forms import this
+ * one, so the key a form looks up and the key the server sends cannot drift
+ * apart.
+ */
+
+/** Flatten zod issues into { "path.to.field": "message" } for the form. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function fieldErrors(issues: any[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const issue of issues) {
+    /*
+      A cross-field refinement has an empty path — "Add a quote or a video
+      link" belongs to the record, not to any one input — so it is keyed "_"
+      and shown as a form-level message.
+    */
+    const key = issue.path.join(".") || "_";
+    if (!out[key]) out[key] = issue.message;
+  }
+  return out;
+}
+
+/**
  * Which error keys a change has made stale.
  *
  * Forms here hold their errors as `{ "dealer.gstin": "…" }` — the shape the

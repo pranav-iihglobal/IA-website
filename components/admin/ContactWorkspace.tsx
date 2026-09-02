@@ -17,6 +17,8 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { FormSheet } from "./FormSheet";
 import { useToast } from "./Toast";
 import { clearChanged } from "@/lib/admin/field-errors";
+import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
+import { contactSchema } from "@/lib/schemas";
 import { ContactForm, type ContactFormValues, emptyContact } from "./ContactForm";
 import { STATUS_LABELS, type ContactRow } from "@/lib/crm/shape";
 import type { ContactList } from "@/lib/crm/list";
@@ -237,6 +239,13 @@ export function ContactWorkspace({
   }, [sheetOpen, editId, creating, config.defaults, closeSheet]);
 
   async function save(values: ContactFormValues) {
+    const check = validateWith(contactSchema, values);
+    if (!check.ok) {
+      setFieldErrors(check.errors);
+      requestAnimationFrame(() => focusFirstInvalid());
+      return;
+    }
+
     setSaving(true);
     setFieldErrors({});
     try {

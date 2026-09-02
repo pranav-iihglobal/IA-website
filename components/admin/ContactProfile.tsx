@@ -7,6 +7,8 @@ import { Button, ErrorBanner, StatusPill } from "./ui";
 import { FormSheet } from "./FormSheet";
 import { useToast } from "./Toast";
 import { clearChanged } from "@/lib/admin/field-errors";
+import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
+import { contactSchema } from "@/lib/schemas";
 import { ContactForm, emptyContact, type ContactFormValues } from "./ContactForm";
 import { ContactNotes, type ContactNote } from "./ContactNotes";
 import { STATUS_LABELS } from "@/lib/crm/shape";
@@ -180,6 +182,13 @@ export function ContactProfile({
   }, [editing, values, contact.id, closeSheet]);
 
   async function save(next: ContactFormValues) {
+    const check = validateWith(contactSchema, next);
+    if (!check.ok) {
+      setFieldErrors(check.errors);
+      requestAnimationFrame(() => focusFirstInvalid());
+      return;
+    }
+
     setSaving(true);
     setFieldErrors({});
     try {

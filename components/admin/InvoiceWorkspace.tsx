@@ -14,6 +14,7 @@ import {
   SearchInput,
   SelectField,
   StatusPill,
+  TextareaField,
   TextField,
 } from "./ui";
 import { FormSheet } from "./FormSheet";
@@ -609,7 +610,7 @@ export function InvoiceWorkspace({
           </div>
         }
       >
-        <TextField
+        <TextareaField
           label="Why"
           value={cancelReason}
           onChange={setCancelReason}
@@ -663,7 +664,7 @@ export function InvoiceWorkspace({
         }
       >
         <div className="space-y-4">
-          <TextField
+          <TextareaField
             label="Reason"
             value={creditReason}
             onChange={setCreditReason}

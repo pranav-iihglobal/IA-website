@@ -25,6 +25,7 @@ import {
   RepeatableList,
   Section,
   SelectField,
+  TextareaField,
   TextField,
   Toggle,
 } from "./ui";
@@ -1113,7 +1114,7 @@ export function ProductForm({
                 hint="Shown next to the badge, and in place of the usual CTA text when out of stock."
               />
             )}
-            <TextField
+            <TextareaField
               label="WhatsApp message"
               value={values.whatsappMessage}
               onChange={(v) => update("whatsappMessage", v)}
