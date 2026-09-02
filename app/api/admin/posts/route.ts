@@ -61,6 +61,8 @@ export async function GET(request: NextRequest) {
       total,
       page,
       pages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+      // So the list can say "21–40 of 96" rather than only "page 2 of 5".
+      pageSize: PAGE_SIZE,
     });
   } catch (error) {
     return errorResponse(error);

@@ -8,7 +8,7 @@ import {
   EmptyState,
   ErrorBanner,
   FilterTabs,
-  ListPageSkeleton,
+  TableSkeleton,
   Pagination,
   RecordCard,
   SearchInput,
@@ -20,13 +20,14 @@ import { clearChanged } from "@/lib/admin/field-errors";
 import { formatRupees } from "@/lib/money";
 import { telHref, whatsappHref } from "@/lib/crm/contact-links";
 import { useDuplicateContacts } from "./useDuplicateContacts";
+import { useListState } from "./useListState";
 import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
 import { contactSchema } from "@/lib/schemas";
 import { ContactForm, type ContactFormValues, emptyContact } from "./ContactForm";
 import type { PickerOption } from "./EntityPicker";
 import { STATUS_LABELS, type ContactRow } from "@/lib/crm/shape";
 import type { ContactList } from "@/lib/crm/list";
-import { SCOPE_QUERY, listQueryKey, type Scope } from "@/lib/crm/scopes";
+import { contactListQuery, listQueryKey, type Scope } from "@/lib/crm/scopes";
 
 /**
  * The list + overlay pairing every CRM screen is built from.
@@ -52,7 +53,6 @@ const SCOPE: Record<
   {
     title: string;
     noun: string;
-    query: Record<string, string>;
     /** Applied to a newly created record so it lands in this list. */
     defaults: Partial<ContactFormValues>;
   }
@@ -60,19 +60,16 @@ const SCOPE: Record<
   customers: {
     title: "Customers",
     noun: "customer",
-    query: SCOPE_QUERY.customers,
     defaults: { kind: "customer", channel: "b2c" },
   },
   dealers: {
     title: "Dealers",
     noun: "dealer",
-    query: SCOPE_QUERY.dealers,
     defaults: { kind: "customer", channel: "b2b" },
   },
   leads: {
     title: "Leads",
     noun: "lead",
-    query: SCOPE_QUERY.leads,
     defaults: { kind: "lead" },
   },
 };
@@ -205,14 +202,21 @@ export function ContactWorkspace({
   const [total, setTotal] = useState(initialData?.total ?? 0);
   const [sampleCount, setSampleCount] = useState(initialData?.sampleCount ?? 0);
   const [pages, setPages] = useState(initialData?.pages ?? 1);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("");
+  // Fixed server-side; kept here only so the range line can say "26–50 of 412".
+  const pageSize = initialData?.pageSize ?? 25;
+  /*
+    Search, filter and page live in the URL — see useListState. The dashboard's
+    "Follow-ups due" tile links to /admin/leads?filter=due and used to land on
+    the unfiltered list, because nothing here read it.
+  */
+  const { search, setSearch, debounced, filter, setFilter, page, setPage } =
+    useListState();
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<ContactRow | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [formValues, setFormValues] = useState<ContactFormValues | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -232,21 +236,11 @@ export function ContactWorkspace({
   const creating = params.get("new") === "1";
   const sheetOpen = Boolean(editId) || creating;
 
-  // Debounced so typing in a 5,000-row list does not fire a query per key.
-  const [debounced, setDebounced] = useState("");
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(search), 250);
-    return () => clearTimeout(t);
-  }, [search]);
-
-  /** Everything that decides which rows this list shows. */
-  const query = useMemo(() => {
-    const q = new URLSearchParams({ ...config.query, page: String(page) });
-    if (debounced) q.set("search", debounced);
-    if (filter === "due") q.set("due", "1");
-    else if (filter) q.set("followUpStatus", filter);
-    return q;
-  }, [config.query, page, debounced, filter]);
+  /** Everything that decides which rows this list shows — see lib/crm/scopes. */
+  const query = useMemo(
+    () => contactListQuery(scope, { search: debounced, filter, page }),
+    [scope, debounced, filter, page],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -283,12 +277,6 @@ export function ContactWorkspace({
     }
     void load();
   }, [load, query]);
-
-  // A new search starts at page 1 — staying on page 7 of the old result set
-  // shows an empty list and looks like a bug.
-  useEffect(() => {
-    setPage(1);
-  }, [debounced, filter]);
 
   const closeSheet = useCallback(() => {
     // Back rather than a push, so closing does not pile up history entries.
@@ -411,6 +399,7 @@ export function ContactWorkspace({
   async function confirmDelete() {
     if (!deleting) return;
     setSaving(true);
+    setDeleteError(null);
     try {
       const res = await fetch(`/api/admin/contacts/${deleting.id}`, { method: "DELETE" });
       if (!res.ok) {
@@ -422,7 +411,7 @@ export function ContactWorkspace({
       await load();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Could not delete";
-      setError(message);
+      setDeleteError(message);
       toast(message, "error");
     } finally {
       setSaving(false);
@@ -468,10 +457,15 @@ export function ContactWorkspace({
         <FilterTabs value={filter} onChange={setFilter} options={filters} />
       </div>
 
-      <ErrorBanner message={error} />
+      <ErrorBanner message={error} onRetry={() => void load()} />
 
+      {/*
+        Rows only. ListPageSkeleton draws a page header, a search box and
+        a filter strip — all three of which are already on screen above
+        this, so every debounced search painted a second copy of them.
+      */}
       {loading ? (
-        <ListPageSkeleton rows={5} />
+        <TableSkeleton rows={5} />
       ) : rows.length === 0 ? (
         <EmptyState
           title={debounced || filter ? "Nothing matches" : `No ${config.noun}s yet`}
@@ -488,7 +482,7 @@ export function ContactWorkspace({
               {dueCount} on this page {dueCount === 1 ? "is" : "are"} due for follow-up.
             </p>
           )}
-          <ul className="admin-rows grid gap-3">
+          <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
             {rows.map((row) => (
               <RecordCard
                 key={row.id}
@@ -579,7 +573,13 @@ export function ContactWorkspace({
               />
             ))}
           </ul>
-          <Pagination page={page} pages={pages} onChange={setPage} />
+          <Pagination
+            page={page}
+            pages={pages}
+            total={total}
+            pageSize={pageSize}
+            onChange={setPage}
+          />
         </>
       )}
 
@@ -632,10 +632,19 @@ export function ContactWorkspace({
       <ConfirmDialog
         open={Boolean(deleting)}
         busy={saving}
+        /*
+          Inside the dialog, not in the list's banner behind it. A refused
+          delete — "this customer has 4 invoices" — used to leave the dialog
+          open with no explanation and a button that appeared to do nothing.
+        */
+        error={deleteError}
         title={`Delete ${deleting?.name ?? ""}?`}
         message="This removes the record and its notes. It cannot be undone."
         onConfirm={confirmDelete}
-        onCancel={() => setDeleting(null)}
+        onCancel={() => {
+          setDeleting(null);
+          setDeleteError(null);
+        }}
       />
     </div>
   );

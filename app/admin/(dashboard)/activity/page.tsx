@@ -66,14 +66,14 @@ export default async function ActivityPage() {
           message="Changes appear here as soon as somebody saves a record."
         />
       ) : (
-        <ul className="admin-rows grid gap-3">
+        <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
           {entries.map((entry) => {
             const when = entry.createdAt ? new Date(entry.createdAt) : null;
             const fields = changedFields(entry);
             return (
               <li
                 key={String(entry._id)}
-                className="admin-card-item admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
+                className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">

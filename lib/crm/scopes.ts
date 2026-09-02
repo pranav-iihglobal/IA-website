@@ -16,6 +16,36 @@ export const SCOPE_QUERY: Record<Scope, Record<string, string>> = {
   leads: { kind: "lead" },
 };
 
+/** What a list URL says, once the defaults are taken out of it. */
+export interface ListParams {
+  search?: string;
+  filter?: string;
+  page?: number;
+}
+
+/**
+ * The API query one CRM list is, from the scope and what the URL says.
+ *
+ * ONE definition, used by the page that server-renders the first screen and
+ * by the workspace that fetches every screen after it. Two copies would work
+ * until somebody changed a filter name, and then the server would render one
+ * set of rows and the browser would immediately replace them with another.
+ */
+export function contactListQuery(
+  scope: Scope,
+  { search = "", filter = "", page = 1 }: ListParams = {},
+): URLSearchParams {
+  const query = new URLSearchParams({
+    ...SCOPE_QUERY[scope],
+    page: String(Math.max(1, page)),
+  });
+  if (search) query.set("search", search);
+  // "due" is a date comparison, not a stored status — hence its own flag.
+  if (filter === "due") query.set("due", "1");
+  else if (filter) query.set("followUpStatus", filter);
+  return query;
+}
+
 /**
  * A canonical string for one list query.
  *

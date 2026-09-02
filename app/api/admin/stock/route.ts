@@ -1,9 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/db/connect";
 import { StockItem } from "@/lib/db/models/StockItem";
+import { listStock } from "@/lib/erp/inventory-list";
 import { stockItemSchema } from "@/lib/schemas";
-import { searchRegex } from "@/lib/search";
-import type { LeanDoc } from "@/lib/db/lean";
 import {
   currentEditor,
   errorResponse,
@@ -20,37 +19,10 @@ export async function GET(request: NextRequest) {
   if (unauthorized) return unauthorized;
 
   try {
-    await connectToDatabase();
-    const params = request.nextUrl.searchParams;
-    const filter: LeanDoc = {};
-
-    const search = (params.get("search") ?? "").trim();
-    if (search) {
-      const rx = searchRegex(search);
-      filter.$or = ["name", "sku", "supplier", "location"].map((f) => ({ [f]: rx }));
-    }
-
-    const items = await StockItem.find(filter).sort({ name: 1 }).limit(500).lean();
-    return NextResponse.json({
-      // Mapped, not spread — same reason as the purchases list.
-      items: (items as LeanDoc[]).map((d) => ({
-        id: String(d._id),
-        version: typeof d.__v === "number" ? d.__v : 0,
-        name: d.name ?? "",
-        sku: d.sku ?? "",
-        kind: d.kind ?? "finished",
-        unit: d.unit ?? "unit",
-        onHand: d.onHand ?? 0,
-        reorderLevel: d.reorderLevel ?? 0,
-        unitCostPaise: d.unitCostPaise ?? 0,
-        supplier: d.supplier ?? "",
-        location: d.location ?? "",
-        notes: d.notes ?? "",
-        countedAt: d.countedAt ? new Date(d.countedAt).toISOString() : null,
-        isSample: Boolean(d.isSample),
-      })),
-      total: items.length,
-    });
+    // Rows capped, totals not — see lib/erp/inventory-list.ts.
+    return NextResponse.json(
+      await listStock(request.nextUrl.searchParams.get("search") ?? ""),
+    );
   } catch (error) {
     return errorResponse(error);
   }

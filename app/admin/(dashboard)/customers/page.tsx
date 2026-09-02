@@ -4,12 +4,16 @@ import { ListPageSkeleton } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { listContacts } from "@/lib/crm/list";
 import { getProductOptions } from "@/lib/admin/products-options";
-import { SCOPE_QUERY, listQueryKey } from "@/lib/crm/scopes";
+import { contactListQuery, listQueryKey } from "@/lib/crm/scopes";
 import { betaNote } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminCustomersPage() {
+export default async function AdminCustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requirePageAccess("crm:read");
   const beta = betaNote("crm");
 
@@ -19,7 +23,23 @@ export default async function AdminCustomersPage() {
     who you are, for rows this render could already have. The identity check
     above is deduped by React.cache(), so this costs one query and nothing else.
   */
-  const query = new URLSearchParams({ ...SCOPE_QUERY.customers, page: "1" });
+  /*
+    Built from the URL, not fixed to page 1. Search, filter and page are in
+    the query string now (see useListState), so a shared link — or the
+    dashboard's "Follow-ups due" tile — must render the rows it names rather
+    than rendering the unfiltered list and letting the browser replace it a
+    moment later.
+  */
+  const url = await searchParams;
+  const one = (key: string) => {
+    const value = url[key];
+    return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
+  };
+  const query = contactListQuery("customers", {
+    search: one("q"),
+    filter: one("filter"),
+    page: Number(one("page")) || 1,
+  });
   const [initialData, products] = await Promise.all([
     listContacts(query),
     // The catalogue, for the sampled-products picker on the lead form.

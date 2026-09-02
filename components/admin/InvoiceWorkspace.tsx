@@ -9,7 +9,7 @@ import {
   EmptyState,
   ErrorBanner,
   FilterTabs,
-  ListPageSkeleton,
+  TableSkeleton,
   Pagination,
   SearchInput,
   SelectField,
@@ -27,7 +27,9 @@ import {
 import { formatINR, paiseToRupeeString } from "@/lib/money";
 import { listQueryKey } from "@/lib/crm/scopes";
 import type { BillableParty, BillableProduct } from "@/lib/admin/invoice-options";
+import { invoiceListQuery } from "@/lib/erp/list-query";
 import type { InvoiceList, InvoiceRow } from "@/lib/erp/list";
+import { useListState } from "./useListState";
 
 /**
  * The invoices screen.
@@ -95,9 +97,11 @@ export function InvoiceWorkspace({
   const [rows, setRows] = useState<InvoiceRow[]>(initialData?.items ?? []);
   const [total, setTotal] = useState(initialData?.total ?? 0);
   const [pages, setPages] = useState(initialData?.pages ?? 1);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("");
+  // Fixed server-side; kept here only so the range line can say "26–50 of 412".
+  const pageSize = initialData?.pageSize ?? 25;
+  // Search, filter and page live in the URL — see useListState.
+  const { search, setSearch, debounced, filter, setFilter, page, setPage } =
+    useListState();
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
 
@@ -131,20 +135,10 @@ export function InvoiceWorkspace({
   */
   const prefillParty = params.get("party") ?? "";
 
-  const [debounced, setDebounced] = useState("");
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(search), 250);
-    return () => clearTimeout(t);
-  }, [search]);
-
-  const query = useMemo(() => {
-    const q = new URLSearchParams({ page: String(page) });
-    if (debounced) q.set("search", debounced);
-    if (filter === "cancelled") q.set("status", "cancelled");
-    else if (filter === "credit_notes") q.set("kind", "credit_note");
-    else if (filter) q.set("payment", filter);
-    return q;
-  }, [page, debounced, filter]);
+  const query = useMemo(
+    () => invoiceListQuery({ search: debounced, filter, page }),
+    [debounced, filter, page],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -172,10 +166,6 @@ export function InvoiceWorkspace({
     }
     void load();
   }, [load, query]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [debounced, filter]);
 
   const closeSheet = useCallback(() => {
     const next = new URLSearchParams(params.toString());
@@ -416,10 +406,15 @@ export function InvoiceWorkspace({
         <FilterTabs value={filter} onChange={setFilter} options={FILTERS} />
       </div>
 
-      <ErrorBanner message={error} />
+      <ErrorBanner message={error} onRetry={() => void load()} />
 
+      {/*
+        Rows only. ListPageSkeleton draws a page header, a search box and
+        a filter strip — all three of which are already on screen above
+        this, so every debounced search painted a second copy of them.
+      */}
       {loading ? (
-        <ListPageSkeleton rows={5} />
+        <TableSkeleton rows={5} />
       ) : rows.length === 0 ? (
         <EmptyState
           title={debounced || filter ? "Nothing matches" : "No invoices yet"}
@@ -430,11 +425,11 @@ export function InvoiceWorkspace({
           }
         />
       ) : (
-        <ul className="admin-rows grid gap-3">
+        <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
           {rows.map((row) => (
             <li
               key={row.id}
-              className="admin-card-item admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
+              className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -524,7 +519,13 @@ export function InvoiceWorkspace({
         </ul>
       )}
 
-      <Pagination page={page} pages={pages} onChange={setPage} />
+      <Pagination
+            page={page}
+            pages={pages}
+            total={total}
+            pageSize={pageSize}
+            onChange={setPage}
+          />
 
       <FormSheet
         open={creating}

@@ -2,6 +2,10 @@ import { connectToDatabase } from "@/lib/db/connect";
 import { Invoice } from "@/lib/db/models/Invoice";
 import type { LeanDoc } from "@/lib/db/lean";
 import { searchRegex } from "@/lib/search";
+import { invoiceListQuery } from "./list-query";
+
+// Re-exported so callers that already import from here keep working.
+export { invoiceListQuery };
 
 /**
  * One page of the invoice list.

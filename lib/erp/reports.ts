@@ -159,7 +159,20 @@ export async function outstandingTotal(): Promise<{ owedPaise: number; count: nu
   return { owedPaise: row?.owed ?? 0, count: row?.count ?? 0 };
 }
 
-export async function outstandingInvoices(): Promise<OutstandingRow[]> {
+/**
+ * Oldest first, or biggest first.
+ *
+ * Oldest is the default and stays the default — an invoice unpaid for four
+ * months is a different problem from a big one raised last week, and it is
+ * the one that needs the call. But "where is the money" is a real question
+ * too, and it could not be asked at all: no list in this panel accepted a
+ * sort, so answering it meant reading 500 rows.
+ */
+export type OutstandingSort = "oldest" | "largest";
+
+export async function outstandingInvoices(
+  sort: OutstandingSort = "oldest",
+): Promise<OutstandingRow[]> {
   await connectToDatabase();
 
   const docs = await Invoice.find({
@@ -169,7 +182,14 @@ export async function outstandingInvoices(): Promise<OutstandingRow[]> {
     "payment.status": { $ne: "paid" },
   })
     .select("number issuedAt party grandTotalPaise payment contactId")
-    .sort({ issuedAt: 1 })
+    /*
+      Sorted on the GRAND TOTAL, not on what is owed. Owed is
+      grandTotal − paid and is computed after the read, so the database
+      cannot order by it — and paging a capped list by a field it cannot
+      sort on would silently return the wrong 500 rows. Part-paid invoices
+      are the minority here and the ordering is a reading aid, not a figure.
+    */
+    .sort(sort === "largest" ? { grandTotalPaise: -1 } : { issuedAt: 1 })
     .limit(OUTSTANDING_ROW_CAP)
     .lean();
 

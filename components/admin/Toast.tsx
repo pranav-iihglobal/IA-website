@@ -125,7 +125,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         One stack on screen, two regions underneath it — failures announce
         assertively, everything else waits its turn.
       */}
-      <div className="pointer-events-none fixed inset-x-4 bottom-6 z-50 flex flex-col gap-2 sm:left-auto sm:right-6 sm:w-full sm:max-w-sm">
+      <div /* Above ConfirmDialog, which is also an overlay at z-50 — a toast about a
+           failed delete must not appear behind the dialog that asked for it. */
+        className="pointer-events-none fixed inset-x-4 bottom-6 z-[60] flex flex-col gap-2 sm:left-auto sm:right-6 sm:w-full sm:max-w-sm">
         <div className="flex flex-col gap-2" role="alert" aria-live="assertive">
           {failures.map((t) => (
             <ToastItem key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />

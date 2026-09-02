@@ -17,6 +17,7 @@ export function ConfirmDialog({
   confirmLabel = "Delete",
   cancelLabel = "Cancel",
   busy = false,
+  error,
   onConfirm,
   onCancel,
 }: {
@@ -26,6 +27,14 @@ export function ConfirmDialog({
   confirmLabel?: string;
   cancelLabel?: string;
   busy?: boolean;
+  /**
+   * Why the last attempt failed, shown inside the dialog.
+   *
+   * It has to be in here. The list's own error banner sits BEHIND this
+   * overlay, so a refused delete — "this customer has 4 invoices" — left the
+   * dialog open with no explanation and a button that appeared to do nothing.
+   */
+  error?: string | null;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -106,6 +115,15 @@ export function ConfirmDialog({
             </p>
           </div>
         </div>
+
+        {error && (
+          <p
+            role="alert"
+            className="mt-4 rounded-xl border border-danger/40 bg-danger/10 px-3 py-2 text-sm font-medium text-ink-strong"
+          >
+            {error}
+          </p>
+        )}
 
         <div className="mt-6 flex justify-end gap-3">
           <button

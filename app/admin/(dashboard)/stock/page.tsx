@@ -1,38 +1,27 @@
-import { StockWorkspace, type StockRow } from "@/components/admin/StockWorkspace";
+import { StockWorkspace } from "@/components/admin/StockWorkspace";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { can } from "@/lib/auth/permissions";
-import { connectToDatabase } from "@/lib/db/connect";
-import { StockItem } from "@/lib/db/models/StockItem";
-import type { LeanDoc } from "@/lib/db/lean";
+import { listStock } from "@/lib/erp/inventory-list";
 
 export const dynamic = "force-dynamic";
 
 export default async function StockPage() {
   const me = await requirePageAccess("billing:read");
 
-  await connectToDatabase();
-  const docs = await StockItem.find().sort({ name: 1 }).limit(500).lean();
+  /*
+    One shared query, used here and by the API route the screen calls after
+    a search — so the rows in the HTML and the rows fetched a moment later
+    come from one definition rather than two that can disagree.
 
-  const items: StockRow[] = (docs as LeanDoc[]).map((d) => ({
-    id: String(d._id),
-    version: typeof d.__v === "number" ? d.__v : 0,
-    name: d.name ?? "",
-    sku: d.sku ?? "",
-    kind: d.kind ?? "finished",
-    unit: d.unit ?? "unit",
-    onHand: d.onHand ?? 0,
-    reorderLevel: d.reorderLevel ?? 0,
-    unitCostPaise: d.unitCostPaise ?? 0,
-    supplier: d.supplier ?? "",
-    location: d.location ?? "",
-    notes: d.notes ?? "",
-    countedAt: d.countedAt ? new Date(d.countedAt).toISOString() : null,
-    isSample: Boolean(d.isSample),
-  }));
+    It also carries the company-wide figures. Those used to be recomputed in
+    the browser from the capped list, which made them quietly LOW past 500
+    items and quietly wrong during a search. See lib/erp/inventory-list.ts.
+  */
+  const initial = await listStock();
 
   return (
     <StockWorkspace
-      initialItems={items}
+      initial={initial}
       canWrite={can(me, "billing:write")}
       canDelete={can(me, "billing:delete")}
     />

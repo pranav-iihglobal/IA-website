@@ -6,7 +6,7 @@ import {
   EmptyState,
   ErrorBanner,
   FilterTabs,
-  ListPageSkeleton,
+  TableSkeleton,
   SearchInput,
   SelectField,
   StatusPill,
@@ -20,6 +20,12 @@ import { useToast } from "./Toast";
 import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
 import { purchaseSchema } from "@/lib/schemas";
 import { formatINR, formatRupees, paiseToRupeeString, rupeesToPaise } from "@/lib/money";
+import { useListState } from "./useListState";
+import type {
+  ListEnvelope,
+  PurchaseRowShape,
+  PurchaseSummary,
+} from "@/lib/erp/inventory-list";
 
 /**
  * What IKSARVA bought, and the GST paid on it.
@@ -30,28 +36,11 @@ import { formatINR, formatRupees, paiseToRupeeString, rupeesToPaise } from "@/li
  * does not match, which is a different thing from silently correcting it.
  */
 
-export interface PurchaseRow {
-  id: string;
-  /** Mongoose __v — sent back on save, so a stale write is refused. */
-  version: number;
-  supplier: string;
-  supplierGstin: string;
-  billNo: string;
-  billDate: string | null;
-  category: string;
-  description: string;
-  taxableValuePaise: number;
-  cgstPaise: number;
-  sgstPaise: number;
-  igstPaise: number;
-  totalPaise: number;
-  inputCreditEligible: boolean;
-  paidBy: string;
-  paidByName: string;
-  paymentStatus: string;
-  paidPaise: number;
-  notes: string;
-}
+/**
+ * The row shape lives beside the query that produces it, so the page, the
+ * route and this screen cannot drift. Re-exported under the old name.
+ */
+export type PurchaseRow = PurchaseRowShape;
 
 const CATEGORIES = [
   { value: "raw_material", label: "Raw material" },
@@ -89,18 +78,27 @@ const EMPTY: FormValues = {
 const paise = (v: string) => rupeesToPaise(v) ?? 0;
 
 export function PurchaseWorkspace({
-  initialItems,
+  initial,
   canWrite,
   canDelete,
 }: {
-  initialItems: PurchaseRow[];
+  initial: ListEnvelope<PurchaseRow, PurchaseSummary>;
   canWrite: boolean;
   canDelete: boolean;
 }) {
   const { toast } = useToast();
-  const [rows, setRows] = useState(initialItems);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("");
+  const [rows, setRows] = useState(initial.items);
+  /*
+    Company-wide, from an aggregation over every purchase rather than from
+    the rows on screen. Input credit and money owed to the directors were a
+    sum of a capped, searched list presented as a company total — see
+    lib/erp/inventory-list.ts.
+  */
+  const [summary, setSummary] = useState(initial.summary);
+  const [total, setTotal] = useState(initial.total);
+  const [capped, setCapped] = useState(initial.capped);
+  // Search and filter live in the URL — see useListState.
+  const { search, setSearch, debounced, filter, setFilter } = useListState();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -119,17 +117,20 @@ export function PurchaseWorkspace({
     setError(null);
     try {
       const q = new URLSearchParams();
-      if (search.trim()) q.set("search", search.trim());
+      if (debounced.trim()) q.set("search", debounced.trim());
       const res = await fetch(`/api/admin/purchases?${q}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not load purchases");
       setRows(data.items);
+      setTotal(data.total ?? data.items.length);
+      setCapped(Boolean(data.capped));
+      if (data.summary) setSummary(data.summary);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load purchases");
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [debounced]);
 
   /*
     Skip only the FIRST run — the initial rows came down with the HTML.
@@ -147,9 +148,8 @@ export function PurchaseWorkspace({
       servedInitial.current = false;
       return;
     }
-    const t = setTimeout(() => void load(), 250);
-    return () => clearTimeout(t);
-  }, [search, load]);
+    void load();
+  }, [debounced, load]);
 
   const shown = useMemo(() => {
     if (filter === "unpaid") return rows.filter((r) => r.paymentStatus !== "paid");
@@ -158,13 +158,7 @@ export function PurchaseWorkspace({
     return rows;
   }, [rows, filter]);
 
-  const creditable = useMemo(
-    () =>
-      rows
-        .filter((r) => r.inputCreditEligible)
-        .reduce((t, r) => t + r.cgstPaise + r.sgstPaise + r.igstPaise, 0),
-    [rows],
-  );
+  const creditable = summary.creditablePaise;
 
   /*
     What the company owes its directors. Not an accounting figure — the CA
@@ -172,13 +166,7 @@ export function PurchaseWorkspace({
     from memory, which is what happens when personal spending is recorded
     nowhere.
   */
-  const owedToDirectors = useMemo(
-    () =>
-      rows
-        .filter((r) => r.paidBy === "director")
-        .reduce((t, r) => t + r.totalPaise, 0),
-    [rows],
-  );
+  const owedToDirectors = summary.owedToDirectorsPaise;
 
   function open(row: PurchaseRow | null) {
     setFieldErrors({});
@@ -315,7 +303,7 @@ export function PurchaseWorkspace({
           <h1 className="font-display text-2xl font-bold text-ink-strong">
             Purchases
             <span className="ml-2 align-middle text-sm font-semibold text-ink-soft">
-              {rows.length}
+              {summary.count}
             </span>
           </h1>
           <p className="mt-0.5 text-xs font-semibold text-ink-soft">
@@ -324,6 +312,13 @@ export function PurchaseWorkspace({
               <span className="text-cta">
                 {" · "}
                 {formatRupees(owedToDirectors)} paid by directors, owed back
+              </span>
+            )}
+            {/* Purchases grow forever; the list is capped and says so. */}
+            {capped && (
+              <span className="text-ink-faint">
+                {" · showing "}
+                {rows.length} of {total}
               </span>
             )}
           </p>
@@ -336,18 +331,40 @@ export function PurchaseWorkspace({
         <FilterTabs value={filter} onChange={setFilter} options={FILTERS} />
       </div>
 
-      <ErrorBanner message={error} />
+      <ErrorBanner message={error} onRetry={() => void load()} />
 
+      {/*
+        Rows only. ListPageSkeleton draws a page header, a search box and
+        a filter strip — all three of which are already on screen above
+        this, so every debounced search painted a second copy of them.
+      */}
       {loading ? (
-        <ListPageSkeleton rows={4} />
+        <TableSkeleton rows={4} />
       ) : shown.length === 0 ? (
-        <EmptyState title="Nothing here" message="Add the first purchase." />
+        <EmptyState
+          title="Nothing here"
+          /*
+            It used to say there were no purchases while the header said 47.
+            A filter that matches nothing is a different fact from an empty
+            ledger, and conflating them reads as a broken screen.
+          */
+          message={
+            filter || search
+              ? "No purchases match this filter. Try another, or clear the search."
+              : "Add the first purchase."
+          }
+          action={
+            canWrite && !filter && !search ? (
+              <Button onClick={() => open(null)}>Add purchase</Button>
+            ) : undefined
+          }
+        />
       ) : (
-        <ul className="admin-rows grid gap-3">
+        <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
           {shown.map((row) => (
             <li
               key={row.id}
-              className="admin-card-item admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
+              className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">

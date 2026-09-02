@@ -6,7 +6,7 @@ import {
   EmptyState,
   ErrorBanner,
   FilterTabs,
-  ListPageSkeleton,
+  TableSkeleton,
   SearchInput,
   SelectField,
   StatusPill,
@@ -19,6 +19,12 @@ import { useToast } from "./Toast";
 import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
 import { stockItemSchema } from "@/lib/schemas";
 import { formatRupees, paiseToRupeeString, rupeesToPaise } from "@/lib/money";
+import { useListState } from "./useListState";
+import type {
+  ListEnvelope,
+  StockRowShape,
+  StockSummary,
+} from "@/lib/erp/inventory-list";
 
 /**
  * What is on the shelf.
@@ -28,23 +34,12 @@ import { formatRupees, paiseToRupeeString, rupeesToPaise } from "@/lib/money";
  * recount that found six more than the book said. See lib/db/models/StockItem.
  */
 
-export interface StockRow {
-  id: string;
-  /** Mongoose __v — sent back on save, so a stale write is refused. */
-  version: number;
-  name: string;
-  sku: string;
-  kind: string;
-  unit: string;
-  onHand: number;
-  reorderLevel: number;
-  unitCostPaise: number;
-  supplier: string;
-  location: string;
-  notes: string;
-  countedAt: string | null;
-  isSample: boolean;
-}
+/**
+ * The row shape now lives beside the query that produces it, so the page,
+ * the route and this screen cannot drift. Re-exported because callers here
+ * still refer to it by this name.
+ */
+export type StockRow = StockRowShape;
 
 const KINDS = [
   { value: "finished", label: "Finished goods" },
@@ -83,18 +78,27 @@ const EMPTY: FormValues = {
 };
 
 export function StockWorkspace({
-  initialItems,
+  initial,
   canWrite,
   canDelete,
 }: {
-  initialItems: StockRow[];
+  initial: ListEnvelope<StockRow, StockSummary>;
   canWrite: boolean;
   canDelete: boolean;
 }) {
   const { toast } = useToast();
-  const [rows, setRows] = useState(initialItems);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("");
+  const [rows, setRows] = useState(initial.items);
+  /*
+    The company-wide figures, from an aggregation over every item rather than
+    from the rows on screen. They used to be a sum of a capped, searched list
+    presented as a company total — see lib/erp/inventory-list.ts.
+  */
+  const [summary, setSummary] = useState(initial.summary);
+  const [total, setTotal] = useState(initial.total);
+  const [capped, setCapped] = useState(initial.capped);
+  // Search and filter live in the URL, so a search can be shared — see
+  // useListState. There is no paging here; the list is capped instead.
+  const { search, setSearch, debounced, filter, setFilter } = useListState();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -113,17 +117,20 @@ export function StockWorkspace({
     setError(null);
     try {
       const q = new URLSearchParams();
-      if (search.trim()) q.set("search", search.trim());
+      if (debounced.trim()) q.set("search", debounced.trim());
       const res = await fetch(`/api/admin/stock?${q}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not load stock");
       setRows(data.items);
+      setTotal(data.total ?? data.items.length);
+      setCapped(Boolean(data.capped));
+      if (data.summary) setSummary(data.summary);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load stock");
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [debounced]);
 
   // Only re-fetch when a search is actually typed; the first page came down
   // with the HTML.
@@ -143,9 +150,8 @@ export function StockWorkspace({
       servedInitial.current = false;
       return;
     }
-    const t = setTimeout(() => void load(), 250);
-    return () => clearTimeout(t);
-  }, [search, load]);
+    void load();
+  }, [debounced, load]);
 
   const shown = useMemo(() => {
     if (filter === "low") return rows.filter(low);
@@ -153,11 +159,8 @@ export function StockWorkspace({
     return rows;
   }, [rows, filter]);
 
-  const lowCount = useMemo(() => rows.filter(low).length, [rows]);
-  const stockValue = useMemo(
-    () => rows.reduce((t, r) => t + r.onHand * r.unitCostPaise, 0),
-    [rows],
-  );
+  const lowCount = summary.lowCount;
+  const stockValue = summary.valuePaise;
 
   function open(row: StockRow | null) {
     setFieldErrors({});
@@ -269,13 +272,24 @@ export function StockWorkspace({
           <h1 className="font-display text-2xl font-bold text-ink-strong">
             Stock
             <span className="ml-2 align-middle text-sm font-semibold text-ink-soft">
-              {rows.length}
+              {summary.items}
             </span>
           </h1>
           <p className="mt-0.5 text-xs font-semibold text-ink-soft">
             {formatRupees(stockValue)} at cost
             {lowCount > 0 && (
               <span className="text-cta"> · {lowCount} need ordering</span>
+            )}
+            {/*
+              Said, not silent. The list is capped for the screen and the
+              figures above are not — so when the two disagree the screen has
+              to explain itself rather than look like it lost rows.
+            */}
+            {capped && (
+              <span className="text-ink-faint">
+                {" · showing "}
+                {rows.length} of {total}
+              </span>
             )}
           </p>
         </div>
@@ -287,21 +301,35 @@ export function StockWorkspace({
         <FilterTabs value={filter} onChange={setFilter} options={FILTERS} />
       </div>
 
-      <ErrorBanner message={error} />
+      <ErrorBanner message={error} onRetry={() => void load()} />
 
+      {/*
+        Rows only. ListPageSkeleton draws a page header, a search box and
+        a filter strip — all three of which are already on screen above
+        this, so every debounced search painted a second copy of them.
+      */}
       {loading ? (
-        <ListPageSkeleton rows={4} />
+        <TableSkeleton rows={4} />
       ) : shown.length === 0 ? (
         <EmptyState
           title="Nothing here"
-          message={filter || search ? "Try a different filter." : "Add the first item."}
+          message={
+            filter || search
+              ? "No items match this filter. Try another, or clear the search."
+              : "Add the first item."
+          }
+          action={
+            canWrite && !filter && !search ? (
+              <Button onClick={() => open(null)}>Add item</Button>
+            ) : undefined
+          }
         />
       ) : (
-        <ul className="admin-rows grid gap-3">
+        <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
           {shown.map((row) => (
             <li
               key={row.id}
-              className="admin-card-item admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
+              className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">

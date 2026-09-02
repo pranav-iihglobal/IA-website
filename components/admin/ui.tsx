@@ -16,6 +16,7 @@ import {
   type FieldInputProps,
   type FieldKind,
 } from "@/lib/admin/field-kinds";
+import { pageNumbers } from "@/lib/admin/pagination";
 import type { Bi } from "@/lib/content";
 
 /** Shared admin form primitives — see the .admin-* classes in globals.css. */
@@ -1233,7 +1234,7 @@ export function RecordCard({
       inside a 350px grid on a phone: every admin list scrolled sideways, and
       truncation never kicked in because the box just grew instead.
     */
-    <li className="admin-card-item admin-bleed group relative min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4 shadow-[0_1px_2px_rgba(95,47,20,0.05)] transition-shadow focus-within:shadow-[0_4px_14px_-6px_rgba(95,47,20,0.28)]">
+    <li className="admin-bleed group relative min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4 shadow-[0_1px_2px_rgba(95,47,20,0.05)] transition-shadow focus-within:shadow-[0_4px_14px_-6px_rgba(95,47,20,0.28)]">
       <div className="flex items-start gap-3">
         {thumb}
         <div className="min-w-0 flex-1">
@@ -1330,12 +1331,26 @@ export function BackLink({ href, label }: { href: string; label: string }) {
 }
 
 /** Inline error banner used above the lists. */
-export function ErrorBanner({ message }: { message?: string | null }) {
+/**
+ * A failed load, with a way out of it.
+ *
+ * `onRetry` matters more than it looks: a dropped request on a village
+ * connection left a sentence and a dead end, and the only recovery was
+ * reloading the whole page — which on this panel means re-running the
+ * permission check, the list query and the form option lists.
+ */
+export function ErrorBanner({
+  message,
+  onRetry,
+}: {
+  message?: string | null;
+  onRetry?: () => void;
+}) {
   if (!message) return null;
   return (
-    <p
+    <div
       role="alert"
-      className="mt-4 flex items-start gap-2 rounded-xl border border-alloy/45 bg-alloy/10 px-4 py-3 text-sm font-medium text-ink-strong"
+      className="mt-4 flex flex-wrap items-start gap-2 rounded-xl border border-alloy/45 bg-alloy/10 px-4 py-3 text-sm font-medium text-ink-strong"
     >
       <svg viewBox="0 0 20 20" className="mt-px h-4 w-4 shrink-0" fill="currentColor" aria-hidden="true">
         <path
@@ -1346,8 +1361,17 @@ export function ErrorBanner({ message }: { message?: string | null }) {
       </svg>
       {/* Error text can carry a long URL — let it break rather than push the
           page sideways. */}
-      <span className="min-w-0 break-words">{message}</span>
-    </p>
+      <span className="min-w-0 flex-1 break-words">{message}</span>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="admin-tap shrink-0 rounded-full border border-line px-4 text-xs font-semibold text-ink hover:border-olive"
+        >
+          Try again
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -1390,32 +1414,138 @@ export function RowActions({
 export function Pagination({
   page,
   pages,
+  total,
+  pageSize,
   onChange,
 }: {
   page: number;
   pages: number;
+  /** Total matching rows, for the "26–50 of 412" line. */
+  total?: number;
+  pageSize?: number;
   onChange: (page: number) => void;
 }) {
   if (pages <= 1) return null;
+
+  const from = pageSize ? (page - 1) * pageSize + 1 : null;
+  const to =
+    pageSize && total !== undefined
+      ? Math.min(page * pageSize, total)
+      : pageSize
+        ? page * pageSize
+        : null;
+
   return (
-    <div className="mt-5 flex items-center justify-center gap-4">
-      <Button
-        variant="secondary"
-        disabled={page <= 1}
-        onClick={() => onChange(page - 1)}
-      >
-        ← Previous
-      </Button>
-      <span className="text-sm text-ink-muted">
-        Page <strong className="text-ink-strong">{page}</strong> of {pages}
-      </span>
-      <Button
-        variant="secondary"
-        disabled={page >= pages}
-        onClick={() => onChange(page + 1)}
-      >
-        Next →
-      </Button>
+    <nav
+      aria-label="Pages"
+      className="mt-5 flex flex-col items-center gap-3"
+    >
+      <div className="flex flex-wrap items-center justify-center gap-1.5">
+        <PageStep
+          label="Previous page"
+          disabled={page <= 1}
+          onClick={() => onChange(page - 1)}
+        >
+          ←
+        </PageStep>
+
+        {/*
+          Numbers, not just Previous and Next. Page 9 of a 5,000-row contact
+          list was eight round trips to reach and eight to come back from.
+        */}
+        {pageNumbers(page, pages).map((n, i) =>
+          n === null ? (
+            <span key={`gap-${i}`} className="px-1 text-sm text-ink-faint">
+              …
+            </span>
+          ) : (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange(n)}
+              aria-current={n === page ? "page" : undefined}
+              className={`admin-tap-square inline-flex items-center justify-center rounded-full px-3 text-sm font-semibold ${
+                n === page
+                  ? "bg-accent-soft text-ink-strong"
+                  : "text-ink-muted hover:bg-surface-subtle hover:text-ink-strong"
+              }`}
+            >
+              {n}
+            </button>
+          ),
+        )}
+
+        <PageStep
+          label="Next page"
+          disabled={page >= pages}
+          onClick={() => onChange(page + 1)}
+        >
+          →
+        </PageStep>
+      </div>
+
+      <p className="text-xs text-ink-soft">
+        {from !== null && to !== null && total !== undefined
+          ? `${from}–${to} of ${total}`
+          : `Page ${page} of ${pages}`}
+      </p>
+    </nav>
+  );
+}
+
+function PageStep({
+  children,
+  label,
+  disabled,
+  onClick,
+}: {
+  children: ReactNode;
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="admin-tap-square inline-flex items-center justify-center rounded-full border border-line px-3 text-sm font-semibold text-ink-muted disabled:opacity-40 enabled:hover:border-olive enabled:hover:text-ink"
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Rows that are being replaced.
+ *
+ * Changing a filter used to freeze the screen: the skeleton only ever showed
+ * on the FIRST load, so every load after it left the previous rows sitting
+ * there, fully interactive, until the new ones snapped in. Half a second of
+ * looking at rows that are already wrong is how somebody edits the wrong
+ * record.
+ *
+ * Faded and inert rather than blanked, because replacing rows with a skeleton
+ * on every keystroke is its own kind of flicker.
+ */
+export function ListBody({
+  busy,
+  children,
+  className = "",
+}: {
+  busy: boolean;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      aria-busy={busy || undefined}
+      className={`${className} transition-opacity ${
+        busy ? "pointer-events-none opacity-50" : ""
+      }`}
+    >
+      {children}
     </div>
   );
 }

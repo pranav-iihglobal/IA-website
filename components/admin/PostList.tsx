@@ -16,6 +16,7 @@ import {
   RowActions,
   SearchInput,
   StatusPill,
+  ListBody,
   TableSkeleton,
 } from "./ui";
 
@@ -64,6 +65,7 @@ export function PostList() {
   const { toast } = useToast();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -84,6 +86,7 @@ export function PostList() {
         items: Row[];
         total: number;
         pages: number;
+        pageSize?: number;
       }>(`/api/admin/posts?${params}`);
       if (!result.ok || !result.data) {
         setError(result.error ?? "Could not load");
@@ -91,6 +94,7 @@ export function PostList() {
       }
       setRows(result.data.items);
       setTotal(result.data.total);
+      if (result.data.pageSize) setPageSize(result.data.pageSize);
       setPages(result.data.pages);
     } finally {
       setLoading(false);
@@ -150,7 +154,7 @@ export function PostList() {
         </span>
       </div>
 
-      <ErrorBanner message={error} />
+      <ErrorBanner message={error} onRetry={() => void load()} />
 
       {loading && rows.length === 0 && <TableSkeleton />}
 
@@ -178,7 +182,7 @@ export function PostList() {
       )}
 
       {rows.length > 0 && (
-        <div className="mt-6">
+        <ListBody busy={loading} className="mt-6">
           {/* Cards below lg, table from lg up. A five-column table cannot be
               read on a phone; a card fits every field the table shows. */}
           <ul className="admin-rows grid gap-3 sm:grid-cols-2 lg:hidden">
@@ -263,10 +267,16 @@ export function PostList() {
               </table>
             </div>
           </div>
-        </div>
+        </ListBody>
       )}
 
-      <Pagination page={page} pages={pages} onChange={setPage} />
+      <Pagination
+        page={page}
+        pages={pages}
+        total={total}
+        pageSize={pageSize}
+        onChange={setPage}
+      />
 
       <ConfirmDialog
         open={Boolean(pending)}

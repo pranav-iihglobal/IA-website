@@ -3,7 +3,7 @@ import { InvoiceWorkspace } from "@/components/admin/InvoiceWorkspace";
 import { ListPageSkeleton } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { betaNote, can } from "@/lib/auth/permissions";
-import { listInvoices } from "@/lib/erp/list";
+import { invoiceListQuery, listInvoices } from "@/lib/erp/list";
 import { listQueryKey } from "@/lib/crm/scopes";
 import {
   getBillableParties,
@@ -12,16 +12,33 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminInvoicesPage() {
+export default async function AdminInvoicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const me = await requirePageAccess("billing:read");
   const beta = betaNote("billing");
 
   /*
-    The first page, plus the two option lists the form needs, in one render.
-    Three round trips to Mumbai in parallel rather than a page that paints and
-    then goes back for everything — see lib/crm/list.ts for why.
+    The list the URL asks for, plus the two option lists the form needs, in
+    one render. Three round trips to Mumbai in parallel rather than a page
+    that paints and then goes back for everything — see lib/crm/list.ts.
+
+    Built from the URL rather than fixed to page 1, so a shared or bookmarked
+    link renders the rows it names instead of rendering the unfiltered list
+    and letting the browser replace it a moment later — see useListState.
   */
-  const query = new URLSearchParams({ page: "1" });
+  const url = await searchParams;
+  const one = (key: string) => {
+    const value = url[key];
+    return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
+  };
+  const query = invoiceListQuery({
+    search: one("q"),
+    filter: one("filter"),
+    page: Number(one("page")) || 1,
+  });
   const [initialData, products, parties] = await Promise.all([
     listInvoices(query),
     getBillableProducts(),

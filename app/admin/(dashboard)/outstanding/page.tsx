@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { outstandingInvoices, outstandingTotal } from "@/lib/erp/reports";
-import type { OutstandingRow } from "@/lib/erp/reports";
+import type { OutstandingRow, OutstandingSort } from "@/lib/erp/reports";
 import { formatINR, formatRupees } from "@/lib/money";
 import { paymentReminder, telHref, whatsappHref } from "@/lib/crm/contact-links";
 import { EmptyState } from "@/components/admin/ui";
@@ -15,15 +15,23 @@ export const dynamic = "force-dynamic";
  * problem from a big one raised last week, and it is the one that needs the
  * call. Sorting by amount would put the urgent ones out of sight.
  */
-export default async function OutstandingPage() {
+export default async function OutstandingPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requirePageAccess("billing:read");
+
+  // In the URL, so "show me the biggest" is a link somebody can send.
+  const url = await searchParams;
+  const sort: OutstandingSort = url.sort === "largest" ? "largest" : "oldest";
   /*
     The total comes from an aggregation over EVERY unpaid invoice, not from
     summing the rows below — those are capped for the screen, and a capped sum
     would be quietly low.
   */
   const [rows, total] = await Promise.all([
-    outstandingInvoices(),
+    outstandingInvoices(sort),
     outstandingTotal(),
   ]);
   const overdue = rows.filter((r) => r.daysOld > 30);
@@ -38,9 +46,21 @@ export default async function OutstandingPage() {
           <strong className={total.owedPaise > 0 ? "text-danger" : ""}>
             {formatRupees(total.owedPaise)}
           </strong>{" "}
-          owed. Oldest first.
-          {capped && ` Showing the oldest ${rows.length}.`}
+          owed. {sort === "largest" ? "Biggest first." : "Oldest first."}
+          {capped &&
+            ` Showing the ${sort === "largest" ? "largest" : "oldest"} ${rows.length}.`}
         </p>
+
+        {/*
+          Two orders, because they answer different questions: oldest first is
+          "who do I ring", biggest first is "where is the money". Oldest stays
+          the default — the four-month-old invoice is the one that needs the
+          call, and sorting by amount would put it out of sight.
+        */}
+        <div className="mt-3 flex gap-2">
+          <SortLink current={sort} value="oldest" label="Oldest first" />
+          <SortLink current={sort} value="largest" label="Biggest first" />
+        </div>
       </div>
 
       {overdue.length > 0 && (
@@ -54,11 +74,11 @@ export default async function OutstandingPage() {
       {rows.length === 0 ? (
         <EmptyState title="Nothing owed" message="Every issued invoice is paid in full." />
       ) : (
-        <ul className="admin-rows grid gap-3">
+        <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
           {rows.map((row) => (
             <li
               key={row.invoiceId}
-              className="admin-card-item admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
+              className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -145,5 +165,30 @@ function Chase({ row }: { row: OutstandingRow }) {
         </a>
       )}
     </div>
+  );
+}
+
+function SortLink({
+  current,
+  value,
+  label,
+}: {
+  current: OutstandingSort;
+  value: OutstandingSort;
+  label: string;
+}) {
+  const active = current === value;
+  return (
+    <Link
+      href={value === "oldest" ? "/admin/outstanding" : `/admin/outstanding?sort=${value}`}
+      aria-current={active ? "true" : undefined}
+      className={`admin-tap inline-flex items-center rounded-full border px-4 text-xs font-semibold ${
+        active
+          ? "border-olive bg-accent-soft text-ink-strong"
+          : "border-line text-ink-muted hover:border-olive hover:text-ink"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }
