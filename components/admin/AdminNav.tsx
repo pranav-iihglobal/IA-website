@@ -205,6 +205,14 @@ const NAV: (NavItem | NavGroup)[] = [
     label: "Settings",
     items: [
       {
+        href: "/admin/activity",
+        label: "Activity",
+        needs: "users:read",
+        icon: (
+          <Icon path="M12 8v4l3 2M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0Z" />
+        ),
+      },
+      {
         href: "/admin/users",
         // "People" moved to "Team": a group called Customers now sits above it,
         // and two people-shaped words in one sidebar is one too many.

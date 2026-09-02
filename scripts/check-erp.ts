@@ -23,6 +23,7 @@ import { Counter, nextInSeries, peekSeries, raiseSeriesTo } from "../lib/db/mode
 import { AuditLog, recordAudit } from "../lib/db/models/AuditLog";
 import { Invoice } from "../lib/db/models/Invoice";
 import { formatIstDate, istParts } from "../lib/time";
+import { parseInvoiceNumber } from "../lib/erp/invoice-number";
 
 loadEnv();
 
@@ -256,6 +257,49 @@ async function main() {
         "    Raise them with the CA. Nothing here rewrites a filed number.\n",
     );
   }
+
+  /*
+    Gaps in the issued series.
+
+    A number is allocated and THEN the document is written; if that write
+    fails, the counter has already moved and the series has a permanent hole.
+    M0 has no transactions, so this cannot be made atomic — but it can be
+    noticed, and a missing number in a filed GST sequence is a question from
+    the department rather than a cosmetic flaw.
+
+    Reported, never filled in. Inventing a document to plug a gap would be
+    considerably worse than the gap.
+  */
+  console.log("\n  Gaps in the invoice series\n");
+  const numbered = await Invoice.find({
+    isSample: { $ne: true },
+    isHistorical: { $ne: true },
+    documentType: { $ne: "credit_note" },
+    number: { $ne: "" },
+  })
+    .select("number")
+    .lean();
+
+  const bySeries = new Map<string, number[]>();
+  for (const doc of numbered) {
+    const parsed = parseInvoiceNumber(doc.number ?? "");
+    if (!parsed) continue;
+    const key = `${parsed.year}-${String(parsed.month).padStart(2, "0")}`;
+    bySeries.set(key, [...(bySeries.get(key) ?? []), parsed.sequence]);
+  }
+
+  const gaps: string[] = [];
+  for (const [key, sequences] of bySeries) {
+    const seen = new Set(sequences);
+    for (let n = 1; n <= Math.max(...sequences); n++) {
+      if (!seen.has(n)) gaps.push(`${key} #${String(n).padStart(3, "0")}`);
+    }
+  }
+  check(
+    `no missing numbers across ${bySeries.size} month series`,
+    gaps.length === 0,
+    gaps.join(", "),
+  );
 
   console.log("\n  Cleaning up\n");
   const removedCounters = await Counter.deleteMany({ _id: SERIES });

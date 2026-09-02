@@ -816,6 +816,15 @@ export function StatusPill({ status }: { status: string }) {
     // never be mistaken for an invoice at a glance.
     "credit note": "bg-alloy/15 text-ink-strong ring-alloy/40",
 
+    // Audit actions, on the Activity screen.
+    create: "bg-accent-soft/60 text-ink-muted ring-laurel",
+    update: "bg-surface-strong/35 text-ink-strong ring-line",
+    delete: "bg-danger/12 text-danger ring-danger/35",
+    issue: "bg-accent-soft/60 text-ink-muted ring-laurel",
+    cancel: "bg-danger/12 text-danger ring-danger/35",
+    credit: "bg-alloy/15 text-ink-strong ring-alloy/40",
+    payment: "bg-surface-strong/35 text-ink-strong ring-line",
+
     // Derived customer states — see STATUS_LABELS in lib/crm/shape.ts.
     Active: "bg-accent-soft/60 text-ink-muted ring-laurel",
     "At risk": "bg-alloy/15 text-ink-strong ring-alloy/40",
@@ -837,6 +846,14 @@ export function StatusPill({ status }: { status: string }) {
     issued: "bg-olive",
     filed: "bg-camel-dark/60",
     "credit note": "bg-alloy",
+
+    create: "bg-olive",
+    update: "bg-camel-dark/60",
+    delete: "bg-danger",
+    issue: "bg-olive",
+    cancel: "bg-danger",
+    credit: "bg-alloy",
+    payment: "bg-camel-dark/60",
 
     Active: "bg-olive",
     "At risk": "bg-alloy",
