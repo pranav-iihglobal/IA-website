@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { summariseTrading, tallyProducts, type ProfileInvoice } from "./profile";
+import { sampledOutcome, summariseTrading, tallyProducts, type ProfileInvoice } from "./profile";
 
 /**
  * What a customer has actually bought.
@@ -223,5 +223,71 @@ describe("credit notes on a profile", () => {
     expect(t.invoicedPaise).toBe(rupees(1000));
     expect(t.creditNoteCount).toBe(0);
     expect(t.cancelledCount).toBe(1);
+  });
+});
+
+describe("sampledOutcome — did the sample convert?", () => {
+  const sampled = [
+    { id: "p1", name: "FloraMax" },
+    { id: "p2", name: "Mycorrhizal" },
+  ];
+
+  it("reports a sampled product that was never bought", () => {
+    expect(sampledOutcome(sampled, [])).toEqual([
+      { productId: "p1", name: "FloraMax", bought: false, quantity: 0, valuePaise: 0 },
+      { productId: "p2", name: "Mycorrhizal", bought: false, quantity: 0, valuePaise: 0 },
+    ]);
+  });
+
+  it("matches on the product id, not on the printed description", () => {
+    /*
+      The invoice line's description is a SNAPSHOT taken at issue. Renaming a
+      product must not break the answer, which is exactly why the free-text
+      version of this could not be asked at all.
+    */
+    const out = sampledOutcome(sampled, [
+      { productId: "p1", description: "FloraMax (old name)", quantity: 3, lineTotalPaise: 90000 },
+    ]);
+    expect(out[0]).toEqual({
+      productId: "p1",
+      name: "FloraMax",
+      bought: true,
+      quantity: 3,
+      valuePaise: 90000,
+    });
+    expect(out[1].bought).toBe(false);
+  });
+
+  it("adds up repeat purchases of the same sampled product", () => {
+    const out = sampledOutcome(sampled, [
+      { productId: "p1", description: "FloraMax", quantity: 2, lineTotalPaise: 50000 },
+      { productId: "p1", description: "FloraMax", quantity: 5, lineTotalPaise: 120000 },
+    ]);
+    expect(out[0].quantity).toBe(7);
+    expect(out[0].valuePaise).toBe(170000);
+  });
+
+  it("does not count a sale that was fully credited back", () => {
+    // Credit note quantities are stored negative. One bag bought, one bag
+    // returned, is not a conversion — and "bought" has to agree with the
+    // figures printed next to it.
+    const out = sampledOutcome(sampled, [
+      { productId: "p1", description: "FloraMax", quantity: 1, lineTotalPaise: 25000 },
+      { productId: "p1", description: "FloraMax", quantity: -1, lineTotalPaise: -25000 },
+    ]);
+    expect(out[0].bought).toBe(false);
+    expect(out[0].quantity).toBe(0);
+    expect(out[0].valuePaise).toBe(0);
+  });
+
+  it("ignores lines whose product was deleted", () => {
+    const out = sampledOutcome(sampled, [
+      { productId: null, description: "Something removed", quantity: 4, lineTotalPaise: 10000 },
+    ]);
+    expect(out.every((p) => !p.bought)).toBe(true);
+  });
+
+  it("is empty when nothing was sampled", () => {
+    expect(sampledOutcome([], [{ productId: "p1", description: "x", quantity: 1, lineTotalPaise: 1 }])).toEqual([]);
   });
 });

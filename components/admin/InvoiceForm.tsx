@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { EntityCombo, EntitySelect } from "./EntityPicker";
 import {
   FieldGroup,
@@ -17,6 +17,12 @@ import {
   GUJARAT_STATE_CODE,
 } from "@/lib/erp/tax";
 import type { BillableParty, BillableProduct } from "@/lib/admin/invoice-options";
+import { usePartyHistory } from "./usePartyHistory";
+import { adminFetch } from "@/lib/admin/fetch";
+import { districtOptions } from "@/lib/crm/places";
+import { Button } from "./ui";
+import type { LastPrice } from "@/lib/erp/history";
+import { formatIstDateLong } from "@/lib/time";
 
 /**
  * Raising an invoice.
@@ -84,18 +90,34 @@ export function InvoiceForm({
   products,
   parties,
   errors = {},
+  onPartyAdded,
 }: {
   values: InvoiceFormValues;
   onChange: (next: InvoiceFormValues) => void;
   products: BillableProduct[];
   parties: BillableParty[];
   errors?: Record<string, string>;
+  /** A customer created from inside this form, for the picker to offer. */
+  onPartyAdded?: (party: BillableParty) => void;
 }) {
+  const [addingParty, setAddingParty] = useState<string | null>(null);
   const set = (patch: Partial<InvoiceFormValues>) => onChange({ ...values, ...patch });
   const setLine = (index: number, patch: Partial<InvoiceLineValues>) =>
     set({ lines: values.lines.map((l, i) => (i === index ? { ...l, ...patch } : l)) });
 
   const party = parties.find((p) => p.id === values.contactId);
+  /*
+    What they bought last, and what they paid. Three SKUs and repeat buyers
+    means most invoices here are the previous one again — see lib/erp/history.
+  */
+  const history = usePartyHistory(values.contactId);
+  const lastPrice = useMemo(
+    () =>
+      new Map(
+        history.prices.map((p) => [`${p.productId}::${p.packLabel}`, p]),
+      ),
+    [history.prices],
+  );
   const byId = useMemo(
     () => new Map(products.map((p) => [p.id, p])),
     [products],
@@ -141,6 +163,10 @@ export function InvoiceForm({
   }, [values.lines, values.placeOfSupplyStateCode, byId]);
 
   const incomplete = values.lines.length - (preview?.counted ?? 0);
+  /** Any line with something in it — the guard on replacing them wholesale. */
+  const hasTypedLines = values.lines.some(
+    (l) => l.productId || l.unitPrice || l.discount,
+  );
 
   return (
     <div className="space-y-5">
@@ -153,13 +179,59 @@ export function InvoiceForm({
           value={values.contactId}
           onChange={(contactId) => set({ contactId })}
           error={errors.contactId}
+          /*
+            A walk-in who is not on file yet. The alternative was abandoning a
+            half-filled invoice to go and create them, which is why sales get
+            written on paper instead.
+          */
+          onCreate={onPartyAdded ? (name) => setAddingParty(name) : undefined}
+          createLabel="Add"
         />
+        {addingParty !== null && onPartyAdded && (
+          <QuickAddCustomer
+            name={addingParty}
+            onCancel={() => setAddingParty(null)}
+            onAdded={(party) => {
+              onPartyAdded(party);
+              set({ contactId: party.id });
+              setAddingParty(null);
+            }}
+          />
+        )}
         {party && (
           <p className="mt-1.5 text-xs font-semibold text-ink-soft">
             {party.gstin
               ? `GSTIN ${party.gstin} — a B2B sale, listed individually on GSTR-1.`
               : "No GSTIN — a B2C sale, summarised as B2CS on the return."}
           </p>
+        )}
+        {/*
+          "Same as last time?" is how most of these sales start. It REPLACES
+          the lines rather than appending — repeating an order onto a form
+          that already has lines would double an order silently — so it is
+          offered only while the form is still untouched.
+        */}
+        {history.lastOrder && history.lastOrder.lines.length > 0 && !hasTypedLines && (
+          <button
+            type="button"
+            onClick={() =>
+              set({
+                lines: history.lastOrder!.lines.map((l) => ({
+                  productId: l.productId,
+                  packLabel: l.packLabel,
+                  quantity: String(l.quantity),
+                  unitPrice: l.unitPrice,
+                  discount: l.discount,
+                })),
+              })
+            }
+            className="admin-tap mt-2 inline-flex items-center rounded-full border border-line px-4 text-xs font-semibold text-ink hover:border-olive"
+          >
+            Repeat their last order —{" "}
+            {history.lastOrder.lines.length} line
+            {history.lastOrder.lines.length === 1 ? "" : "s"} from{" "}
+            {history.lastOrder.number}
+          </button>
         )}
         <SelectField
           label="Place of supply"
@@ -238,18 +310,33 @@ export function InvoiceForm({
                   value={line.quantity}
                   onChange={(quantity) => setLine(i, { quantity })}
                 />
-                <TextField
-                  label="Price each"
-                  kind="money"
-                  prefix="₹"
-                  hint={
-                    pack
-                      ? `Suggested from the product. Change it if the price was negotiated.`
-                      : undefined
-                  }
-                  value={line.unitPrice}
-                  onChange={(unitPrice) => setLine(i, { unitPrice })}
-                />
+                <div>
+                  <TextField
+                    label="Price each"
+                    kind="money"
+                    prefix="₹"
+                    hint={
+                      pack
+                        ? `Suggested from the product. Change it if the price was negotiated.`
+                        : undefined
+                    }
+                    value={line.unitPrice}
+                    onChange={(unitPrice) => setLine(i, { unitPrice })}
+                  />
+                  {/*
+                    "What did we charge them last time?" is asked on every
+                    negotiated sale, and the answer was already in the
+                    invoices with no way to reach it without opening another
+                    screen. One tap applies it; it is never applied on its
+                    own, because the suggested price is the product's current
+                    one and quietly overriding that would hide a price rise.
+                  */}
+                  <LastSold
+                    price={lastPrice.get(`${line.productId}::${line.packLabel}`)}
+                    current={line.unitPrice}
+                    onUse={(unitPrice) => setLine(i, { unitPrice })}
+                  />
+                </div>
                 <TextField
                   label="Discount"
                   kind="money"
@@ -351,6 +438,152 @@ function InvoiceTotals({
       {preview.roundOffPaise !== 0 && row("Round off", formatINR(preview.roundOffPaise))}
       {row("Total", formatINR(preview.grandTotalPaise), true)}
       <p className="pt-1 text-xs font-semibold text-ink-soft">{preview.amountInWords}</p>
+    </div>
+  );
+}
+
+/**
+ * What this customer last paid for this product, and a way to use it.
+ *
+ * Hidden when it agrees with what is already in the box — a note saying the
+ * price is the price it already says is noise on the busiest form in the
+ * panel.
+ */
+function LastSold({
+  price,
+  current,
+  onUse,
+}: {
+  price: LastPrice | undefined;
+  current: string;
+  onUse: (value: string) => void;
+}) {
+  if (!price) return null;
+  const asRupees = paiseToRupeeString(price.unitPricePaise);
+  if (asRupees === current.trim()) return null;
+
+  return (
+    <p className="mt-1 text-xs text-ink-soft">
+      Last sold at{" "}
+      <button
+        type="button"
+        onClick={() => onUse(asRupees)}
+        className="font-semibold underline underline-offset-2 hover:text-cta"
+      >
+        {formatINR(price.unitPricePaise)}
+      </button>
+      {price.issuedAt ? ` on ${formatIstDateLong(new Date(price.issuedAt))}` : ""}
+      {price.number ? ` · ${price.number}` : ""}
+    </p>
+  );
+}
+
+/**
+ * The smallest customer record that can be invoiced, created in place.
+ *
+ * Four fields, not twenty. Everything else on a contact — crop, acres, source,
+ * discount tier — is worth having and none of it is needed to raise a bill, so
+ * asking for it here would turn a thirty-second sale into a form-filling
+ * exercise. The record is a real one and can be completed later from the CRM.
+ *
+ * Not a nested dialog. This form is already inside a native <dialog>, and a
+ * second one over it would put two focus traps on screen with the discard
+ * guard of the outer sheet sitting between them.
+ */
+function QuickAddCustomer({
+  name,
+  onAdded,
+  onCancel,
+}: {
+  name: string;
+  onAdded: (party: BillableParty) => void;
+  onCancel: () => void;
+}) {
+  const [values, setValues] = useState({
+    name,
+    phone: "",
+    village: "",
+    district: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit() {
+    if (!values.name.trim()) {
+      setError("A name is the one thing an invoice cannot do without.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    const response = await adminFetch<{ id: string }>("/api/admin/contacts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...values,
+        // A customer, because that is what raising an invoice makes them.
+        kind: "customer",
+        channel: "b2c",
+      }),
+    });
+    setSaving(false);
+
+    if (!response.ok || !response.data?.id) {
+      setError(response.error ?? "Could not add them.");
+      return;
+    }
+    onAdded({
+      id: response.data.id,
+      name: values.name.trim(),
+      hint: [values.village, values.district].filter(Boolean).join(" · "),
+      // No GSTIN, so this is a B2C sale — summarised as B2CS on the return.
+      gstin: "",
+      channel: "b2c",
+    });
+  }
+
+  return (
+    <div className="mt-2 rounded-xl border border-line-soft bg-surface-muted/40 p-3">
+      <p className="text-xs font-bold uppercase tracking-wider text-ink-faint">
+        New customer
+      </p>
+      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+        <TextField
+          label="Name"
+          required
+          value={values.name}
+          onChange={(v) => setValues((c) => ({ ...c, name: v }))}
+        />
+        <TextField
+          label="Mobile"
+          kind="phone"
+          value={values.phone}
+          onChange={(v) => setValues((c) => ({ ...c, phone: v }))}
+        />
+        <TextField
+          label="Village"
+          value={values.village}
+          onChange={(v) => setValues((c) => ({ ...c, village: v }))}
+        />
+        <SelectField
+          label="District"
+          value={values.district}
+          onChange={(v) => setValues((c) => ({ ...c, district: v }))}
+          options={districtOptions(values.district)}
+        />
+      </div>
+      {error && <p className="mt-2 text-xs font-semibold text-cta">{error}</p>}
+      <p className="mt-2 text-xs text-ink-soft">
+        Enough to bill them. The rest of the record can be filled in later
+        under Customers.
+      </p>
+      <div className="mt-3 flex gap-2">
+        <Button onClick={submit} disabled={saving}>
+          {saving ? "Adding…" : "Add and bill them"}
+        </Button>
+        <Button variant="secondary" onClick={onCancel} disabled={saving}>
+          Cancel
+        </Button>
+      </div>
     </div>
   );
 }

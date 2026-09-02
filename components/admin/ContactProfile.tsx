@@ -10,6 +10,7 @@ import { clearChanged } from "@/lib/admin/field-errors";
 import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
 import { contactSchema } from "@/lib/schemas";
 import { ContactForm, emptyContact, type ContactFormValues } from "./ContactForm";
+import type { SampledProduct } from "@/lib/crm/profile";
 import { useDuplicateContacts } from "./useDuplicateContacts";
 import { ContactNotes, type ContactNote } from "./ContactNotes";
 import type { PickerOption } from "./EntityPicker";
@@ -179,6 +180,8 @@ export function ContactProfile({
   notes: initialNotes,
   canEdit,
   canSeeMoney,
+  canBill = false,
+  sampling,
   /** The catalogue, for the sampled-products picker. */
   products = [],
   backHref,
@@ -191,6 +194,10 @@ export function ContactProfile({
   canEdit: boolean;
   /** billing:read. Someone doing follow-up calls does not see the money. */
   canSeeMoney: boolean;
+  /** billing:write, and this is a real customer — see the page for why. */
+  canBill?: boolean;
+  /** What was sampled, and whether it converted. Absent for a record with none. */
+  sampling?: Sampling;
   products?: PickerOption[];
   backHref: string;
   backLabel: string;
@@ -310,13 +317,28 @@ export function ContactProfile({
             {contact.isSample && <StatusPill status="sample" />}
           </p>
         </div>
-        {canEdit && (
-          <Button
-            onClick={() => router.push(`${pathname}?edit=1`, { scroll: false })}
-          >
-            Edit
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {/*
+            Raising an invoice for the person on screen used to mean reading
+            their name, going to Invoices and searching for them again. The
+            party arrives prefilled — see InvoiceWorkspace.
+          */}
+          {canBill && (
+            <Link
+              href={`/admin/invoices?new=1&party=${contact.id}`}
+              className="admin-btn admin-tap border border-line bg-raised/70 text-ink hover:border-olive hover:bg-surface-muted"
+            >
+              Raise an invoice
+            </Link>
+          )}
+          {canEdit && (
+            <Button
+              onClick={() => router.push(`${pathname}?edit=1`, { scroll: false })}
+            >
+              Edit
+            </Button>
+          )}
+        </div>
       </header>
 
       {/*
@@ -458,6 +480,8 @@ export function ContactProfile({
               </dl>
             </>
           )}
+
+          <SamplingSection sampling={sampling} canSeeMoney={canSeeMoney} />
         </section>
 
         <div className="space-y-5">
@@ -586,5 +610,88 @@ export function ContactProfile({
         )}
       </FormSheet>
     </div>
+  );
+}
+
+export interface Sampling {
+  products: SampledProduct[];
+  /** The original free text, where the migration could not place it. */
+  note: string;
+  sampleDate: string | null;
+  quantity: string;
+  feedbackCollected: boolean;
+  feedbackNotes: string;
+}
+
+/**
+ * What was sampled, and whether it converted.
+ *
+ * The whole point of running a sampling programme, and until the products
+ * became references it could not be shown at all: "FloraMax" and "Flora Max"
+ * were two different things, so nothing could be matched against what was
+ * later bought.
+ *
+ * It stays on the profile after a lead becomes a customer, deliberately —
+ * conversion is exactly when the answer becomes interesting, and hiding it
+ * then would throw the answer away at the moment it arrives.
+ */
+function SamplingSection({
+  sampling,
+  canSeeMoney,
+}: {
+  sampling?: Sampling;
+  canSeeMoney: boolean;
+}) {
+  if (!sampling) return null;
+  const { products, note, sampleDate, quantity, feedbackNotes } = sampling;
+  const hasAnything =
+    products.length > 0 || note || sampleDate || quantity || feedbackNotes;
+  if (!hasAnything) return null;
+
+  return (
+    <>
+      <h3 className="mt-5 border-t border-line-soft pt-4 font-display text-sm font-bold text-ink-strong">
+        Sampling
+      </h3>
+
+      {products.length > 0 && (
+        <ul className="mt-2 space-y-1.5">
+          {products.map((p) => (
+            <li key={p.productId} className="flex flex-wrap items-baseline gap-2 text-sm">
+              <span className="font-semibold text-ink">{p.name}</span>
+              {p.bought ? (
+                <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-ink">
+                  Bought {p.quantity}
+                  {canSeeMoney ? ` · ${formatRupees(p.valuePaise)}` : ""}
+                </span>
+              ) : (
+                <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] font-semibold text-ink-muted">
+                  Not bought yet
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/*
+        Shown alongside, never instead. This is what somebody actually wrote
+        down; where the migration could not match it to the catalogue it is
+        the only record of what was given, and dropping it would lose that.
+      */}
+      {note && (
+        <p className="mt-2 text-sm text-ink-muted">
+          Recorded as: <span className="text-ink">{note}</span>
+        </p>
+      )}
+
+      <dl className="mt-3 grid grid-cols-2 gap-3">
+        <Field label="Sampled on" value={date(sampleDate)} />
+        <Field label="Quantity" value={quantity} />
+      </dl>
+      {feedbackNotes && (
+        <p className="mt-2 text-sm text-ink-muted">{feedbackNotes}</p>
+      )}
+    </>
   );
 }

@@ -3,7 +3,7 @@ import { isValidObjectId } from "mongoose";
 import { ContactProfile, type ProfileContact } from "@/components/admin/ContactProfile";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { can } from "@/lib/auth/permissions";
-import { getContactProfile } from "@/lib/crm/profile";
+import { getContactProfile, sampledOutcome } from "@/lib/crm/profile";
 import { joinPlace } from "@/lib/crm/shape";
 import { scopeFor } from "@/lib/crm/scopes";
 import { getProductOptions } from "@/lib/admin/products-options";
@@ -89,6 +89,39 @@ export default async function ContactProfilePage({
     at: n.at ? new Date(n.at).toISOString() : new Date().toISOString(),
   }));
 
+  /*
+    What was sampled, and whether they then bought it — the loop the sampling
+    programme exists to close, and which could not be closed while the
+    sampled products were a sentence.
+
+    Names come from the catalogue the page already loaded, so a product
+    renamed since the sample was given reads as its current self. A reference
+    to a product that has since been DELETED is dropped rather than shown as
+    a blank row; the original free text is still on the record beneath it.
+  */
+  const productNames = new Map(productOptions.map((p) => [p.id, p.name]));
+  const sampled = (c.lead?.productIds ?? [])
+    .map((id: unknown) => String(id))
+    .filter((id: string) => productNames.has(id))
+    .map((id: string) => ({ id, name: productNames.get(id)! }));
+
+  const sampling = {
+    products: sampledOutcome(
+      sampled,
+      // Cancelled invoices count for nothing here either — summariseTrading
+      // takes the same view, and the two must not disagree on one screen.
+      data.invoices.filter((i) => i.status !== "cancelled").flatMap((i) => i.lines),
+    ),
+    /** Kept and shown: it is what was actually written down at the time. */
+    note: c.lead?.productsSampled ?? "",
+    sampleDate: c.lead?.sampleDate
+      ? new Date(c.lead.sampleDate).toISOString()
+      : null,
+    quantity: c.lead?.sampleQuantity ?? "",
+    feedbackCollected: Boolean(c.lead?.feedbackCollected),
+    feedbackNotes: c.lead?.feedbackNotes ?? "",
+  };
+
   const backLabel =
     scope === "leads" ? "Leads" : scope === "dealers" ? "Dealers" : "Customers";
 
@@ -98,10 +131,19 @@ export default async function ContactProfilePage({
       products={productOptions.map((p) => ({ id: p.id, label: p.name, hint: p.hint }))}
       invoices={data.invoices}
       trading={data.trading}
+      sampling={sampling}
       notes={notes}
       canEdit={can(me, "crm:write")}
       /* billing:read, deliberately separate from crm:read. */
       canSeeMoney={can(me, "billing:read")}
+      /*
+        A sample contact is excluded for the same reason the invoice party
+        picker excludes them: a real invoice raised against a seeded person
+        looks perfectly correct right up until the wipe deletes them.
+      */
+      canBill={
+        can(me, "billing:write") && contact.kind === "customer" && !contact.isSample
+      }
       backHref={`/admin/${scope}`}
       backLabel={backLabel}
     />

@@ -104,6 +104,13 @@ export function InvoiceWorkspace({
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [values, setValues] = useState<InvoiceFormValues>(emptyInvoice);
+  /*
+    Customers created from inside the form. The page-level list is a server
+    prop and cannot be added to; keeping the new ones beside it means the
+    picker offers them immediately, without a reload that would take the
+    half-filled invoice with it.
+  */
+  const [addedParties, setAddedParties] = useState<BillableParty[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [paying, setPaying] = useState<InvoiceRow | null>(null);
@@ -116,6 +123,13 @@ export function InvoiceWorkspace({
   const [creditLines, setCreditLines] = useState<CreditLine[] | null>(null);
 
   const creating = params.get("new") === "1";
+  /*
+    Arriving from a customer's profile: /admin/invoices?new=1&party=<id>.
+    Reading the name, going to Invoices and searching for the same person
+    again was the whole cost of raising an invoice for somebody you were
+    already looking at.
+  */
+  const prefillParty = params.get("party") ?? "";
 
   const [debounced, setDebounced] = useState("");
   useEffect(() => {
@@ -166,17 +180,26 @@ export function InvoiceWorkspace({
   const closeSheet = useCallback(() => {
     const next = new URLSearchParams(params.toString());
     next.delete("new");
+    next.delete("party");
     const qs = next.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [params, pathname, router]);
 
   useEffect(() => {
-    if (!creating) {
-      setValues(emptyInvoice());
-      setFieldErrors({});
-      setDirty(false);
+    if (creating) {
+      // Only the party, and only on opening. Everything else is typed here,
+      // and a prefill that reapplied itself would fight whoever is typing.
+      if (prefillParty) {
+        setValues((current) =>
+          current.contactId ? current : { ...current, contactId: prefillParty },
+        );
+      }
+      return;
     }
-  }, [creating]);
+    setValues(emptyInvoice());
+    setFieldErrors({});
+    setDirty(false);
+  }, [creating, prefillParty]);
 
   async function issue() {
     setSaving(true);
@@ -530,7 +553,8 @@ export function InvoiceWorkspace({
             setDirty(true);
           }}
           products={products}
-          parties={parties}
+          parties={[...addedParties, ...parties]}
+          onPartyAdded={(party) => setAddedParties((c) => [party, ...c])}
           errors={fieldErrors}
         />
       </FormSheet>

@@ -683,6 +683,23 @@ export const contactNoteSchema = z.object({
   body: z.string().trim().min(1, "Write something first"),
 });
 
+/**
+ * Clearing or postponing a follow-up, from the list.
+ *
+ * Its own tiny shape rather than a full contact save, for the same reason a
+ * note is: it must not read-modify-write the whole record. The follow-up view
+ * exists to be worked through quickly, and opening the edit sheet to change
+ * one date is what stops that happening.
+ *
+ * "done" and "snooze" are the only two, deliberately. Anything else is a real
+ * edit and belongs in the form.
+ */
+export const followUpActionSchema = z.object({
+  action: z.enum(["done", "snooze"]),
+  /** Snooze only. Capped at a quarter — beyond that it is not a follow-up. */
+  days: z.coerce.number().int().min(1).max(90).default(7),
+});
+
 /* ========================================================================== */
 /* INVOICE                                                                    */
 /* ========================================================================== */

@@ -14,6 +14,15 @@ import { daysSince, deriveStatus, type ContactStatus } from "./shape";
  */
 
 export interface ProfileInvoiceLine {
+  /**
+   * Reporting only, exactly as the model says — never read for money.
+   *
+   * Carried so the sampling section can ask whether a SAMPLED product was
+   * later bought. Matching on the description would answer that question with
+   * a string comparison against a snapshot taken at issue, which is the same
+   * drift that made productsSampled free text useless.
+   */
+  productId?: string | null;
   description: string;
   quantity: number;
   lineTotalPaise: number;
@@ -164,6 +173,7 @@ export async function getContactProfile(
     paymentStatus: i.payment?.status ?? "unpaid",
     isHistorical: Boolean(i.isHistorical),
     lines: (i.lines ?? []).map((l: LeanDoc) => ({
+      productId: l.productId ? String(l.productId) : null,
       description: l.description ?? "(unnamed)",
       quantity: l.quantity ?? 0,
       lineTotalPaise: l.lineTotalPaise ?? 0,
@@ -175,4 +185,55 @@ export async function getContactProfile(
     invoices,
     trading: summariseTrading(invoices),
   };
+}
+
+export interface SampledProduct {
+  productId: string;
+  name: string;
+  /** True once this exact product appears on an invoice they actually paid for. */
+  bought: boolean;
+  quantity: number;
+  valuePaise: number;
+}
+
+/**
+ * Did what we sampled turn into a sale?
+ *
+ * The question the sampling programme exists to answer, and the one that
+ * could not be asked while the sampled products were a sentence. Matched on
+ * the PRODUCT ID both sides — the invoice line carries one for reporting, and
+ * the lead now carries a list of them.
+ *
+ * Pure, so every rule in it is checkable without a database, and cancelled
+ * invoices are the caller's to exclude — this takes the lines it is given, in
+ * the same way tallyProducts() does.
+ */
+export function sampledOutcome(
+  sampled: { id: string; name: string }[],
+  lines: ProfileInvoiceLine[],
+): SampledProduct[] {
+  const bought = new Map<string, { quantity: number; valuePaise: number }>();
+  for (const line of lines) {
+    if (!line.productId) continue;
+    const row = bought.get(line.productId) ?? { quantity: 0, valuePaise: 0 };
+    row.quantity += line.quantity ?? 0;
+    row.valuePaise += line.lineTotalPaise ?? 0;
+    bought.set(line.productId, row);
+  }
+
+  return sampled.map((product) => {
+    const sale = bought.get(product.id);
+    return {
+      productId: product.id,
+      name: product.name,
+      /*
+        A credit note nets its quantity back out. Sampling one bag, buying
+        one and returning it is not a conversion, and "bought" has to agree
+        with the figures printed beside it.
+      */
+      bought: Boolean(sale && sale.quantity > 0),
+      quantity: sale?.quantity ?? 0,
+      valuePaise: sale?.valuePaise ?? 0,
+    };
+  });
 }

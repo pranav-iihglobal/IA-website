@@ -144,6 +144,39 @@ function CallLink({ phone, name }: { phone: string; name: string }) {
   );
 }
 
+/**
+ * Done, or push it a week — the two outcomes of a follow-up call.
+ *
+ * Text rather than icons: these change a date on a record, and an
+ * unlabelled tick beside an unlabelled clock is a guess.
+ */
+function FollowUpActions({
+  onDone,
+  onSnooze,
+}: {
+  onDone: () => void;
+  onSnooze: () => void;
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onDone}
+        className="admin-btn admin-tap shrink-0 border border-line px-3 text-xs font-semibold text-ink-muted hover:border-olive hover:text-ink"
+      >
+        Done
+      </button>
+      <button
+        type="button"
+        onClick={onSnooze}
+        className="admin-btn admin-tap shrink-0 border border-line px-3 text-xs font-semibold text-ink-muted hover:border-olive hover:text-ink"
+      >
+        +1 week
+      </button>
+    </>
+  );
+}
+
 export function ContactWorkspace({
   scope,
   initialData,
@@ -341,6 +374,40 @@ export function ContactWorkspace({
     }
   }
 
+  /**
+   * Clear or postpone a follow-up without opening the edit sheet.
+   *
+   * The follow-up view exists to be worked through quickly — twelve people to
+   * ring, each one either done or pushed to next week. Opening a twenty-field
+   * form to change one date is what stopped anyone working through it.
+   *
+   * A targeted PATCH, not a form save: see the route for why that matters
+   * when two people have the same list open.
+   */
+  async function setFollowUp(row: ContactRow, action: "done" | "snooze") {
+    try {
+      const res = await fetch(`/api/admin/contacts/${row.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ followUp: { action, days: 7 } }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Could not update the follow-up");
+      }
+      toast(
+        action === "done"
+          ? `${row.name} — follow-up cleared`
+          : `${row.name} — back in a week`,
+      );
+      await load();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Could not update the follow-up";
+      setError(message);
+      toast(message, "error");
+    }
+  }
+
   async function confirmDelete() {
     if (!deleting) return;
     setSaving(true);
@@ -440,7 +507,22 @@ export function ContactWorkspace({
                   cost two screens. Hidden when the stored number is not one
                   `dialable` can be confident about — see lib/crm/contact-links.
                 */
-                actions={<CallLink phone={row.phone} name={row.name} />}
+                actions={
+                  <>
+                    {/*
+                      No permission check here, matching Delete and Edit on
+                      the same card: this screen has one gate, at the page,
+                      and the route refuses a write without crm:write anyway.
+                    */}
+                    {row.overdue && (
+                      <FollowUpActions
+                        onDone={() => setFollowUp(row, "done")}
+                        onSnooze={() => setFollowUp(row, "snooze")}
+                      />
+                    )}
+                    <CallLink phone={row.phone} name={row.name} />
+                  </>
+                }
                 thumb={
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft font-display text-base font-bold text-ink">
                     {initialOf(row)}

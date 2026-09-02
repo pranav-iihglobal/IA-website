@@ -3,7 +3,7 @@ import { isValidObjectId } from "mongoose";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Contact } from "@/lib/db/models/Contact";
 import { Invoice } from "@/lib/db/models/Invoice";
-import { contactNoteSchema, contactSchema } from "@/lib/schemas";
+import { contactNoteSchema, contactSchema, followUpActionSchema } from "@/lib/schemas";
 import type { LeanDoc } from "@/lib/db/lean";
 import {
   currentEditor,
@@ -92,6 +92,59 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       });
 
       return NextResponse.json({ ok: true, notes: (updated as LeanDoc).notes ?? [] });
+    }
+
+    /*
+      Clearing or postponing a follow-up, also a targeted $set.
+
+      Same reasoning as the note above: the follow-up view exists to be worked
+      through quickly, and a full form save from a list row would carry the
+      whole record back with it — overwriting an edit somebody else made
+      while the list was open, to change one date.
+    */
+    if (body && typeof body === "object" && "followUp" in body) {
+      const parsedAction = followUpActionSchema.safeParse(body.followUp);
+      if (!parsedAction.success) {
+        return NextResponse.json({ error: "Unknown follow-up action" }, { status: 400 });
+      }
+
+      await connectToDatabase();
+      const now = new Date();
+      const editor = await currentEditor();
+      const followUpAt =
+        parsedAction.data.action === "done"
+          ? null
+          : new Date(now.getTime() + parsedAction.data.days * 86_400_000);
+
+      const updated = await Contact.findByIdAndUpdate(
+        id,
+        {
+          $set: {
+            followUpAt,
+            /*
+              Only "done" means somebody spoke to them. Snoozing is deciding
+              not to, and stamping it as contact would make the derived status
+              say the relationship is healthy because a call was PUT OFF.
+            */
+            ...(parsedAction.data.action === "done" ? { lastContactAt: now } : {}),
+            updatedBy: editor,
+          },
+        },
+        { returnDocument: "after" },
+      ).lean();
+      if (!updated) return badId();
+
+      await auditChange({
+        action: "update",
+        entity: "Contact",
+        entityId: id,
+        after: { followUp: parsedAction.data.action, followUpAt },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        followUpAt: followUpAt ? followUpAt.toISOString() : null,
+      });
     }
 
     const parsed = contactSchema.safeParse(body);

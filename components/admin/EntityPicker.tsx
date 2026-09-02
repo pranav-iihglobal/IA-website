@@ -206,6 +206,8 @@ export function EntityCombo({
   error,
   required,
   placeholder = "Search…",
+  onCreate,
+  createLabel = "Add",
 }: {
   label: string;
   options: PickerOption[];
@@ -214,6 +216,13 @@ export function EntityCombo({
   error?: string;
   required?: boolean;
   placeholder?: string;
+  /**
+   * Offered when nothing matches what was typed, with that text passed on.
+   * The alternative — leaving to create the record — abandons whatever form
+   * this picker is sitting in.
+   */
+  onCreate?: (query: string) => void;
+  createLabel?: string;
 }) {
   const [query, setQuery] = useState("");
   const chosen = useMemo(
@@ -314,9 +323,20 @@ export function EntityCombo({
             </p>
           )}
           {query.trim() && matches.length === 0 && (
-            <p className="mt-1.5 text-xs text-ink-soft">
-              Nothing matches &ldquo;{query.trim()}&rdquo;.
-            </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <p className="text-xs text-ink-soft">
+                Nothing matches &ldquo;{query.trim()}&rdquo;.
+              </p>
+              {onCreate && (
+                <button
+                  type="button"
+                  onClick={() => onCreate(query.trim())}
+                  className="admin-tap rounded-full border border-line px-3 text-xs font-semibold text-ink hover:border-olive"
+                >
+                  {createLabel} &ldquo;{query.trim()}&rdquo;
+                </button>
+              )}
+            </div>
           )}
           {!query.trim() && (
             <p className="mt-1.5 text-xs text-ink-soft">
