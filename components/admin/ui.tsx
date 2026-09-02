@@ -1198,6 +1198,7 @@ export function RecordCard({
   editHref,
   onDelete,
   label,
+  actions,
   removable = true,
 }: {
   /** Square-ish image or initial, already sized by the caller. */
@@ -1214,6 +1215,12 @@ export function RecordCard({
   onDelete: () => void;
   /** Record name, for the delete button's accessible label. */
   label: string;
+  /**
+   * Row actions that are NOT "open this record" — a tel: link, a WhatsApp
+   * chat. They sit beside Delete and lift above the stretched link, so the
+   * card as a whole still opens the record.
+   */
+  actions?: ReactNode;
   /** False hides Delete, for rows that must not be removed. */
   removable?: boolean;
 }) {
@@ -1279,6 +1286,8 @@ export function RecordCard({
           Delete is the only button here — Edit is the card itself. It sits
           above the stretched link, and it is the one red thing on the card.
         */}
+        <div className="relative z-10 flex shrink-0 items-center gap-2">
+          {actions}
         {removable && (
         <button
           type="button"
@@ -1292,6 +1301,7 @@ export function RecordCard({
           Delete
         </button>
         )}
+        </div>
       </div>
     </li>
   );

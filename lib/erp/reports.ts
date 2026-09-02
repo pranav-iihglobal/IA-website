@@ -105,6 +105,8 @@ export interface OutstandingRow {
   number: string;
   issuedAt: string | null;
   partyName: string;
+  /** So the screen for chasing money can actually reach somebody. */
+  partyPhone: string;
   contactId: string | null;
   grandTotalPaise: number;
   paidPaise: number;
@@ -181,6 +183,7 @@ export async function outstandingInvoices(): Promise<OutstandingRow[]> {
         number: i.number ?? "",
         issuedAt: i.issuedAt ? new Date(i.issuedAt).toISOString() : null,
         partyName: i.party?.businessName || i.party?.name || "",
+        partyPhone: i.party?.phone ?? "",
         contactId: i.contactId ? String(i.contactId) : null,
         grandTotalPaise: i.grandTotalPaise ?? 0,
         paidPaise: paid,

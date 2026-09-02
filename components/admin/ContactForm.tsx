@@ -4,6 +4,7 @@ import { Button, FieldGroup, SelectField, TextField } from "./ui";
 import { EntityPicker, type PickerOption } from "./EntityPicker";
 import { districtOptions } from "@/lib/crm/places";
 import { ContactNotes, type ContactNote } from "./ContactNotes";
+import type { DuplicateMatch } from "./useDuplicateContacts";
 import type { Scope } from "./ContactWorkspace";
 
 /**
@@ -124,6 +125,7 @@ export function ContactForm({
   onChange,
   contactId,
   products,
+  duplicates = [],
 }: {
   scope: Scope;
   values: ContactFormValues;
@@ -133,6 +135,8 @@ export function ContactForm({
   contactId?: string;
   /** The catalogue, for the sampled-products picker. */
   products: PickerOption[];
+  /** Records already holding this number. Advisory — see useDuplicateContacts. */
+  duplicates?: DuplicateMatch[];
 }) {
   const set = (patch: Partial<ContactFormValues>) =>
     onChange({ ...values, ...patch });
@@ -177,14 +181,17 @@ export function ContactForm({
           error={errors.nameGu}
           hint="Optional. Their sheets carry both."
         />
-        <TextField
-          label="Mobile"
-          kind="phone"
-          value={values.phone}
-          onChange={(v) => set({ phone: v })}
-          error={errors.phone}
-          hint="10 digits. +91 and spaces are fine — they are stripped on save."
-        />
+        <div>
+          <TextField
+            label="Mobile"
+            kind="phone"
+            value={values.phone}
+            onChange={(v) => set({ phone: v })}
+            error={errors.phone}
+            hint="10 digits. +91 and spaces are fine — they are stripped on save."
+          />
+          <DuplicateWarning matches={duplicates} />
+        </div>
         <TextField
           label="Alternate mobile"
           kind="phone"
@@ -224,11 +231,21 @@ export function ContactForm({
           onChange={(v) => set({ taluka: v })}
           error={errors.taluka}
         />
-        <TextField
+        {/*
+          A select, not a text box. The district filter is a headline feature
+          at 5,118 contacts, and "Sabarkantha" and "Sabar Kantha" are two
+          different districts to it — so free text made the filter return a
+          quietly INCOMPLETE list, the failure direction nobody investigates.
+          districtOptions() always offers back a stored value it does not
+          recognise, marked as such, so an imported row is never silently
+          blanked by opening the form.
+        */}
+        <SelectField
           label="District"
           value={values.district}
           onChange={(v) => set({ district: v })}
           error={errors.district}
+          options={districtOptions(values.district)}
         />
         <SelectField
           label="Region"
@@ -472,6 +489,54 @@ export function ContactForm({
           onAdded={(notes) => onChange({ ...values, notes })}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * Who else already has this number.
+ *
+ * A warning, not a wall: `status` rather than `alert`, no red, and the form
+ * saves whether or not it is showing. The link opens the existing record in a
+ * new tab so a half-filled form is not thrown away to go and look.
+ *
+ * It names the record and where they are, because "a contact already has this
+ * number" without saying WHICH one leaves the person no better off than
+ * before — they still have to go and search for it.
+ */
+function DuplicateWarning({ matches }: { matches: DuplicateMatch[] }) {
+  if (matches.length === 0) return null;
+
+  return (
+    <div
+      role="status"
+      className="mt-2 rounded-xl border border-alloy/40 bg-alloy/10 px-3 py-2 text-xs text-ink"
+    >
+      <p className="font-semibold">
+        {matches.length === 1
+          ? "Somebody already has this number"
+          : `${matches.length} records already have this number`}
+      </p>
+      <ul className="mt-1 space-y-0.5">
+        {matches.map((m) => (
+          <li key={m.id}>
+            <a
+              href={`/admin/contacts/${m.id}`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold underline underline-offset-2 hover:text-cta"
+            >
+              {m.name || m.contactId || "Unnamed"}
+            </a>{" "}
+            <span className="text-ink-muted">
+              {[m.kind, m.place].filter(Boolean).join(" · ")}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1 text-ink-muted">
+        Saving anyway is fine — a household often shares one number.
+      </p>
     </div>
   );
 }

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { outstandingInvoices, outstandingTotal } from "@/lib/erp/reports";
+import type { OutstandingRow } from "@/lib/erp/reports";
 import { formatINR, formatRupees } from "@/lib/money";
+import { paymentReminder, telHref, whatsappHref } from "@/lib/crm/contact-links";
 import { EmptyState } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
@@ -90,9 +92,57 @@ export default async function OutstandingPage() {
                   )}
                 </div>
               </div>
+              <Chase row={row} />
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The two taps this screen exists for.
+ *
+ * A list of who owes money, with no way to reach any of them, is a report
+ * rather than a tool. The WhatsApp message names the invoice and the amount
+ * because "you owe us money" prompts a call back asking which one — see
+ * lib/crm/contact-links.ts.
+ *
+ * Both are hidden rather than disabled when the stored number is not one this
+ * can be confident about: a dead "Call" button is worse than none.
+ */
+function Chase({ row }: { row: OutstandingRow }) {
+  const tel = telHref(row.partyPhone);
+  const chat = whatsappHref(
+    row.partyPhone,
+    paymentReminder({
+      name: row.partyName,
+      number: row.number,
+      amount: formatRupees(row.owedPaise),
+    }),
+  );
+  if (!tel && !chat) return null;
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-2 border-t border-line-soft pt-3">
+      {tel && (
+        <a
+          href={tel}
+          className="admin-tap inline-flex items-center rounded-full border border-line px-4 text-xs font-semibold text-ink hover:border-olive"
+        >
+          Call {row.partyPhone}
+        </a>
+      )}
+      {chat && (
+        <a
+          href={chat}
+          target="_blank"
+          rel="noreferrer"
+          className="admin-tap inline-flex items-center rounded-full border border-line px-4 text-xs font-semibold text-ink-muted hover:border-olive"
+        >
+          WhatsApp a reminder
+        </a>
       )}
     </div>
   );

@@ -18,6 +18,8 @@ import { FormSheet } from "./FormSheet";
 import { useToast } from "./Toast";
 import { clearChanged } from "@/lib/admin/field-errors";
 import { formatRupees } from "@/lib/money";
+import { telHref, whatsappHref } from "@/lib/crm/contact-links";
+import { useDuplicateContacts } from "./useDuplicateContacts";
 import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
 import { contactSchema } from "@/lib/schemas";
 import { ContactForm, type ContactFormValues, emptyContact } from "./ContactForm";
@@ -99,6 +101,49 @@ function initialOf(row: ContactRow) {
 */
 const rupees = formatRupees;
 
+/**
+ * Ring, or open WhatsApp, straight from a row.
+ *
+ * Both lift above the card's stretched link so they are their own targets —
+ * without that, tapping "Call" would open the profile instead. Rendered as
+ * icons because the row already carries the number in its subtitle and a
+ * second copy of it would not fit on a phone.
+ */
+function CallLink({ phone, name }: { phone: string; name: string }) {
+  const tel = telHref(phone);
+  const chat = whatsappHref(phone, `Namaste ${name}, this is IKSARVA Agritech.`);
+  if (!tel && !chat) return null;
+
+  return (
+    <>
+      {tel && (
+        <a
+          href={tel}
+          aria-label={`Call ${name}`}
+          className="admin-btn admin-tap-square shrink-0 border border-line px-0 text-ink-muted hover:border-olive hover:text-ink"
+        >
+          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+            <path d="M4.6 2.5a1.5 1.5 0 0 1 2 .3l1.5 2a1.5 1.5 0 0 1-.1 2l-.8.8a9.6 9.6 0 0 0 4.2 4.2l.8-.8a1.5 1.5 0 0 1 2-.1l2 1.5a1.5 1.5 0 0 1 .3 2l-1 1.4a2.5 2.5 0 0 1-2.9.8C8.6 14.8 5.2 11.4 3.4 6.4a2.5 2.5 0 0 1 .8-2.9Z" />
+          </svg>
+        </a>
+      )}
+      {chat && (
+        <a
+          href={chat}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`WhatsApp ${name}`}
+          className="admin-btn admin-tap-square shrink-0 border border-line px-0 text-ink-muted hover:border-olive hover:text-ink"
+        >
+          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+            <path d="M10 1.7a8.2 8.2 0 0 0-7 12.5l-1.2 4.1 4.2-1.1A8.2 8.2 0 1 0 10 1.7Zm0 1.6a6.6 6.6 0 1 1-3.4 12.3l-.3-.2-2.5.7.7-2.4-.2-.3A6.6 6.6 0 0 1 10 3.3Zm-3 3.4c-.2 0-.4 0-.6.3-.2.2-.7.7-.7 1.7s.7 2 .8 2.1c.1.2 1.4 2.3 3.5 3.1 1.7.7 2.1.6 2.5.5.4 0 1.2-.5 1.4-1s.2-.9.1-1l-.6-.3-1.2-.6c-.2 0-.3-.1-.5.1l-.6.8c-.1.1-.2.2-.4 0a5.4 5.4 0 0 1-1.6-1 6 6 0 0 1-1.1-1.4c-.1-.2 0-.3.1-.4l.3-.4.2-.4v-.4l-.6-1.4c-.1-.3-.3-.3-.4-.3Z" />
+          </svg>
+        </a>
+      )}
+    </>
+  );
+}
+
 export function ContactWorkspace({
   scope,
   initialData,
@@ -140,6 +185,12 @@ export function ContactWorkspace({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const editId = params.get("edit");
+  /*
+    Advisory only, and it must not fire against the record being edited — a
+    contact reporting itself as its own duplicate would train people to ignore
+    the warning entirely.
+  */
+  const duplicates = useDuplicateContacts(formValues?.phone ?? "", editId ?? undefined);
   // The row as it was loaded, for the version it carried.
   const editingRow = useMemo(
     () => (editId ? rows.find((r) => r.id === editId) : undefined),
@@ -383,6 +434,13 @@ export function ContactWorkspace({
                 */
                 editHref={`/admin/contacts/${row.id}`}
                 onDelete={() => setDeleting(row)}
+                /*
+                  Tap to ring, from the list. This is a CRM of 5,118 numbers
+                  used on a phone in the field; reaching somebody should not
+                  cost two screens. Hidden when the stored number is not one
+                  `dialable` can be confident about — see lib/crm/contact-links.
+                */
+                actions={<CallLink phone={row.phone} name={row.name} />}
                 thumb={
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft font-display text-base font-bold text-ink">
                     {initialOf(row)}
@@ -474,6 +532,7 @@ export function ContactWorkspace({
             scope={scope}
             products={products}
             contactId={editId ?? undefined}
+            duplicates={duplicates}
             values={formValues}
             errors={fieldErrors}
             onChange={(next) => {

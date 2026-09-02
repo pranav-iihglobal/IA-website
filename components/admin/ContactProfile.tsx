@@ -10,8 +10,10 @@ import { clearChanged } from "@/lib/admin/field-errors";
 import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
 import { contactSchema } from "@/lib/schemas";
 import { ContactForm, emptyContact, type ContactFormValues } from "./ContactForm";
+import { useDuplicateContacts } from "./useDuplicateContacts";
 import { ContactNotes, type ContactNote } from "./ContactNotes";
 import type { PickerOption } from "./EntityPicker";
+import { telHref, whatsappHref } from "@/lib/crm/contact-links";
 import { STATUS_LABELS } from "@/lib/crm/shape";
 import { scopeFor } from "@/lib/crm/scopes";
 import { formatINR, formatRupees } from "@/lib/money";
@@ -70,6 +72,56 @@ export interface ProfileContact {
     nextVisitAt: string | null;
   };
   isSample: boolean;
+}
+
+/**
+ * A phone number you can act on: call it, or open WhatsApp.
+ *
+ * WhatsApp is not decoration here — it is how this business talks to farmers,
+ * and it is a plain wa.me link, so no API, no cost and no verification.
+ */
+function ReachField({
+  label,
+  phone,
+  name,
+}: {
+  label: string;
+  phone: string;
+  name: string;
+}) {
+  const tel = telHref(phone);
+  const chat = whatsappHref(
+    phone,
+    `Namaste ${name}, this is IKSARVA Agritech.`,
+  );
+  if (!phone) return <Field label={label} value="" />;
+
+  return (
+    <div>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-ink-faint">
+        {label}
+      </p>
+      <div className="mt-0.5 flex flex-wrap items-center gap-2">
+        {tel ? (
+          <a href={tel} className="admin-tap font-semibold text-ink hover:underline">
+            {phone}
+          </a>
+        ) : (
+          <span className="text-ink">{phone}</span>
+        )}
+        {chat && (
+          <a
+            href={chat}
+            target="_blank"
+            rel="noreferrer"
+            className="admin-tap inline-flex items-center rounded-full border border-line px-3 text-xs font-semibold text-ink-muted hover:border-olive"
+          >
+            WhatsApp
+          </a>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function Field({ label, value }: { label: string; value: string | null }) {
@@ -153,6 +205,8 @@ export function ContactProfile({
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [values, setValues] = useState<ContactFormValues | null>(null);
+  // Excludes this record, so editing it never reports it against itself.
+  const duplicates = useDuplicateContacts(values?.phone ?? "", contact.id);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const editing = params.get("edit") === "1";
@@ -348,8 +402,13 @@ export function ContactProfile({
         <section className="admin-card p-4">
           <h2 className="font-display text-base font-bold text-ink-strong">Details</h2>
           <dl className="mt-3 grid grid-cols-2 gap-3">
-            <Field label="Phone" value={contact.phone} />
-            <Field label="Alt phone" value={contact.altPhone} />
+            {/*
+              Tappable. There was not one tel: link in the whole admin — a CRM
+              of 5,118 numbers, used on a phone in a field, where you could not
+              ring anybody from it.
+            */}
+            <ReachField label="Phone" phone={contact.phone} name={contact.name} />
+            <ReachField label="Alt phone" phone={contact.altPhone} name={contact.name} />
             <Field label="Email" value={contact.email} />
             <Field label="Place" value={contact.place} />
             <Field label="District" value={contact.district} />
@@ -512,6 +571,7 @@ export function ContactProfile({
             scope={scope}
             products={products}
             contactId={contact.id}
+            duplicates={duplicates}
             values={values}
             onChange={(next) => {
               // Errors for the fields just edited go now, not at the next save.
