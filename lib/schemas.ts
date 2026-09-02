@@ -613,6 +613,8 @@ export const contactSchema = z.object({
 
   lead: z
     .object({
+      /* References now; the free text stays for what predates them. */
+      productIds: z.array(objectIdSchema).default([]),
       productsSampled: z.string().trim().default(""),
       sampleDate: dateOrNull,
       sampleQuantity: z.string().trim().default(""),

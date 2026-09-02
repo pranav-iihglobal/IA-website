@@ -6,6 +6,7 @@ import { can } from "@/lib/auth/permissions";
 import { getContactProfile } from "@/lib/crm/profile";
 import { joinPlace } from "@/lib/crm/shape";
 import { scopeFor } from "@/lib/crm/scopes";
+import { getProductOptions } from "@/lib/admin/products-options";
 import type { LeanDoc } from "@/lib/db/lean";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,10 @@ export default async function ContactProfilePage({
   const { id } = await params;
   if (!isValidObjectId(id)) notFound();
 
-  const data = await getContactProfile(id);
+  const [data, productOptions] = await Promise.all([
+    getContactProfile(id),
+    getProductOptions(),
+  ]);
   if (!data) notFound();
 
   const c = data.contact;
@@ -91,6 +95,7 @@ export default async function ContactProfilePage({
   return (
     <ContactProfile
       contact={contact}
+      products={productOptions.map((p) => ({ id: p.id, label: p.name, hint: p.hint }))}
       invoices={data.invoices}
       trading={data.trading}
       notes={notes}

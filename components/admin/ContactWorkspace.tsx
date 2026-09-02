@@ -21,6 +21,7 @@ import { formatRupees } from "@/lib/money";
 import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
 import { contactSchema } from "@/lib/schemas";
 import { ContactForm, type ContactFormValues, emptyContact } from "./ContactForm";
+import type { PickerOption } from "./EntityPicker";
 import { STATUS_LABELS, type ContactRow } from "@/lib/crm/shape";
 import type { ContactList } from "@/lib/crm/list";
 import { SCOPE_QUERY, listQueryKey, type Scope } from "@/lib/crm/scopes";
@@ -105,11 +106,14 @@ export function ContactWorkspace({
   initialQuery,
   /** The module's beta note, if it has one. Renders a star beside the title. */
   beta,
+  /** The catalogue, for the sampled-products picker. */
+  products = [],
 }: {
   scope: Scope;
   initialData?: ContactList;
   initialQuery?: string;
   beta?: string | null;
+  products?: PickerOption[];
 }) {
   const config = SCOPE[scope];
   const router = useRouter();
@@ -468,6 +472,7 @@ export function ContactWorkspace({
         {formValues && (
           <ContactForm
             scope={scope}
+            products={products}
             contactId={editId ?? undefined}
             values={formValues}
             errors={fieldErrors}

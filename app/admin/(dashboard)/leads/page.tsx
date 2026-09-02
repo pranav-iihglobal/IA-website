@@ -3,6 +3,7 @@ import { ContactWorkspace } from "@/components/admin/ContactWorkspace";
 import { ListPageSkeleton } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { listContacts } from "@/lib/crm/list";
+import { getProductOptions } from "@/lib/admin/products-options";
 import { SCOPE_QUERY, listQueryKey } from "@/lib/crm/scopes";
 import { betaNote } from "@/lib/auth/permissions";
 
@@ -19,7 +20,11 @@ export default async function AdminLeadsPage() {
     above is deduped by React.cache(), so this costs one query and nothing else.
   */
   const query = new URLSearchParams({ ...SCOPE_QUERY.leads, page: "1" });
-  const initialData = await listContacts(query);
+  const [initialData, products] = await Promise.all([
+    listContacts(query),
+    // The catalogue, for the sampled-products picker on the lead form.
+    getProductOptions(),
+  ]);
 
   return (
     <>
@@ -27,6 +32,7 @@ export default async function AdminLeadsPage() {
           which opts the subtree into client-side rendering. */}
       <Suspense fallback={<ListPageSkeleton rows={5} />}>
         <ContactWorkspace
+          products={products.map((p) => ({ id: p.id, label: p.name, hint: p.hint }))}
           beta={beta}
           scope="leads"
           initialData={initialData}

@@ -1,6 +1,8 @@
 "use client";
 
 import { Button, FieldGroup, SelectField, TextField } from "./ui";
+import { EntityPicker, type PickerOption } from "./EntityPicker";
+import { districtOptions } from "@/lib/crm/places";
 import { ContactNotes, type ContactNote } from "./ContactNotes";
 import type { Scope } from "./ContactWorkspace";
 
@@ -121,6 +123,7 @@ export function ContactForm({
   errors,
   onChange,
   contactId,
+  products,
 }: {
   scope: Scope;
   values: ContactFormValues;
@@ -128,6 +131,8 @@ export function ContactForm({
   onChange: (next: ContactFormValues) => void;
   /** The saved record's id. Absent while creating — notes need somewhere to go. */
   contactId?: string;
+  /** The catalogue, for the sampled-products picker. */
+  products: PickerOption[];
 }) {
   const set = (patch: Partial<ContactFormValues>) =>
     onChange({ ...values, ...patch });
@@ -158,6 +163,20 @@ export function ContactForm({
             error={errors.businessName}
           />
         )}
+        {/*
+          These five were declared in ContactFormValues and rendered nowhere:
+          nameGu, altPhone, email, acres and state. They round-tripped
+          untouched, so nothing was lost — but they could not be seen or
+          edited, and nameGu is the GUJARATI NAME, in a Gujarati-speaking
+          business whose own sheets carry one.
+        */}
+        <TextField
+          label="Name in Gujarati"
+          value={values.nameGu}
+          onChange={(v) => set({ nameGu: v })}
+          error={errors.nameGu}
+          hint="Optional. Their sheets carry both."
+        />
         <TextField
           label="Mobile"
           kind="phone"
@@ -165,6 +184,20 @@ export function ContactForm({
           onChange={(v) => set({ phone: v })}
           error={errors.phone}
           hint="10 digits. +91 and spaces are fine — they are stripped on save."
+        />
+        <TextField
+          label="Alternate mobile"
+          kind="phone"
+          value={values.altPhone}
+          onChange={(v) => set({ altPhone: v })}
+          error={errors.altPhone}
+        />
+        <TextField
+          label="Email"
+          kind="email"
+          value={values.email}
+          onChange={(v) => set({ email: v })}
+          error={errors.email}
         />
         <TextField
           label="Their reference"
@@ -213,6 +246,14 @@ export function ContactForm({
           value={values.pin}
           onChange={(v) => set({ pin: v })}
           error={errors.pin}
+        />
+        <TextField
+          label="Acres"
+          kind="decimal"
+          value={values.acres === null ? "" : String(values.acres)}
+          onChange={(v) => set({ acres: v === "" ? null : Number(v) })}
+          error={errors.acres}
+          hint="Land under cultivation. Drives how much a sample should be."
         />
         <TextField
           label="Crop"
@@ -269,12 +310,38 @@ export function ContactForm({
             error={errors["lead.followUpStatus"]}
             options={FOLLOW_UP.map(([value, label]) => ({ value, label }))}
           />
-          <TextField
+          {/*
+            A picker, not a text box. A farmer is often sampled two products
+            at once, and the catalogue is three SKUs the business already
+            knows — typed free, "FloraMax" and "Flora Max" were two different
+            things and neither "which product do we sample most" nor "which
+            sampled product converts" could be answered.
+          */}
+          <EntityPicker
             label="Products sampled"
-            value={String(values.lead?.productsSampled ?? "")}
-            onChange={(v) => setGroup("lead", { productsSampled: v })}
-            error={errors["lead.productsSampled"]}
+            options={products}
+            selected={(values.lead?.productIds as string[]) ?? []}
+            onChange={(productIds) => setGroup("lead", { productIds })}
+            emptyLabel="None recorded yet."
+            placeholder="Search products…"
+            error={errors["lead.productIds"]}
           />
+          {/*
+            What was written down before there were references, shown only
+            while nothing has been picked. It is the actual record of what
+            happened and the migration refuses to guess at it, so it stays
+            visible until a person says what it meant.
+          */}
+          {!((values.lead?.productIds as string[])?.length) &&
+            String(values.lead?.productsSampled ?? "").trim() && (
+              <p className="text-xs text-ink-soft">
+                Recorded before this was a picker:{" "}
+                <strong className="font-semibold text-ink-muted">
+                  {String(values.lead?.productsSampled)}
+                </strong>
+                . Pick the products above to replace it.
+              </p>
+            )}
           <TextField
             label="Sample date"
             type="date"

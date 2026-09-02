@@ -113,6 +113,25 @@ const contactSchema = new Schema(
 
     /** The sample pipeline — their Samples_Leads sheet. */
     lead: {
+      /**
+       * WHICH products were sampled, as references.
+       *
+       * A farmer is often given two at once, and the catalogue is three SKUs
+       * the business already knows — so this was the wrong shape as free text.
+       * "FloraMax" and "Flora Max" were two different things, and the two
+       * questions a sampling programme exists to answer — which product do we
+       * sample most, and which sampled product actually converts to a sale —
+       * could not be asked at all.
+       */
+      productIds: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+      /**
+       * The original free text, kept.
+       *
+       * Not deleted: it is what was actually recorded at the time, and the
+       * migration reports what it cannot match rather than guessing. A row
+       * whose text names something not in the catalogue keeps its note until
+       * a person decides what it meant.
+       */
       productsSampled: { type: String, default: "", trim: true },
       sampleDate: { type: Date, default: null },
       sampleQuantity: { type: String, default: "", trim: true },

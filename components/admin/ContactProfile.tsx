@@ -11,6 +11,7 @@ import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
 import { contactSchema } from "@/lib/schemas";
 import { ContactForm, emptyContact, type ContactFormValues } from "./ContactForm";
 import { ContactNotes, type ContactNote } from "./ContactNotes";
+import type { PickerOption } from "./EntityPicker";
 import { STATUS_LABELS } from "@/lib/crm/shape";
 import { scopeFor } from "@/lib/crm/scopes";
 import { formatINR, formatRupees } from "@/lib/money";
@@ -126,6 +127,8 @@ export function ContactProfile({
   notes: initialNotes,
   canEdit,
   canSeeMoney,
+  /** The catalogue, for the sampled-products picker. */
+  products = [],
   backHref,
   backLabel,
 }: {
@@ -136,6 +139,7 @@ export function ContactProfile({
   canEdit: boolean;
   /** billing:read. Someone doing follow-up calls does not see the money. */
   canSeeMoney: boolean;
+  products?: PickerOption[];
   backHref: string;
   backLabel: string;
 }) {
@@ -506,6 +510,7 @@ export function ContactProfile({
         {values && (
           <ContactForm
             scope={scope}
+            products={products}
             contactId={contact.id}
             values={values}
             onChange={(next) => {
