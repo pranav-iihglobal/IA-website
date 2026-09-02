@@ -1,6 +1,7 @@
 import { connectToDatabase } from "@/lib/db/connect";
 import { Contact } from "@/lib/db/models/Contact";
 import type { LeanDoc } from "@/lib/db/lean";
+import { CONTACT_SORTS, sortKey } from "@/lib/admin/sorts";
 import { buildFilter } from "./filter";
 import { toContactRow, type ContactRow } from "./shape";
 
@@ -30,16 +31,32 @@ export interface ContactList {
   pageSize: number;
 }
 
+/**
+ * The Mongo sort for each key in CONTACT_SORTS (lib/admin/sorts.ts).
+ *
+ * `_id` as the final tie-break on every one, so paging is stable: two
+ * contacts updated in the same second must not swap places between page 2
+ * and page 3. "last-order" is descending so contacts who never ordered —
+ * a null date — fall to the end rather than the front.
+ */
+export const CONTACT_SORT_SPECS: Record<string, Record<string, 1 | -1>> = {
+  "": { updatedAt: -1, _id: 1 },
+  name: { name: 1, _id: 1 },
+  "last-order": { "customer.lastOrderAt": -1, updatedAt: -1, _id: 1 },
+  district: { district: 1, name: 1, _id: 1 },
+};
+
 export async function listContacts(params: URLSearchParams): Promise<ContactList> {
   await connectToDatabase();
 
   const page = Math.max(1, Number(params.get("page") ?? 1));
   const filter = buildFilter(params);
+  const sort = CONTACT_SORT_SPECS[sortKey(CONTACT_SORTS, params.get("sort"))];
 
   const [items, counts] = await Promise.all([
     Contact.find(filter)
       .select(LIST_FIELDS)
-      .sort({ updatedAt: -1 })
+      .sort(sort)
       .skip((page - 1) * PAGE_SIZE)
       .limit(PAGE_SIZE)
       .lean(),

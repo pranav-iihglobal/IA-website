@@ -20,6 +20,8 @@ export const SCOPE_QUERY: Record<Scope, Record<string, string>> = {
 export interface ListParams {
   search?: string;
   filter?: string;
+  /** A key from lib/admin/sorts.ts; "" or absent for the list's default. */
+  sort?: string;
   page?: number;
 }
 
@@ -33,13 +35,14 @@ export interface ListParams {
  */
 export function contactListQuery(
   scope: Scope,
-  { search = "", filter = "", page = 1 }: ListParams = {},
+  { search = "", filter = "", sort = "", page = 1 }: ListParams = {},
 ): URLSearchParams {
   const query = new URLSearchParams({
     ...SCOPE_QUERY[scope],
     page: String(Math.max(1, page)),
   });
   if (search) query.set("search", search);
+  if (sort) query.set("sort", sort);
   // "due" is a date comparison, not a stored status — hence its own flag.
   if (filter === "due") query.set("due", "1");
   else if (filter) query.set("followUpStatus", filter);

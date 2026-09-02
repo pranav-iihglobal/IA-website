@@ -6,6 +6,8 @@ import {
   EmptyState,
   ErrorBanner,
   FilterTabs,
+  Pagination,
+  SortMenu,
   TableSkeleton,
   SearchInput,
   StatusPill,
@@ -17,6 +19,9 @@ import { useToast } from "./Toast";
 import { formatINR, formatRupees } from "@/lib/money";
 import { formatIstDate } from "@/lib/time";
 import { useListState } from "./useListState";
+import { PURCHASE_SORTS } from "@/lib/admin/sorts";
+import { purchaseListQuery } from "@/lib/erp/inventory-query";
+import { listQueryKey } from "@/lib/crm/scopes";
 import type {
   ListEnvelope,
   PurchaseRowShape,
@@ -51,10 +56,13 @@ const FILTERS = [
 
 export function PurchaseWorkspace({
   initial,
+  initialQuery,
   canWrite,
   canDelete,
 }: {
   initial: ListEnvelope<PurchaseRow, PurchaseSummary>;
+  /** The query the server already ran, so the first render skips a fetch. */
+  initialQuery?: string;
   canWrite: boolean;
   canDelete: boolean;
 }) {
@@ -68,14 +76,22 @@ export function PurchaseWorkspace({
   */
   const [summary, setSummary] = useState(initial.summary);
   const [total, setTotal] = useState(initial.total);
-  const [capped, setCapped] = useState(initial.capped);
-  // Search and filter live in the URL — see useListState.
-  const { search, setSearch, debounced, filter, setFilter } = useListState();
+  const [pages, setPages] = useState(initial.pages);
+  const pageSize = initial.pageSize;
+  // Search, filter, sort and page live in the URL — see useListState. The
+  // filter used to be applied here to a capped list; it goes to the server.
+  const { search, setSearch, debounced, filter, setFilter, sort, setSort, page, setPage } =
+    useListState();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<PurchaseRow | null>(null);
+
+  const query = useMemo(
+    () => purchaseListQuery({ search: debounced, filter, sort, page }),
+    [debounced, filter, sort, page],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -83,47 +99,30 @@ export function PurchaseWorkspace({
     // the red banner on screen until a full page reload.
     setError(null);
     try {
-      const q = new URLSearchParams();
-      if (debounced.trim()) q.set("search", debounced.trim());
-      const res = await fetch(`/api/admin/purchases?${q}`, { cache: "no-store" });
+      const res = await fetch(`/api/admin/purchases?${query}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not load purchases");
       setRows(data.items);
       setTotal(data.total ?? data.items.length);
-      setCapped(Boolean(data.capped));
+      setPages(data.pages ?? 1);
       if (data.summary) setSummary(data.summary);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load purchases");
     } finally {
       setLoading(false);
     }
-  }, [debounced]);
+  }, [query]);
 
-  /*
-    Skip only the FIRST run — the initial rows came down with the HTML.
-
-    This used to bail on an empty search instead, which meant clearing the box
-    never reloaded: `rows` kept the last search's subset, and every headline
-    figure on this screen is computed from `rows`. The count in the header, the
-    stock value, the low-stock count, the input-credit total and the money owed
-    to directors were all recomputed from a handful of matches and presented as
-    company-wide totals.
-  */
-  const servedInitial = useRef(true);
+  // The server already answered the untouched first query — see
+  // ContactWorkspace. Spent after one use, so coming back re-fetches.
+  const alreadyServed = useRef(initial ? initialQuery : null);
   useEffect(() => {
-    if (servedInitial.current) {
-      servedInitial.current = false;
+    if (alreadyServed.current === listQueryKey(query)) {
+      alreadyServed.current = null;
       return;
     }
     void load();
-  }, [debounced, load]);
-
-  const shown = useMemo(() => {
-    if (filter === "unpaid") return rows.filter((r) => r.paymentStatus !== "paid");
-    if (filter === "credit") return rows.filter((r) => r.inputCreditEligible);
-    if (filter === "director") return rows.filter((r) => r.paidBy === "director");
-    return rows;
-  }, [rows, filter]);
+  }, [load, query]);
 
   const creditable = summary.creditablePaise;
 
@@ -135,11 +134,6 @@ export function PurchaseWorkspace({
   */
   const owedToDirectors = summary.owedToDirectorsPaise;
 
-  async function reload() {
-    const res = await fetch("/api/admin/purchases", { cache: "no-store" });
-    if (res.ok) setRows((await res.json()).items);
-  }
-
   async function confirmDelete() {
     if (!deleting) return;
     setSaving(true);
@@ -148,7 +142,7 @@ export function PurchaseWorkspace({
       if (!res.ok) throw new Error("Could not delete");
       toast(`${deleting.supplier} deleted`);
       setDeleting(null);
-      await reload();
+      await load();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Could not delete";
       setError(message);
@@ -176,13 +170,6 @@ export function PurchaseWorkspace({
                 {formatRupees(owedToDirectors)} paid by directors, owed back
               </span>
             )}
-            {/* Purchases grow forever; the list is capped and says so. */}
-            {capped && (
-              <span className="text-ink-faint">
-                {" · showing "}
-                {rows.length} of {total}
-              </span>
-            )}
           </p>
         </div>
         {canWrite && (
@@ -197,6 +184,7 @@ export function PurchaseWorkspace({
       <div className="flex flex-wrap items-center gap-2">
         <SearchInput value={search} onChange={setSearch} placeholder="Search supplier, bill, description" />
         <FilterTabs value={filter} onChange={setFilter} options={FILTERS} />
+        <SortMenu value={sort} onChange={setSort} options={PURCHASE_SORTS} />
       </div>
 
       <ErrorBanner message={error} onRetry={() => void load()} />
@@ -208,7 +196,7 @@ export function PurchaseWorkspace({
       */}
       {loading ? (
         <TableSkeleton rows={4} />
-      ) : shown.length === 0 ? (
+      ) : rows.length === 0 ? (
         <EmptyState
           title="Nothing here"
           /*
@@ -230,8 +218,9 @@ export function PurchaseWorkspace({
           }
         />
       ) : (
+        <>
         <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-          {shown.map((row) => (
+          {rows.map((row) => (
             <li
               key={row.id}
               className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
@@ -303,6 +292,8 @@ export function PurchaseWorkspace({
             </li>
           ))}
         </ul>
+        <Pagination page={page} pages={pages} total={total} pageSize={pageSize} onChange={setPage} />
+        </>
       )}
 
       <ConfirmDialog

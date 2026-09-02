@@ -1044,6 +1044,59 @@ export function SearchInput({
 }
 
 /**
+ * "Sort: Newest first" — the order a list is in, as a native select.
+ *
+ * Native for the same reason SelectField is: iOS opens its wheel for a
+ * `<select>`, which is the right control for four options on a phone. Not a
+ * second row of pills — the filter strip already scrolls on a 390px screen,
+ * and a sort is chosen far less often than a filter.
+ *
+ * The visible label is part of the control, so the value reads as a sentence
+ * rather than a bare "Oldest first" floating in the toolbar.
+ */
+export function SortMenu({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  const id = useId();
+  return (
+    <div className="relative inline-flex min-w-0 items-center">
+      <label
+        htmlFor={id}
+        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-ink-soft"
+      >
+        Sort
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="admin-tap appearance-none rounded-full border border-line bg-surface py-1.5 pl-12 pr-8 text-xs font-semibold text-ink-strong hover:border-olive"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <svg
+        viewBox="0 0 20 20"
+        className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-soft"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M5.5 7.5 10 12l4.5-4.5H5.5Z" />
+      </svg>
+    </div>
+  );
+}
+
+/**
  * Segmented status filter — one tap, no dropdown.
  *
  * SCROLLS SIDEWAYS ON A NARROW SCREEN, and that is the whole point of the

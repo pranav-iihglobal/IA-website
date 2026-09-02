@@ -6,6 +6,8 @@ import {
   EmptyState,
   ErrorBanner,
   FilterTabs,
+  Pagination,
+  SortMenu,
   TableSkeleton,
   SearchInput,
   StatusPill,
@@ -14,6 +16,9 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { useToast } from "./Toast";
 import { formatRupees } from "@/lib/money";
 import { useListState } from "./useListState";
+import { STOCK_SORTS } from "@/lib/admin/sorts";
+import { stockListQuery } from "@/lib/erp/inventory-query";
+import { listQueryKey } from "@/lib/crm/scopes";
 import type {
   ListEnvelope,
   StockRowShape,
@@ -59,10 +64,13 @@ function low(row: { onHand: number; reorderLevel: number }): boolean {
 
 export function StockWorkspace({
   initial,
+  initialQuery,
   canWrite,
   canDelete,
 }: {
   initial: ListEnvelope<StockRow, StockSummary>;
+  /** The query the server already ran, so the first render skips a fetch. */
+  initialQuery?: string;
   canWrite: boolean;
   canDelete: boolean;
 }) {
@@ -75,15 +83,26 @@ export function StockWorkspace({
   */
   const [summary, setSummary] = useState(initial.summary);
   const [total, setTotal] = useState(initial.total);
-  const [capped, setCapped] = useState(initial.capped);
-  // Search and filter live in the URL, so a search can be shared — see
-  // useListState. There is no paging here; the list is capped instead.
-  const { search, setSearch, debounced, filter, setFilter } = useListState();
+  const [pages, setPages] = useState(initial.pages);
+  const pageSize = initial.pageSize;
+  /*
+    Search, filter, sort and page live in the URL — see useListState. The
+    filter used to be applied here in the browser to a capped list, so
+    "Needs ordering" could miss a low item that was not in the first 500 by
+    name. It goes to the server with everything else now.
+  */
+  const { search, setSearch, debounced, filter, setFilter, sort, setSort, page, setPage } =
+    useListState();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<StockRow | null>(null);
+
+  const query = useMemo(
+    () => stockListQuery({ search: debounced, filter, sort, page }),
+    [debounced, filter, sort, page],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -91,56 +110,33 @@ export function StockWorkspace({
     // the red banner on screen until a full page reload.
     setError(null);
     try {
-      const q = new URLSearchParams();
-      if (debounced.trim()) q.set("search", debounced.trim());
-      const res = await fetch(`/api/admin/stock?${q}`, { cache: "no-store" });
+      const res = await fetch(`/api/admin/stock?${query}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not load stock");
       setRows(data.items);
       setTotal(data.total ?? data.items.length);
-      setCapped(Boolean(data.capped));
+      setPages(data.pages ?? 1);
       if (data.summary) setSummary(data.summary);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load stock");
     } finally {
       setLoading(false);
     }
-  }, [debounced]);
+  }, [query]);
 
-  // Only re-fetch when a search is actually typed; the first page came down
-  // with the HTML.
-  /*
-    Skip only the FIRST run — the initial rows came down with the HTML.
-
-    This used to bail on an empty search instead, which meant clearing the box
-    never reloaded: `rows` kept the last search's subset, and every headline
-    figure on this screen is computed from `rows`. The count in the header, the
-    stock value, the low-stock count, the input-credit total and the money owed
-    to directors were all recomputed from a handful of matches and presented as
-    company-wide totals.
-  */
-  const servedInitial = useRef(true);
+  // The server already answered the untouched first query — see
+  // ContactWorkspace. Spent after one use, so coming back re-fetches.
+  const alreadyServed = useRef(initial ? initialQuery : null);
   useEffect(() => {
-    if (servedInitial.current) {
-      servedInitial.current = false;
+    if (alreadyServed.current === listQueryKey(query)) {
+      alreadyServed.current = null;
       return;
     }
     void load();
-  }, [debounced, load]);
-
-  const shown = useMemo(() => {
-    if (filter === "low") return rows.filter(low);
-    if (filter) return rows.filter((r) => r.kind === filter);
-    return rows;
-  }, [rows, filter]);
+  }, [load, query]);
 
   const lowCount = summary.lowCount;
   const stockValue = summary.valuePaise;
-
-  async function reload() {
-    const res = await fetch("/api/admin/stock", { cache: "no-store" });
-    if (res.ok) setRows((await res.json()).items);
-  }
 
   async function confirmDelete() {
     if (!deleting) return;
@@ -150,7 +146,7 @@ export function StockWorkspace({
       if (!res.ok) throw new Error("Could not delete");
       toast(`${deleting.name} deleted`);
       setDeleting(null);
-      await reload();
+      await load();
     } catch (e) {
       const message = e instanceof Error ? e.message : "Could not delete";
       setError(message);
@@ -176,17 +172,6 @@ export function StockWorkspace({
             {lowCount > 0 && (
               <span className="text-cta"> · {lowCount} need ordering</span>
             )}
-            {/*
-              Said, not silent. The list is capped for the screen and the
-              figures above are not — so when the two disagree the screen has
-              to explain itself rather than look like it lost rows.
-            */}
-            {capped && (
-              <span className="text-ink-faint">
-                {" · showing "}
-                {rows.length} of {total}
-              </span>
-            )}
           </p>
         </div>
         {canWrite && (
@@ -201,6 +186,7 @@ export function StockWorkspace({
       <div className="flex flex-wrap items-center gap-2">
         <SearchInput value={search} onChange={setSearch} placeholder="Search name, SKU, supplier" />
         <FilterTabs value={filter} onChange={setFilter} options={FILTERS} />
+        <SortMenu value={sort} onChange={setSort} options={STOCK_SORTS} />
       </div>
 
       <ErrorBanner message={error} onRetry={() => void load()} />
@@ -212,7 +198,7 @@ export function StockWorkspace({
       */}
       {loading ? (
         <TableSkeleton rows={4} />
-      ) : shown.length === 0 ? (
+      ) : rows.length === 0 ? (
         <EmptyState
           title="Nothing here"
           message={
@@ -229,8 +215,9 @@ export function StockWorkspace({
           }
         />
       ) : (
+        <>
         <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-          {shown.map((row) => (
+          {rows.map((row) => (
             <li
               key={row.id}
               className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
@@ -295,6 +282,8 @@ export function StockWorkspace({
             </li>
           ))}
         </ul>
+        <Pagination page={page} pages={pages} total={total} pageSize={pageSize} onChange={setPage} />
+        </>
       )}
 
       <ConfirmDialog

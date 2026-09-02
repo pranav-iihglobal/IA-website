@@ -7,6 +7,7 @@ import {
   EmptyState,
   ErrorBanner,
   FilterTabs,
+  SortMenu,
   TableSkeleton,
   Pagination,
   RecordCard,
@@ -17,6 +18,7 @@ import { useToast } from "./Toast";
 import { formatRupees } from "@/lib/money";
 import { telHref, whatsappHref } from "@/lib/crm/contact-links";
 import { useListState } from "./useListState";
+import { CONTACT_SORTS } from "@/lib/admin/sorts";
 import { STATUS_LABELS, type ContactRow } from "@/lib/crm/shape";
 import type { ContactList } from "@/lib/crm/list";
 import { contactListQuery, listQueryKey, type Scope } from "@/lib/crm/scopes";
@@ -190,7 +192,7 @@ export function ContactWorkspace({
     "Follow-ups due" tile links to /admin/leads?filter=due and used to land on
     the unfiltered list, because nothing here read it.
   */
-  const { search, setSearch, debounced, filter, setFilter, page, setPage } =
+  const { search, setSearch, debounced, filter, setFilter, sort, setSort, page, setPage } =
     useListState();
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
@@ -201,8 +203,8 @@ export function ContactWorkspace({
 
   /** Everything that decides which rows this list shows — see lib/crm/scopes. */
   const query = useMemo(
-    () => contactListQuery(scope, { search: debounced, filter, page }),
-    [scope, debounced, filter, page],
+    () => contactListQuery(scope, { search: debounced, filter, sort, page }),
+    [scope, debounced, filter, sort, page],
   );
 
   const load = useCallback(async () => {
@@ -336,6 +338,7 @@ export function ContactWorkspace({
           placeholder={`Search name, village, phone`}
         />
         <FilterTabs value={filter} onChange={setFilter} options={filters} />
+        <SortMenu value={sort} onChange={setSort} options={CONTACT_SORTS} />
       </div>
 
       <ErrorBanner message={error} onRetry={() => void load()} />

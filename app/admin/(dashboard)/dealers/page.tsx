@@ -38,6 +38,7 @@ export default async function AdminDealersPage({
   const query = contactListQuery("dealers", {
     search: one("q"),
     filter: one("filter"),
+    sort: one("sort"),
     page: Number(one("page")) || 1,
   });
   // Just the list. The catalogue moved to the form's own route, which is

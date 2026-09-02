@@ -2,6 +2,7 @@ import { connectToDatabase } from "@/lib/db/connect";
 import { Invoice } from "@/lib/db/models/Invoice";
 import type { LeanDoc } from "@/lib/db/lean";
 import { searchRegex } from "@/lib/search";
+import { INVOICE_SORTS, sortKey } from "@/lib/admin/sorts";
 import { invoiceListQuery } from "./list-query";
 
 // Re-exported so callers that already import from here keep working.
@@ -87,18 +88,33 @@ export function buildInvoiceFilter(params: URLSearchParams): LeanDoc {
   return filter;
 }
 
+/**
+ * The Mongo sort for each key in INVOICE_SORTS (lib/admin/sorts.ts).
+ * `_id` last on every one so paging is stable — see CONTACT_SORT_SPECS.
+ */
+export const INVOICE_SORT_SPECS: Record<string, Record<string, 1 | -1>> = {
+  "": { issuedAt: -1, createdAt: -1, _id: 1 },
+  oldest: { issuedAt: 1, createdAt: 1, _id: 1 },
+  amount: { grandTotalPaise: -1, issuedAt: -1, _id: 1 },
+  // The party's own name. A dealer trading under a business name still has
+  // a proprietor, and one field sorts consistently where "business or name"
+  // would put every farmer before every firm.
+  party: { "party.name": 1, issuedAt: -1, _id: 1 },
+};
+
 export async function listInvoices(params: URLSearchParams): Promise<InvoiceList> {
   await connectToDatabase();
 
   const page = Math.max(1, Number(params.get("page") ?? 1));
   const filter = buildInvoiceFilter(params);
+  const sort = INVOICE_SORT_SPECS[sortKey(INVOICE_SORTS, params.get("sort"))];
 
   const [items, total] = await Promise.all([
     Invoice.find(filter)
       .select(
         "number documentType againstNumber financialYear status issuedAt party grandTotalPaise payment isHistorical",
       )
-      .sort({ issuedAt: -1, createdAt: -1 })
+      .sort(sort)
       .skip((page - 1) * PAGE_SIZE)
       .limit(PAGE_SIZE)
       .lean(),

@@ -33,6 +33,7 @@ export default async function AdminInvoicesPage({
   const query = invoiceListQuery({
     search: one("q"),
     filter: one("filter"),
+    sort: one("sort"),
     page: Number(one("page")) || 1,
   });
   const initialData = await listInvoices(query);

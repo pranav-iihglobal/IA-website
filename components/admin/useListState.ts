@@ -36,6 +36,9 @@ export interface ListState {
   debounced: string;
   filter: string;
   setFilter: (value: string) => void;
+  /** One of the list's sort keys (lib/admin/sorts.ts), "" for its default. */
+  sort: string;
+  setSort: (value: string) => void;
   page: number;
   setPage: (page: number) => void;
 }
@@ -50,6 +53,7 @@ export function useListState(): ListState {
 
   const urlSearch = params.get("q") ?? "";
   const filter = params.get("filter") ?? "";
+  const sort = params.get("sort") ?? "";
   const page = Math.max(1, Number(params.get("page")) || 1);
 
   const write = useCallback(
@@ -99,6 +103,13 @@ export function useListState(): ListState {
     filter,
     setFilter: useCallback(
       (value: string) => write({ filter: value, page: 1 }, "push"),
+      [write],
+    ),
+    sort,
+    // A deliberate step, like a filter: pushed, so Back undoes it, and back
+    // to page 1, because page 7 of a differently ordered list means nothing.
+    setSort: useCallback(
+      (value: string) => write({ sort: value, page: 1 }, "push"),
       [write],
     ),
     page,

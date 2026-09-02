@@ -7,6 +7,7 @@ import {
   EmptyState,
   ErrorBanner,
   FilterTabs,
+  SortMenu,
   TableSkeleton,
   Pagination,
   SearchInput,
@@ -16,6 +17,7 @@ import { formatINR } from "@/lib/money";
 import { formatIstDate } from "@/lib/time";
 import { listQueryKey } from "@/lib/crm/scopes";
 import { invoiceListQuery } from "@/lib/erp/list-query";
+import { INVOICE_SORTS } from "@/lib/admin/sorts";
 import type { InvoiceList, InvoiceRow } from "@/lib/erp/list";
 import { useListState } from "./useListState";
 
@@ -70,14 +72,14 @@ export function InvoiceWorkspace({
   // Fixed server-side; kept here only so the range line can say "26–50 of 412".
   const pageSize = initialData?.pageSize ?? 25;
   // Search, filter and page live in the URL — see useListState.
-  const { search, setSearch, debounced, filter, setFilter, page, setPage } =
+  const { search, setSearch, debounced, filter, setFilter, sort, setSort, page, setPage } =
     useListState();
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
 
   const query = useMemo(
-    () => invoiceListQuery({ search: debounced, filter, page }),
-    [debounced, filter, page],
+    () => invoiceListQuery({ search: debounced, filter, sort, page }),
+    [debounced, filter, sort, page],
   );
 
   const load = useCallback(async () => {
@@ -136,6 +138,7 @@ export function InvoiceWorkspace({
           placeholder="Search number or customer"
         />
         <FilterTabs value={filter} onChange={setFilter} options={FILTERS} />
+        <SortMenu value={sort} onChange={setSort} options={INVOICE_SORTS} />
       </div>
 
       <ErrorBanner message={error} onRetry={() => void load()} />

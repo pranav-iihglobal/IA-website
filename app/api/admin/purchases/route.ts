@@ -19,10 +19,8 @@ export async function GET(request: NextRequest) {
   if (unauthorized) return unauthorized;
 
   try {
-    // Rows capped, totals not — see lib/erp/inventory-list.ts.
-    return NextResponse.json(
-      await listPurchases(request.nextUrl.searchParams.get("search") ?? ""),
-    );
+    // Rows paged, totals over everything — see lib/erp/inventory-list.ts.
+    return NextResponse.json(await listPurchases(request.nextUrl.searchParams));
   } catch (error) {
     return errorResponse(error);
   }

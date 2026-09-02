@@ -16,10 +16,12 @@
 export function invoiceListQuery({
   search = "",
   filter = "",
+  sort = "",
   page = 1,
-}: { search?: string; filter?: string; page?: number } = {}): URLSearchParams {
+}: { search?: string; filter?: string; sort?: string; page?: number } = {}): URLSearchParams {
   const query = new URLSearchParams({ page: String(Math.max(1, page)) });
   if (search) query.set("search", search);
+  if (sort) query.set("sort", sort);
   if (filter === "cancelled") query.set("status", "cancelled");
   else if (filter === "credit_notes") query.set("kind", "credit_note");
   else if (filter) query.set("payment", filter);
