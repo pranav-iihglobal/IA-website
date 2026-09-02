@@ -57,6 +57,13 @@ export interface ContactFormValues {
   crop: string;
   acres: number | null;
   source: string;
+  /*
+    Carried, not edited. Neither has a field on this form, but the save sends
+    the WHOLE record — so anything the schema accepts and this object omits is
+    wiped on every save. See lib/crm/form.ts and its test.
+  */
+  gjZone: string;
+  tags: string[];
   owner: string;
   followUpAt: string | null;
   lastContactAt: string | null;
@@ -86,6 +93,8 @@ export function emptyContact(): ContactFormValues {
     crop: "",
     acres: null,
     source: "other",
+    gjZone: "",
+    tags: [],
     owner: "",
     followUpAt: null,
     lastContactAt: null,

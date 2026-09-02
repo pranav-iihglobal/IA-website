@@ -42,6 +42,10 @@ export function toContactFormValues(doc: LeanDoc): ContactFormValues {
     crop: doc.crop ?? "",
     acres: typeof doc.acres === "number" ? doc.acres : null,
     source: doc.source ?? "other",
+    // Carried through untouched: the form has no field for either, and the
+    // save sends the whole record.
+    gjZone: doc.gjZone ?? "",
+    tags: (doc.tags ?? []).map((t: unknown) => String(t)),
     owner: doc.owner ?? "",
     followUpAt: iso(doc.followUpAt),
     lastContactAt: iso(doc.lastContactAt),
@@ -64,15 +68,29 @@ export function toContactFormValues(doc: LeanDoc): ContactFormValues {
       discountTier: doc.customer?.discountTier ?? "",
       lifetimeOrders: doc.customer?.lifetimeOrders ?? 0,
       lifetimeRevenuePaise: doc.customer?.lifetimeRevenuePaise ?? 0,
+      /*
+        THE LIST READS THESE. deriveStatus() and "last 12d ago" in
+        lib/crm/shape.ts come from customer.lastOrderAt, so dropping it here
+        turned every edited customer into a Prospect with no last order — on
+        the list, while the profile went on deriving its own from invoices and
+        showing the right thing. Two screens disagreeing about the same
+        customer is the worst version of this.
+      */
+      firstOrderAt: iso(doc.customer?.firstOrderAt),
+      lastOrderAt: iso(doc.customer?.lastOrderAt),
     },
     dealer: {
       gstin: doc.dealer?.gstin ?? "",
+      pan: doc.dealer?.pan ?? "",
       proprietor: doc.dealer?.proprietor ?? "",
       tier: doc.dealer?.tier ?? "",
       territory: doc.dealer?.territory ?? "",
       creditLimitPaise: doc.dealer?.creditLimitPaise ?? 0,
       creditDays: doc.dealer?.creditDays ?? 0,
+      outstandingPaise: doc.dealer?.outstandingPaise ?? 0,
       paymentTerms: doc.dealer?.paymentTerms ?? "",
+      marketingSupport: doc.dealer?.marketingSupport ?? "",
+      onboardingAt: iso(doc.dealer?.onboardingAt),
       nextVisitAt: iso(doc.dealer?.nextVisitAt),
     },
   };

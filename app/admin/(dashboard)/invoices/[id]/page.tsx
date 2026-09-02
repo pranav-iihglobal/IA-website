@@ -49,7 +49,14 @@ export default async function InvoiceDetailPage({
   const isCredit = invoice.documentType === "credit_note";
   const canWrite = can(me, "billing:write");
   const canCancel = can(me, "billing:delete");
-  const live = invoice.status === "issued" && !invoice.isHistorical && !isCredit;
+  /*
+    What this document still accepts. Payment and Credit are invoice-only;
+    Cancel applies to a credit note too, because one raised in error has to be
+    voidable and cancelling it releases its quantities back to the invoice.
+    See lib/erp/one.ts, which enforces the same three rules on the URLs.
+  */
+  const open = invoice.status === "issued" && !invoice.isHistorical;
+  const live = open && !isCredit;
 
   /* Displayed magnitude. The stored sign is what every sum relies on. */
   const money = (paise: number) => formatINR(isCredit ? Math.abs(paise) : paise);
@@ -139,7 +146,7 @@ export default async function InvoiceDetailPage({
               Credit note
             </Link>
           )}
-          {canCancel && live && (
+          {canCancel && open && (
             <Link
               href={`/admin/invoices/${invoice.id}/cancel`}
               className="admin-btn admin-tap text-ink-soft hover:bg-danger/12 hover:text-danger"

@@ -135,6 +135,23 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         { status: 400 },
       );
     }
+    /*
+      Not a credit note. It is money going the OTHER way and is written
+      `payment: paid` for its full value at issue, so "recording a payment"
+      against one would overwrite that on a filed document with a figure that
+      means nothing.
+
+      This never came up while the Payment button was rendered only on
+      non-credit rows — the JSX condition was doing the work. Now that every
+      action is an addressable URL, the condition has to be here, where a
+      request passes through, rather than where a button does not render.
+    */
+    if (invoice.documentType === "credit_note") {
+      return NextResponse.json(
+        { error: "A credit note is money going the other way. There is no payment to record against it." },
+        { status: 400 },
+      );
+    }
 
     const before = { ...invoice.payment };
     // Assigned as a whole rather than field by field: `payment` is optional on

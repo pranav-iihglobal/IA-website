@@ -1,7 +1,7 @@
 import { CancelInvoiceForm } from "@/components/admin/InvoiceActionForms";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
-import { issuedInvoiceOr404 } from "@/lib/erp/one";
+import { invoiceForActionOr404 } from "@/lib/erp/one";
 import { formatINR } from "@/lib/money";
 
 export const metadata = { title: "Cancel an invoice" };
@@ -16,7 +16,9 @@ export default async function CancelInvoicePage({
   // invoice action that is not part of raising or settling one.
   await requirePageAccess("billing:delete");
   const { id } = await params;
-  const doc = await issuedInvoiceOr404(id);
+  // A credit note raised in error has to be voidable too — the engine
+  // supports it, and cancelling one releases its quantities back.
+  const doc = await invoiceForActionOr404(id, { allowCreditNote: true });
 
   return (
     <>

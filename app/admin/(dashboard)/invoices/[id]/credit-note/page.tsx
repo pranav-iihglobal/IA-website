@@ -4,7 +4,7 @@ import {
 } from "@/components/admin/InvoiceActionForms";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
-import { issuedInvoiceOr404 } from "@/lib/erp/one";
+import { invoiceForActionOr404 } from "@/lib/erp/one";
 import { formatINR } from "@/lib/money";
 import type { LeanDoc } from "@/lib/db/lean";
 
@@ -18,7 +18,9 @@ export default async function CreditNotePage({
 }) {
   await requirePageAccess("billing:write");
   const { id } = await params;
-  const doc = await issuedInvoiceOr404(id);
+  // issueCreditNote() refuses to credit a credit note, so the form should
+  // never appear rather than be filled in and then rejected.
+  const doc = await invoiceForActionOr404(id);
 
   /*
     The lines come with the page. The list row does not carry them, and a

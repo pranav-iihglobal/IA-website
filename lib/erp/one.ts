@@ -7,13 +7,44 @@ import type { LeanDoc } from "@/lib/db/lean";
 /**
  * One invoice, for the three pages that act on it.
  *
- * Shared so payment, cancel and credit-note all agree on WHICH invoices can be
- * acted on. Every one of them is only valid against an issued invoice: a draft
- * has nothing to pay, and a cancelled document is finished. The API refuses
- * the rest anyway — that is the real guard — but discovering it after filling
- * a form in is a poor way to find out.
+ * WHY THIS EXISTS AT ALL. These three acts used to be dialogs opened from a
+ * row, and which rows offered which button WAS the guard:
+ *
+ *     canWrite && !row.isHistorical && !isCredit(row) && row.status === "issued"
+ *
+ * Turning them into pages made every one of them an addressable URL, and a URL
+ * is reachable by anybody who can type one — from a bookmark, from the browser
+ * history, from a link somebody pastes into WhatsApp. A condition in JSX stops
+ * a button rendering; it does not stop a request. So the conditions had to move
+ * somewhere a URL passes through, and this is it.
+ *
+ * The API is still the real guard, and mostly already was. The one place it was
+ * not is named below.
  */
-export async function issuedInvoiceOr404(id: string): Promise<LeanDoc> {
+
+export interface InvoiceActionOptions {
+  /**
+   * Whether this act makes sense on a credit note.
+   *
+   * Cancelling one does: a note raised in error has to be voidable, the
+   * engine supports it, and creditedSoFar() only counts ISSUED notes, so
+   * cancelling one correctly releases its quantities back to the invoice.
+   *
+   * Paying one does not. A credit note is money going the other way and is
+   * written `payment: paid` at issue; "recording a payment" against it would
+   * overwrite that on a filed document with a figure that means nothing.
+   *
+   * Crediting one does not either — issueCreditNote() refuses it in so many
+   * words — so the form should never appear rather than being filled in and
+   * then rejected.
+   */
+  allowCreditNote?: boolean;
+}
+
+export async function invoiceForActionOr404(
+  id: string,
+  { allowCreditNote = false }: InvoiceActionOptions = {},
+): Promise<LeanDoc> {
   if (!isValidObjectId(id)) notFound();
 
   await connectToDatabase();
@@ -26,6 +57,7 @@ export async function issuedInvoiceOr404(id: string): Promise<LeanDoc> {
     rule in the plan.
   */
   if (doc.status !== "issued" || doc.isHistorical) notFound();
+  if (doc.documentType === "credit_note" && !allowCreditNote) notFound();
 
   return doc;
 }

@@ -1,7 +1,7 @@
 import { RecordPaymentForm } from "@/components/admin/InvoiceActionForms";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
-import { issuedInvoiceOr404 } from "@/lib/erp/one";
+import { invoiceForActionOr404 } from "@/lib/erp/one";
 import { formatIstDateLong } from "@/lib/time";
 
 export const metadata = { title: "Record a payment" };
@@ -14,7 +14,9 @@ export default async function PaymentPage({
 }) {
   await requirePageAccess("billing:write");
   const { id } = await params;
-  const doc = await issuedInvoiceOr404(id);
+  // Not a credit note: it is written `paid` at issue, and money going the
+  // other way has no payment to record. See lib/erp/one.ts.
+  const doc = await invoiceForActionOr404(id);
 
   return (
     <>
