@@ -93,7 +93,10 @@ export default async function OutstandingPage({
                     )}
                   </p>
                   <p className="mt-0.5 text-sm text-ink-muted">
-                    <Link href={`/admin/invoices/${row.invoiceId}/print`} className="hover:underline">
+                    {/* The record, not the printable document — what is owed
+                        on an invoice is a question about its history, and the
+                        document cannot answer it. */}
+                    <Link href={`/admin/invoices/${row.invoiceId}`} className="hover:underline">
                       {row.number}
                     </Link>
                     {" · "}

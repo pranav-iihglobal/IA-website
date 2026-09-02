@@ -165,7 +165,16 @@ export function InvoiceWorkspace({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-display text-base font-bold text-ink-strong">
-                    {row.number || "(no number)"}
+                    {/* The number opens the record, not the printable
+                        document. Print is still one tap away below, and the
+                        two are different things: one is the paperwork, the
+                        other is what has happened to it since. */}
+                    <Link
+                      href={`/admin/invoices/${row.id}`}
+                      className="hover:text-cta hover:underline"
+                    >
+                      {row.number || "(no number)"}
+                    </Link>
                   </p>
                   <p className="mt-0.5 truncate text-sm text-ink-muted">
                     {row.partyName}
