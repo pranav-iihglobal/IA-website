@@ -17,6 +17,23 @@ export const STATUS_LABELS: Record<ContactStatus, string> = {
   dormant: "Dormant",
 };
 
+/**
+ * Where a lead has got to, for reading.
+ *
+ * The stored values are the sheet's own vocabulary; these are how they are
+ * written on screen. Beside STATUS_LABELS deliberately: a lead's stage and a
+ * customer's derived status are the two "where are they" answers this CRM
+ * gives, and keeping them apart is what stops a lead being labelled with a
+ * customer's.
+ */
+export const FOLLOW_UP_LABELS: Record<string, string> = {
+  not_contacted: "Not contacted",
+  contacted: "Contacted",
+  interested: "Interested",
+  not_interested: "Not interested",
+  converted: "Converted",
+};
+
 /** Days since the last order that tip a customer into each state. */
 export const AT_RISK_AFTER_DAYS = 90;
 export const DORMANT_AFTER_DAYS = 180;

@@ -67,6 +67,7 @@ export default async function ContactProfilePage({
     followUpAt: c.followUpAt ? new Date(c.followUpAt).toISOString() : null,
     lastContactAt: c.lastContactAt ? new Date(c.lastContactAt).toISOString() : null,
     nextAction: c.lead?.nextAction ?? "",
+    followUpStatus: c.lead?.followUpStatus ?? "",
     storedOrders: c.customer?.lifetimeOrders ?? 0,
     storedRevenuePaise: c.customer?.lifetimeRevenuePaise ?? 0,
     discountTier: c.customer?.discountTier ?? "",

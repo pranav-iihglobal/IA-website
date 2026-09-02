@@ -8,7 +8,7 @@ import { ContactNotes, type ContactNote } from "./ContactNotes";
 import { RecordHistory } from "./RecordHistory";
 import type { HistoryEntry } from "@/lib/admin/history";
 import { telHref, whatsappHref } from "@/lib/crm/contact-links";
-import { STATUS_LABELS } from "@/lib/crm/shape";
+import { FOLLOW_UP_LABELS, STATUS_LABELS } from "@/lib/crm/shape";
 import { formatINR, formatRupees } from "@/lib/money";
 import type { ProfileInvoice, Trading } from "@/lib/crm/profile";
 
@@ -50,6 +50,7 @@ export interface ProfileContact {
   followUpAt: string | null;
   lastContactAt: string | null;
   nextAction: string;
+  followUpStatus: string;
   /** Carried over from the spreadsheets — see the note in the trading block. */
   storedOrders: number;
   storedRevenuePaise: number;
@@ -199,6 +200,22 @@ export function ContactProfile({
   const [notes, setNotes] = useState(initialNotes);
 
   const isDealer = contact.channel === "b2b";
+  /*
+    A LEAD IS NOT A CUSTOMER, and this page used to show one as if it were.
+
+    It is one route for all three kinds on purpose — they are one collection
+    filtered three ways — but "one route" was being read as "one layout", and
+    the layout was the customer's: four money figures, an Orders list, and a
+    status pill derived from a last-order date a lead does not have, which
+    renders as "Prospect". Opening a lead landed you on what read as a
+    customer page with everything at zero.
+
+    A lead cannot even be invoiced — getBillableParties() excludes them — so
+    those figures are not merely empty, they are guaranteed empty. What a lead
+    has instead is a sampling pipeline and a follow-up, and that is what the
+    top of the page shows now.
+  */
+  const isLead = contact.kind === "lead";
   const title = contact.businessName || contact.name;
 
   return (
@@ -218,7 +235,11 @@ export function ContactProfile({
           )}
           {contact.nameGu && <p className="text-sm text-ink-muted">{contact.nameGu}</p>}
           <p className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-            <StatusPill status={STATUS_LABELS[trading.status]} />
+            {isLead ? (
+              <StatusPill status="lead" />
+            ) : (
+              <StatusPill status={STATUS_LABELS[trading.status]} />
+            )}
             {contact.contactId && (
               <span className="text-ink-faint">{contact.contactId}</span>
             )}
@@ -256,7 +277,57 @@ export function ContactProfile({
         business seeing what a customer spends, and this is the first screen
         where the two modules meet.
       */}
-      {canSeeMoney && (
+      {/* Where the lead has got to — the equivalent row, in the same place. */}
+      {isLead && (
+        <section className="admin-card p-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <Stat
+              label="Stage"
+              value={FOLLOW_UP_LABELS[contact.followUpStatus] ?? "Not contacted"}
+            />
+            <Stat
+              label="Sampled"
+              value={
+                sampling && sampling.products.length > 0
+                  ? `${sampling.products.length} product${sampling.products.length === 1 ? "" : "s"}`
+                  : sampling?.note
+                    ? "recorded as text"
+                    : "nothing yet"
+              }
+              hint={
+                sampling?.sampleDate
+                  ? date(sampling.sampleDate) ?? undefined
+                  : undefined
+              }
+            />
+            <Stat
+              label="Follow up"
+              value={date(contact.followUpAt) ?? "not set"}
+              tone={
+                contact.followUpAt && new Date(contact.followUpAt) <= new Date()
+                  ? "danger"
+                  : undefined
+              }
+              hint={
+                contact.followUpAt && new Date(contact.followUpAt) <= new Date()
+                  ? "due now"
+                  : undefined
+              }
+            />
+            <Stat
+              label="Last contacted"
+              value={date(contact.lastContactAt) ?? "never"}
+            />
+          </div>
+          {contact.nextAction && (
+            <p className="mt-3 border-t border-line-soft pt-3 text-sm text-ink">
+              <span className="font-semibold">Next:</span> {contact.nextAction}
+            </p>
+          )}
+        </section>
+      )}
+
+      {canSeeMoney && !isLead && (
         <section className="admin-card space-y-4 p-4">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Stat
@@ -395,7 +466,7 @@ export function ContactProfile({
         </section>
 
         <div className="space-y-5">
-          {canSeeMoney && (
+          {canSeeMoney && !isLead && (
             <section className="admin-card p-4">
               <h2 className="font-display text-base font-bold text-ink-strong">
                 Orders

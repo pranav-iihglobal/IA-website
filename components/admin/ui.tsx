@@ -838,6 +838,12 @@ export function StatusPill({ status }: { status: string }) {
     Prospect: "bg-surface-strong/35 text-ink-strong ring-line",
 
     dealer: "bg-surface-strong/35 text-ink-strong ring-line",
+    /*
+      A lead is not a customer at any stage of their life, and the profile
+      showed no pill saying so — only the DERIVED customer status, which for
+      somebody who has never bought reads "Prospect".
+    */
+    lead: "bg-alloy/15 text-ink-strong ring-alloy/40",
     sample: "bg-alloy/15 text-ink-strong ring-alloy/40",
   };
   const dot: Record<string, string> = {
