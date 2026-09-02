@@ -20,6 +20,8 @@ import { clearChanged } from "@/lib/admin/field-errors";
 import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
 import { purchaseSchema } from "@/lib/schemas";
 import { formatINR, rupeesToPaise } from "@/lib/money";
+import { SupplierPicker } from "./SupplierPicker";
+import type { SupplierOption } from "@/lib/admin/supplier-options";
 
 /**
  * One supplier bill, on its own page.
@@ -35,6 +37,9 @@ import { formatINR, rupeesToPaise } from "@/lib/money";
  */
 
 export interface PurchaseFormValues {
+  /** The supplier record. Blank only on rows from before suppliers were records. */
+  supplierId: string;
+  /** Filled from the picked record; the server overwrites both from the record. */
   supplier: string;
   supplierGstin: string;
   billNo: string;
@@ -55,6 +60,7 @@ export interface PurchaseFormValues {
 }
 
 export const EMPTY_PURCHASE: PurchaseFormValues = {
+  supplierId: "",
   supplier: "",
   supplierGstin: "",
   billNo: "",
@@ -91,11 +97,14 @@ export function PurchaseForm({
   initial,
   purchaseId,
   version,
+  suppliers,
 }: {
   initial: PurchaseFormValues;
   purchaseId?: string;
   /** The version this form loaded with, so a stale save is refused. */
   version?: number;
+  /** Every real supplier, for the picker. */
+  suppliers: SupplierOption[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -203,25 +212,23 @@ export function PurchaseForm({
       id: "bill",
       title: "The bill",
       description: "Whose it is, and what for",
-      errorKeys: ["supplier", "supplierGstin", "billNo", "billDate", "category", "description"],
-      complete: Boolean(values.supplier.trim()),
+      errorKeys: ["supplierId", "supplier", "supplierGstin", "billNo", "billDate", "category", "description"],
+      complete: Boolean(values.supplierId || values.supplier.trim()),
       content: (
         <Section title="The bill" description="Whose it is, and what for.">
           <div className="grid gap-4 sm:grid-cols-2">
-            <TextField
-              label="Supplier"
-              value={values.supplier}
-              onChange={(supplier) => set({ supplier })}
-              error={errors.supplier}
+            {/*
+              The record, not two text fields. The GSTIN that decides input
+              credit lives on the supplier now and is snapshotted onto the
+              bill by the server — see components/admin/SupplierPicker.tsx.
+            */}
+            <SupplierPicker
+              suppliers={suppliers}
+              value={values.supplierId}
+              legacyName={values.supplierId ? undefined : values.supplier}
+              onChange={(picked) => set(picked)}
+              error={errors.supplierId ?? errors.supplier}
               required
-            />
-            <TextField
-              label="Supplier GSTIN"
-              kind="gstin"
-              hint="Without one there is no input credit to claim."
-              value={values.supplierGstin}
-              onChange={(supplierGstin) => set({ supplierGstin })}
-              error={errors.supplierGstin}
             />
             <TextField
               label="Their bill number"

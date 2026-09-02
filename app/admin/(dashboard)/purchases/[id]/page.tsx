@@ -74,7 +74,17 @@ export default async function PurchaseDetailPage({
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="font-display text-2xl font-bold text-ink-strong">
-            {doc.supplier}
+            {/* The name as it was on the bill; the link is to the record. */}
+            {doc.supplierId ? (
+              <Link
+                href={`/admin/suppliers/${String(doc.supplierId)}`}
+                className="hover:text-cta hover:underline"
+              >
+                {doc.supplier}
+              </Link>
+            ) : (
+              doc.supplier
+            )}
           </h1>
           <p className="mt-2 flex flex-wrap items-center gap-2 text-xs">
             <StatusPill status={doc.paymentStatus ?? "unpaid"} />

@@ -177,6 +177,13 @@ const NAV: (NavItem | NavGroup)[] = [
         needs: "billing:read",
         icon: <Icon path="M6 7h12l-1 12H7L6 7Zm3 0V5a3 3 0 0 1 6 0v2" />,
       },
+      {
+        href: "/admin/suppliers",
+        module: "billing",
+        label: "Suppliers",
+        needs: "billing:read",
+        icon: <Icon path="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6M9 11h.01M15 11h.01" />,
+      },
     ],
   },
   {

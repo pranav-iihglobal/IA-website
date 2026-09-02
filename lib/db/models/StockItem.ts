@@ -41,6 +41,8 @@ const stockSchema = new Schema(
     /** What one unit costs to buy or make. Integer paise, as everywhere. */
     unitCostPaise: { type: Number, default: 0 },
 
+    /** Who it is bought from — the record, and the name as a snapshot. */
+    supplierId: { type: Schema.Types.ObjectId, ref: "Supplier", default: null, index: true },
     supplier: { type: String, default: "", trim: true },
     location: { type: String, default: "", trim: true },
     notes: { type: String, default: "", trim: true },

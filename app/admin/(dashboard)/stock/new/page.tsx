@@ -1,12 +1,14 @@
 import { EMPTY_STOCK, StockForm } from "@/components/admin/StockForm";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
+import { getSupplierOptions } from "@/lib/admin/supplier-options";
 
 export const metadata = { title: "New stock item" };
 export const dynamic = "force-dynamic";
 
 export default async function NewStockItemPage() {
   await requirePageAccess("billing:write");
+  const suppliers = await getSupplierOptions();
 
   return (
     <>
@@ -17,7 +19,7 @@ export default async function NewStockItemPage() {
         description="Saving records a count — the date stamps itself."
       />
       <div className="mt-8">
-        <StockForm initial={EMPTY_STOCK} />
+        <StockForm initial={EMPTY_STOCK} suppliers={suppliers} />
       </div>
     </>
   );

@@ -6,6 +6,7 @@ import {
 } from "@/components/admin/PurchaseForm";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
+import { getSupplierOptions } from "@/lib/admin/supplier-options";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Purchase } from "@/lib/db/models/Purchase";
 import { paiseToRupeeString } from "@/lib/money";
@@ -21,6 +22,7 @@ function toFormValues(doc: LeanDoc): PurchaseFormValues {
     typeof paise === "number" && paise !== 0 ? paiseToRupeeString(paise) : "";
 
   return {
+    supplierId: doc.supplierId ? String(doc.supplierId) : "",
     supplier: doc.supplier ?? "",
     supplierGstin: doc.supplierGstin ?? "",
     billNo: doc.billNo ?? "",
@@ -53,7 +55,10 @@ export default async function EditPurchasePage({
   if (!isValidObjectId(id)) notFound();
 
   await connectToDatabase();
-  const doc = (await Purchase.findById(id).lean()) as LeanDoc | null;
+  const [doc, suppliers] = await Promise.all([
+    Purchase.findById(id).lean() as Promise<LeanDoc | null>,
+    getSupplierOptions(),
+  ]);
   if (!doc) notFound();
 
   return (
@@ -68,6 +73,7 @@ export default async function EditPurchasePage({
         <PurchaseForm
           initial={toFormValues(doc)}
           purchaseId={id}
+          suppliers={suppliers}
           /* Sent back on save, so an edit here cannot silently overwrite one
              made from another phone at the same moment. */
           version={typeof doc.__v === "number" ? doc.__v : 0}

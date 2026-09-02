@@ -118,6 +118,26 @@ export function buildStockItems() {
   ].map((item) => ({ ...item, isSample: true, countedAt: new Date(), updatedBy: "erp-sample" }));
 }
 
+/**
+ * The suppliers the stock items and purchases below name, as records.
+ *
+ * Seeded FIRST, so every sample bill can carry a supplierId the way a real
+ * one does; erp-sample.ts links them by name after insert.
+ */
+export function buildSuppliers() {
+  return [
+    { name: "Shree Poly Pack", gstin: "24AABCS1429B1Z1", city: "Ahmedabad" },
+    { name: "Gokul Containers", gstin: "24AAECG7712M1ZP", city: "Rajkot" },
+    { name: "Sabar Minerals", gstin: "24AAFFS9021K1ZR", city: "Himatnagar" },
+    { name: "Vraj Printers", gstin: "", city: "Mehsana" },
+    { name: "Anand Biotech Labs", gstin: "24AADCA3388J1ZK", city: "Anand" },
+    { name: "Patel Transport", gstin: "24AAGFP5540L1ZQ", city: "Mehsana" },
+    { name: "Local tempo hire", gstin: "", city: "" },
+    { name: "Skyline Digital", gstin: "24AAJCS2201F1ZW", city: "Gandhinagar" },
+    { name: "Nirav & Associates", gstin: "24AAKFN8834C1ZD", city: "Ahmedabad" },
+  ].map((s) => ({ ...s, state: "Gujarat", isSample: true, updatedBy: "erp-sample" }));
+}
+
 export function buildPurchases() {
   const day = 86_400_000;
   const now = Date.now();

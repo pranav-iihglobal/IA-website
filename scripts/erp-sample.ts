@@ -27,6 +27,7 @@ import { Invoice } from "../lib/db/models/Invoice";
 import { Counter } from "../lib/db/models/Counter";
 import { StockItem } from "../lib/db/models/StockItem";
 import { Purchase } from "../lib/db/models/Purchase";
+import { Supplier } from "../lib/db/models/Supplier";
 import { computeInvoice, GUJARAT_STATE_CODE, supplyTypeFor } from "../lib/erp/tax";
 import {
   financialYear,
@@ -34,7 +35,7 @@ import {
   formatSampleInvoiceNumber,
 } from "../lib/erp/invoice-number";
 import { formatRupees } from "../lib/money";
-import { buildStockItems, buildPurchases, SAMPLE_SKUS } from "./erp-sample-data";
+import { buildStockItems, buildPurchases, buildSuppliers, SAMPLE_SKUS } from "./erp-sample-data";
 
 loadEnv();
 
@@ -276,16 +277,18 @@ async function main() {
   const mongoose = await connectToDatabase();
 
   if (command === "wipe") {
-    const [inv, stock, buys, counters] = await Promise.all([
+    const [inv, stock, buys, suppliers, counters] = await Promise.all([
       Invoice.deleteMany({ isSample: true }),
       StockItem.deleteMany({ isSample: true }),
       Purchase.deleteMany({ isSample: true }),
+      Supplier.deleteMany({ isSample: true }),
       // Sample counters only — the real invoice series is never touched.
       Counter.deleteMany({ _id: /^sample-/ }),
     ]);
     console.log(
       `\n  Deleted ${inv.deletedCount} invoices, ${stock.deletedCount} stock items, ` +
-        `${buys.deletedCount} purchases, ${counters.deletedCount} sample counters.`,
+        `${buys.deletedCount} purchases, ${suppliers.deletedCount} suppliers, ` +
+        `${counters.deletedCount} sample counters.`,
     );
     const realInvoices = await Invoice.countDocuments({ isSample: { $ne: true } });
     console.log(`  ${realInvoices} real invoices remain, untouched.`);
@@ -306,18 +309,33 @@ async function main() {
       Invoice.deleteMany({ isSample: true }),
       StockItem.deleteMany({ isSample: true }),
       Purchase.deleteMany({ isSample: true }),
+      Supplier.deleteMany({ isSample: true }),
     ]);
 
     const invoices = await seedInvoices(count);
     // After the invoices: a credit note needs something to be raised against.
     const creditNotes = await seedCreditNotes(Math.max(1, Math.floor(count / 12)));
-    const stock = await StockItem.insertMany(buildStockItems());
-    const purchases = await Purchase.insertMany(buildPurchases());
+    /*
+      Suppliers first, so every bill and stock item can point at its record
+      the way a real one does — the typed name stays on the row as the
+      snapshot a real bill carries.
+    */
+    const suppliers = await Supplier.insertMany(buildSuppliers());
+    const supplierId = new Map(suppliers.map((s) => [s.name, s._id]));
+    const stock = await StockItem.insertMany(
+      buildStockItems().map((item) => ({
+        ...item,
+        supplierId: "supplier" in item && item.supplier ? (supplierId.get(item.supplier) ?? null) : null,
+      })),
+    );
+    const purchases = await Purchase.insertMany(
+      buildPurchases().map((p) => ({ ...p, supplierId: supplierId.get(p.supplier) ?? null })),
+    );
 
     console.log(
       `\n  Seeded ${invoices} invoices, ${creditNotes} credit notes, ` +
-        `${stock.length} stock items, ${purchases.length} purchases — ` +
-        `all marked sample.\n`,
+        `${suppliers.length} suppliers, ${stock.length} stock items, ` +
+        `${purchases.length} purchases — all marked sample.\n`,
     );
   } else if (command === "doctor" || command === "count") {
     const [total, sample, real, unpaid, cancelled, credits] = await Promise.all([

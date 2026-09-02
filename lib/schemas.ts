@@ -787,6 +787,31 @@ export const creditNoteSchema = z.object({
 /* STOCK AND PURCHASES                                                        */
 /* ========================================================================== */
 
+/**
+ * A supplier picked from the list: its id, or blank for none.
+ *
+ * The NAME beside it is a snapshot the server fills from the record — the
+ * form sends whatever it has, and the route overwrites it. Rows from before
+ * suppliers were records carry a name and no id, and stay valid.
+ */
+const supplierRef = z
+  .string()
+  .trim()
+  .refine((v) => v === "" || /^[a-f\d]{24}$/i.test(v), "Pick a supplier from the list")
+  .default("");
+
+export const supplierSchema = z.object({
+  version: versionField,
+  name: z.string().trim().min(1, "Name is required"),
+  gstin: gstinSchema.default(""),
+  phone: phoneSchema.default(""),
+  email: z.string().trim().default(""),
+  address: z.string().trim().default(""),
+  city: z.string().trim().default(""),
+  state: z.string().trim().default("Gujarat"),
+  notes: z.string().trim().default(""),
+});
+
 export const stockItemSchema = z
   .object({
     version: versionField,
@@ -798,6 +823,7 @@ export const stockItemSchema = z
     /** 0 means "no alert wanted" — see needsReorder() in the model. */
     reorderLevel: z.coerce.number().min(0).default(0),
     unitCost: rupeeField("Unit cost"),
+    supplierId: supplierRef,
     supplier: z.string().trim().default(""),
     location: z.string().trim().default(""),
     notes: z.string().trim().default(""),
@@ -812,8 +838,14 @@ export const stockItemSchema = z
 export const purchaseSchema = z
   .object({
     version: versionField,
-    supplier: z.string().trim().min(1, "Supplier is required"),
-    supplierGstin: z.string().trim().default(""),
+    supplierId: supplierRef,
+    /*
+      Required as a NAME still, so a row entered before suppliers were
+      records stays saveable — but the form fills it from the picked record
+      and the route overwrites both from the record when an id is present.
+    */
+    supplier: z.string().trim().min(1, "Pick a supplier"),
+    supplierGstin: gstinSchema.default(""),
     billNo: z.string().trim().default(""),
     billDate: z.coerce.date().nullable().default(null),
     category: z

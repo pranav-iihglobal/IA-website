@@ -5,6 +5,7 @@ import { exportStock, listStock } from "@/lib/erp/inventory-list";
 import { STOCK_EXPORT_HEADERS, stockExportRow } from "@/lib/erp/export";
 import { EXPORT_READ, csvResponse } from "@/lib/admin/csv-response";
 import { stockItemSchema } from "@/lib/schemas";
+import { supplierSnapshot } from "@/lib/erp/suppliers";
 import {
   currentEditor,
   errorResponse,
@@ -48,8 +49,19 @@ export async function POST(request: NextRequest) {
     }
 
     await connectToDatabase();
+    // The supplier's name from the record, when one is picked.
+    const snapshot = parsed.data.supplierId ? await supplierSnapshot(parsed.data.supplierId) : null;
+    if (parsed.data.supplierId && !snapshot) {
+      return NextResponse.json(
+        { error: "That supplier no longer exists. Pick another.", fields: { supplierId: "Pick a supplier from the list" } },
+        { status: 400 },
+      );
+    }
     const created = await StockItem.create({
       ...parsed.data,
+      ...(snapshot
+        ? { supplierId: snapshot.supplierId, supplier: snapshot.supplier }
+        : { supplierId: null }),
       // Never trusted from the client — anything created here is real.
       isSample: false,
       updatedBy: await currentEditor(),

@@ -3,6 +3,7 @@ import { isValidObjectId } from "mongoose";
 import { StockForm, type StockFormValues } from "@/components/admin/StockForm";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
+import { getSupplierOptions } from "@/lib/admin/supplier-options";
 import { connectToDatabase } from "@/lib/db/connect";
 import { StockItem } from "@/lib/db/models/StockItem";
 import { paiseToRupeeString } from "@/lib/money";
@@ -23,6 +24,7 @@ function toFormValues(doc: LeanDoc): StockFormValues {
     // paiseToRupeeString, not String(paise / 100): the latter reads 105050
     // paise back as "1050.5" rather than "1050.50", on a money field.
     unitCost: doc.unitCostPaise ? paiseToRupeeString(doc.unitCostPaise) : "",
+    supplierId: doc.supplierId ? String(doc.supplierId) : "",
     supplier: doc.supplier ?? "",
     location: doc.location ?? "",
     notes: doc.notes ?? "",
@@ -40,7 +42,10 @@ export default async function EditStockItemPage({
   if (!isValidObjectId(id)) notFound();
 
   await connectToDatabase();
-  const doc = (await StockItem.findById(id).lean()) as LeanDoc | null;
+  const [doc, suppliers] = await Promise.all([
+    StockItem.findById(id).lean() as Promise<LeanDoc | null>,
+    getSupplierOptions(),
+  ]);
   if (!doc) notFound();
 
   return (
@@ -59,6 +64,7 @@ export default async function EditStockItemPage({
         <StockForm
           initial={toFormValues(doc)}
           itemId={id}
+          suppliers={suppliers}
           /* Sent back on save, so a count taken on one phone cannot silently
              erase one taken on another. */
           version={typeof doc.__v === "number" ? doc.__v : 0}

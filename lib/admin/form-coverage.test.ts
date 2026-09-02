@@ -5,8 +5,10 @@ import {
   productSchema,
   purchaseSchema,
   stockItemSchema,
+  supplierSchema,
   testimonialSchema,
 } from "@/lib/schemas";
+import { EMPTY_SUPPLIER } from "@/components/admin/SupplierForm";
 import { emptyContact } from "@/components/admin/ContactForm";
 import { EMPTY_STOCK } from "@/components/admin/StockForm";
 import { EMPTY_PURCHASE } from "@/components/admin/PurchaseForm";
@@ -94,6 +96,11 @@ const PAIRS: {
     name: "purchaseSchema ↔ PurchaseForm",
     schema: purchaseSchema,
     empty: EMPTY_PURCHASE as unknown as Record<string, unknown>,
+  },
+  {
+    name: "supplierSchema ↔ SupplierForm",
+    schema: supplierSchema,
+    empty: EMPTY_SUPPLIER as unknown as Record<string, unknown>,
   },
   {
     name: "testimonialSchema ↔ TestimonialForm",

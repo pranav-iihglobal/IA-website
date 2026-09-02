@@ -3,6 +3,7 @@ import { isValidObjectId } from "mongoose";
 import { connectToDatabase } from "@/lib/db/connect";
 import { StockItem } from "@/lib/db/models/StockItem";
 import { stockItemSchema } from "@/lib/schemas";
+import { supplierSnapshot } from "@/lib/erp/suppliers";
 import {
   currentEditor,
   errorResponse,
@@ -58,6 +59,21 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
 
     await connectToDatabase();
+    // The supplier's name from the record, when one is picked.
+    const snapshot = parsed.data.supplierId ? await supplierSnapshot(parsed.data.supplierId) : null;
+    if (parsed.data.supplierId && !snapshot) {
+      return NextResponse.json(
+        { error: "That supplier no longer exists. Pick another.", fields: { supplierId: "Pick a supplier from the list" } },
+        { status: 400 },
+      );
+    }
+    const record = {
+      ...parsed.data,
+      ...(snapshot
+        ? { supplierId: snapshot.supplierId, supplier: snapshot.supplier }
+        : { supplierId: null }),
+    };
+
     // Read first, so the audit entry can say what actually changed rather
     // than restating the whole document.
     const before = await StockItem.findById(id).lean();
@@ -67,7 +83,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     */
     const updated = await StockItem.findOneAndUpdate(
       versionedFilter(id, (parsed.data as { version?: unknown }).version),
-      { ...parsed.data, updatedBy: await currentEditor() },
+      { ...record, updatedBy: await currentEditor() },
       { returnDocument: "after", runValidators: true },
     );
     if (!updated) {
@@ -81,7 +97,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       entity: "StockItem",
       entityId: id,
       before: before as Record<string, unknown> | null,
-      after: parsed.data as Record<string, unknown>,
+      after: record as Record<string, unknown>,
     });
 
     return NextResponse.json({ id: String(updated._id) });

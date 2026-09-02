@@ -19,6 +19,8 @@ import { clearChanged } from "@/lib/admin/field-errors";
 import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
 import { stockItemSchema } from "@/lib/schemas";
 import { formatRupees, rupeesToPaise } from "@/lib/money";
+import { SupplierPicker } from "./SupplierPicker";
+import type { SupplierOption } from "@/lib/admin/supplier-options";
 
 /**
  * One stock item, on its own page.
@@ -38,6 +40,8 @@ export interface StockFormValues {
   onHand: string;
   reorderLevel: string;
   unitCost: string;
+  /** The supplier record; the name beside it is filled from it. */
+  supplierId: string;
   supplier: string;
   location: string;
   notes: string;
@@ -51,6 +55,7 @@ export const EMPTY_STOCK: StockFormValues = {
   onHand: "0",
   reorderLevel: "0",
   unitCost: "",
+  supplierId: "",
   supplier: "",
   location: "",
   notes: "",
@@ -68,11 +73,14 @@ export function StockForm({
   initial,
   itemId,
   version,
+  suppliers,
 }: {
   initial: StockFormValues;
   itemId?: string;
   /** The version this form loaded with, so a stale save is refused. */
   version?: number;
+  /** Every real supplier, for the picker. */
+  suppliers: SupplierOption[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -175,7 +183,7 @@ export function StockForm({
       id: "item",
       title: "The item",
       description: "What it is and where it sits",
-      errorKeys: ["name", "sku", "kind", "unit", "supplier", "location"],
+      errorKeys: ["name", "sku", "kind", "unit", "supplierId", "supplier", "location"],
       complete: Boolean(values.name.trim()),
       content: (
         <Section title="The item" description="What it is and where it sits.">
@@ -209,16 +217,17 @@ export function StockForm({
               error={errors.unit}
             />
             <TextField
-              label="Supplier"
-              value={values.supplier}
-              onChange={(supplier) => set({ supplier })}
-              error={errors.supplier}
-            />
-            <TextField
               label="Location"
               value={values.location}
               onChange={(location) => set({ location })}
               error={errors.location}
+            />
+            <SupplierPicker
+              suppliers={suppliers}
+              value={values.supplierId}
+              legacyName={values.supplierId ? undefined : values.supplier}
+              onChange={({ supplierId, supplier }) => set({ supplierId, supplier })}
+              error={errors.supplierId ?? errors.supplier}
             />
           </div>
         </Section>

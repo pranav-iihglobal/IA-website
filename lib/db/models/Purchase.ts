@@ -24,6 +24,16 @@ export const PURCHASE_CATEGORIES = [
 
 const purchaseSchema = new Schema(
   {
+    /**
+     * The supplier record, and a SNAPSHOT of its name and GSTIN as they were
+     * when this bill was entered — the same design as an invoice's party.
+     * A bill is a filed document; a correction to the supplier record later
+     * must not rewrite what input credit was claimed against.
+     *
+     * Null on rows from before suppliers were records. migrate-suppliers
+     * links them by name and reports what it cannot.
+     */
+    supplierId: { type: Schema.Types.ObjectId, ref: "Supplier", default: null, index: true },
     supplier: { type: String, required: true, trim: true },
     /** Their GSTIN. Its absence means no input credit can be claimed. */
     supplierGstin: { type: String, default: "", trim: true, uppercase: true },
@@ -93,6 +103,8 @@ const purchaseSchema = new Schema(
 );
 
 purchaseSchema.index({ billDate: -1 });
+/* The supplier's own page: their bills, newest first. */
+purchaseSchema.index({ supplierId: 1, billDate: -1 });
 purchaseSchema.index({ supplier: 1, billDate: -1 });
 
 export type PurchaseDoc = InferSchemaType<typeof purchaseSchema>;
