@@ -63,6 +63,7 @@ export function FormSheet({
   wide?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const discardRef = useRef<HTMLDialogElement>(null);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   /*
     Was a hardcoded "form-sheet-title". InvoiceWorkspace renders FOUR sheets
@@ -71,6 +72,7 @@ export function FormSheet({
     dialogs announced the wrong title.
   */
   const titleId = useId();
+  const discardTitleId = useId();
   const shellClass = `flex max-h-[inherit] flex-col ${wide ? "sm:w-[46rem]" : "sm:w-[34rem]"}`;
 
   function submit(e: FormEvent<HTMLFormElement>) {
@@ -92,6 +94,14 @@ export function FormSheet({
     if (open && !el.open) el.showModal();
     if (!open && el.open) el.close();
   }, [open]);
+
+  // Same again for the discard prompt, which stacks on top of the sheet.
+  useEffect(() => {
+    const el = discardRef.current;
+    if (!el) return;
+    if (confirmingDiscard && !el.open) el.showModal();
+    if (!confirmingDiscard && el.open) el.close();
+  }, [confirmingDiscard]);
 
   // The page behind must not scroll while the sheet is up — on iOS especially,
   // a drawer over a scrolling page scrolls the page instead of the drawer.
@@ -226,38 +236,59 @@ export function FormSheet({
       {shell}
 
 
-      {confirmingDiscard && (
-        <div className="absolute inset-0 grid place-items-end bg-russet-dark/40 sm:place-items-center">
-          <div className="w-full rounded-t-2xl bg-surface p-5 sm:max-w-sm sm:rounded-2xl">
-            <p className="font-display text-base font-bold text-ink-strong">
-              Discard your changes?
-            </p>
-            <p className="mt-1 text-sm text-ink">
-              This form has edits that have not been saved.
-            </p>
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                autoFocus
-                onClick={() => setConfirmingDiscard(false)}
-                className="min-h-11 flex-1 rounded-xl border-2 border-olive px-4 text-sm font-semibold text-ink-muted"
-              >
-                Keep editing
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setConfirmingDiscard(false);
-                  onClose();
-                }}
-                className="min-h-11 flex-1 rounded-xl bg-russet px-4 text-sm font-semibold text-cornsilk-light"
-              >
-                Discard
-              </button>
-            </div>
+      {/*
+        A nested <dialog>, not a div over one.
+
+        As a div it had none of what the sheet around it has: Escape did
+        nothing (the key reached the sheet's own cancel handler, which just
+        re-asked the same question), and Tab walked straight into the form
+        behind it — the form it exists to protect. A dialog on the top layer
+        stacks above its parent and brings the focus trap, Escape and
+        inertness with it, which is the same argument that put the sheet on a
+        <dialog> in the first place.
+      */}
+      <dialog
+        ref={discardRef}
+        aria-labelledby={discardTitleId}
+        onCancel={(e) => {
+          // Escape here means "keep editing" — never "throw the work away".
+          e.preventDefault();
+          setConfirmingDiscard(false);
+        }}
+        className="discard-prompt"
+      >
+        <div className="p-5 sm:w-[22rem]">
+          <p
+            id={discardTitleId}
+            className="font-display text-base font-bold text-ink-strong"
+          >
+            Discard your changes?
+          </p>
+          <p className="mt-1 text-sm text-ink">
+            This form has edits that have not been saved.
+          </p>
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              autoFocus
+              onClick={() => setConfirmingDiscard(false)}
+              className="admin-btn admin-tap flex-1 border border-line text-ink hover:bg-surface-subtle"
+            >
+              Keep editing
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmingDiscard(false);
+                onClose();
+              }}
+              className="admin-btn admin-btn-danger-solid admin-tap flex-1"
+            >
+              Discard
+            </button>
           </div>
         </div>
-      )}
+      </dialog>
     </dialog>
   );
 }

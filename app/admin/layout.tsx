@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Admin",
+  /*
+    A template, so every tab says what it is showing.
+
+    One page in eighteen exported metadata, so every admin tab read
+    "Admin | IKSARVA" — with the panel open in three tabs, which is how these
+    screens are actually used, none of them could be told apart.
+  */
+  title: { default: "Admin", template: "%s · Admin" },
   // The admin panel must never appear in search results.
   robots: { index: false, follow: false, nocache: true },
 };

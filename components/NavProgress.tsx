@@ -94,7 +94,7 @@ export function NavProgress() {
       className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-0.5"
     >
       <div
-        className="h-full bg-alloy transition-[width,opacity] duration-200 ease-out"
+        className="admin-progress h-full bg-alloy transition-[width,opacity] duration-200 ease-out"
         style={{
           width: `${progress ?? 0}%`,
           opacity: progress === null ? 0 : 1,

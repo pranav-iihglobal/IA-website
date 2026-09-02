@@ -13,6 +13,7 @@ import { istParts } from "@/lib/time";
 import { SELLER } from "@/lib/content";
 import { MonthPicker } from "@/components/admin/MonthPicker";
 
+export const metadata = { title: "GST filing" };
 export const dynamic = "force-dynamic";
 
 /**

@@ -192,6 +192,12 @@ export function FormWizard({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!e.altKey || e.metaKey || e.ctrlKey) return;
+      /*
+        Not while an overlay is up — a window listener would otherwise walk
+        the wizard behind an open dialog, so dismissing it revealed a
+        different step than the one that was left.
+      */
+      if (document.querySelector("dialog[open], [role='alertdialog']")) return;
       if (e.key === "ArrowRight" && safeCurrent < total - 1) {
         e.preventDefault();
         goTo(safeCurrent + 1);
@@ -230,7 +236,7 @@ export function FormWizard({
               </p>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-subtle">
                 <div
-                  className="h-full rounded-full bg-olive transition-[width] duration-300"
+                  className="admin-progress h-full rounded-full bg-olive transition-[width] duration-300"
                   style={{ width: `${(completed / total) * 100}%` }}
                 />
               </div>
@@ -336,7 +342,7 @@ export function FormWizard({
           <div className="mb-4 flex items-center gap-3 xl:hidden">
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-subtle">
               <div
-                className="h-full rounded-full bg-olive transition-[width] duration-300"
+                className="admin-progress h-full rounded-full bg-olive transition-[width] duration-300"
                 style={{ width: `${(steps.filter((s) => s.complete).length / total) * 100}%` }}
               />
             </div>
@@ -499,17 +505,31 @@ export function FormWizard({
                 ) : null}
 
                 <div className="ml-auto flex min-w-0 items-center gap-3">
-                  <span className="hidden items-center gap-1.5 text-xs font-medium sm:flex">
+                  {/*
+                    Visible on a phone too.
+
+                    The whole indicator was `hidden … sm:flex`, so on the one
+                    device where a stray back-swipe loses a half-filled
+                    product there was no sign that anything was unsaved. The
+                    dot alone carries it below sm — it is the part that
+                    changes — and the words come back with the room for them.
+                  */}
+                  <span className="flex items-center gap-1.5 text-xs font-medium">
                     {dirty ? (
                       <>
                         <span className="h-1.5 w-1.5 rounded-full bg-alloy" />
-                        <span className="text-cta">Unsaved changes</span>
+                        <span className="text-cta">
+                          Unsaved<span className="hidden sm:inline"> changes</span>
+                        </span>
                       </>
                     ) : (
                       <>
                         <span className="h-1.5 w-1.5 rounded-full bg-accent-mid" />
                         <span className="text-ink-soft">
-                          All changes saved
+                          Saved<span className="hidden sm:inline">
+                            {" "}
+                            — all changes
+                          </span>
                         </span>
                       </>
                     )}

@@ -7,6 +7,7 @@ import { getProductOptions } from "@/lib/admin/products-options";
 import { contactListQuery, listQueryKey } from "@/lib/crm/scopes";
 import { betaNote } from "@/lib/auth/permissions";
 
+export const metadata = { title: "Customers" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminCustomersPage({

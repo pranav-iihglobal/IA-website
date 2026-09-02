@@ -966,6 +966,14 @@ select.admin-input {
   }
 }
 
+/*
+  Someone who asked not to be moved should not be.
+
+  The list below grew by four: the sidebar's slide-in and the nav link's hover
+  indent are the largest movements in the panel and were both unguarded, and
+  the wizard's progress bar and the route-change progress line animate on
+  every navigation — the exact repetitive motion this query exists for.
+*/
 @media (prefers-reduced-motion: reduce) {
   .admin-card,
   .admin-btn,
@@ -974,7 +982,16 @@ select.admin-input {
   .admin-nav-group svg,
   .admin-hover-reveal,
   .admin-row,
-  .admin-row-actions {
+  .admin-row-actions,
+  .admin-drawer,
+  .admin-progress {
+    transition: none;
+  }
+  /* The indent is the hover cue; the colour change carries it instead. */
+  .admin-nav-link:hover {
+    padding-left: 0.75rem;
+  }
+  .admin-nav-link::before {
     transition: none;
   }
   .admin-toast,
@@ -1069,11 +1086,20 @@ select.admin-input {
    browser's own <dialog> defaults (margin:auto, max-width, a fixed border)
    and Tailwind's utilities, and @layer would put them behind both.
    ========================================================================== */
+/*
+  Tokens, not brand colours.
+
+  This was `--color-cornsilk-light` on `--color-russet-dark`, neither of which
+  the dark theme redefines — so in dark mode the sheet stayed a cream card
+  while everything inside it rendered off-white text on it. The whole sheet
+  was unreadable on a phone set to dark, which is the default on most of them
+  after sunset.
+*/
 dialog.form-sheet {
   padding: 0;
   border: 0;
-  background: var(--color-cornsilk-light);
-  color: var(--color-russet-dark);
+  background: var(--color-surface);
+  color: var(--color-ink);
   overflow: visible;
 }
 dialog.form-sheet::backdrop {
@@ -1103,6 +1129,27 @@ dialog.form-sheet::backdrop {
     box-shadow: 0 24px 60px rgb(95 47 20 / 0.28);
     animation: form-sheet-in 160ms ease-out;
   }
+}
+
+/*
+  The discard prompt, stacked on the sheet it protects.
+
+  Its own element rather than a div inside the sheet, so it gets the focus
+  trap, Escape and inertness the sheet itself gets — see FormSheet. Centred at
+  every width because it is two buttons, not a form.
+*/
+dialog.discard-prompt {
+  padding: 0;
+  border: 0;
+  margin: auto;
+  max-width: calc(100vw - 2rem);
+  border-radius: 1rem;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.35);
+}
+dialog.discard-prompt::backdrop {
+  background: rgb(0 0 0 / 0.4);
 }
 
 @keyframes form-sheet-up {

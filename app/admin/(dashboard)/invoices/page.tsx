@@ -10,6 +10,7 @@ import {
   getBillableProducts,
 } from "@/lib/admin/invoice-options";
 
+export const metadata = { title: "Invoices" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminInvoicesPage({

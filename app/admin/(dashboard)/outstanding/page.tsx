@@ -6,6 +6,7 @@ import { formatINR, formatRupees } from "@/lib/money";
 import { paymentReminder, telHref, whatsappHref } from "@/lib/crm/contact-links";
 import { EmptyState } from "@/components/admin/ui";
 
+export const metadata = { title: "Outstanding" };
 export const dynamic = "force-dynamic";
 
 /**

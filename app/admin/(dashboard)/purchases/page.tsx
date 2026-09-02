@@ -3,6 +3,7 @@ import { requirePageAccess } from "@/lib/admin/page-guard";
 import { can } from "@/lib/auth/permissions";
 import { listPurchases } from "@/lib/erp/inventory-list";
 
+export const metadata = { title: "Purchases" };
 export const dynamic = "force-dynamic";
 
 export default async function PurchasesPage() {

@@ -1,5 +1,6 @@
 "use client";
 
+import { safeLinkHref } from "@/lib/admin/link-url";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -111,15 +112,27 @@ export function RichTextEditor({
     const previous = editor?.getAttributes("link").href as string | undefined;
     const url = window.prompt("Link URL", previous ?? "https://");
     if (url === null) return;
-    if (url === "") {
+    if (url.trim() === "") {
       editor?.chain().focus().extendMarkRange("link").unsetLink().run();
       return;
     }
+
+    /*
+      Checked, not trusted. Whatever came back went straight into an href,
+      and `javascript:alert(1)` was a valid answer — on content that is
+      PUBLISHED to every visitor. See lib/admin/link-url.ts.
+    */
+    const href = safeLinkHref(url);
+    if (!href) {
+      toast("That link cannot be used — try an https:// address.", "error");
+      return;
+    }
+
     editor
       ?.chain()
       .focus()
       .extendMarkRange("link")
-      .setLink({ href: url, target: "_blank" })
+      .setLink({ href, target: "_blank" })
       .run();
   }
 

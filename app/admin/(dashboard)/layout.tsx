@@ -51,11 +51,31 @@ export default async function DashboardLayout({
         overflow-x-auto containers (the step rail, wide tables) never get to
         scroll — the whole page scrolls sideways instead.
       */}
+      {/*
+        First thing in the tab order, invisible until focused.
+
+        Without it a keyboard user tabbed the entire sidebar — around fifteen
+        links, the group toggles, View site and Sign out — on every single
+        page before reaching any content. Neither <main> even had an id to
+        jump to.
+      */}
+      <a
+        href="#admin-content"
+        className="admin-tap sr-only z-[70] rounded-full bg-russet px-5 font-semibold text-cornsilk-light focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:inline-flex focus:items-center"
+      >
+        Skip to content
+      </a>
       <div className="flex min-w-0 flex-1">
         <AdminNav user={user} />
         {/* pt clears the fixed mobile top bar rendered by AdminNav. */}
         {/* px-4 matches --admin-gutter, which .admin-bleed cancels. */}
-        <main className="min-w-0 flex-1 px-4 pb-10 pt-[74px] sm:px-8 lg:py-9">
+        <main
+          id="admin-content"
+          /* -1 so the skip link can move focus here without adding it to the
+             tab order for everybody else. */
+          tabIndex={-1}
+          className="min-w-0 flex-1 px-4 pb-10 pt-[74px] sm:px-8 lg:py-9"
+        >
           {/* Same 1600px ceiling as the public site — see .container-page. */}
           <div className="mx-auto w-full max-w-[100rem]">
             <RouteTransition>{children}</RouteTransition>

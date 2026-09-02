@@ -899,49 +899,6 @@ export function FieldGroup({
   );
 }
 
-/**
- * Sticky save bar. Keeps the primary action reachable in these long forms
- * without scrolling to the bottom, and shows unsaved state as you type.
- */
-export function FormActions({
-  saving,
-  dirty,
-  submitLabel,
-  savingLabel = "Saving…",
-  onCancel,
-}: {
-  saving: boolean;
-  dirty: boolean;
-  submitLabel: string;
-  savingLabel?: string;
-  onCancel: () => void;
-}) {
-  return (
-    <div className="sticky bottom-0 z-20 -mx-1 mt-2 flex flex-wrap items-center gap-3 rounded-t-2xl border-t border-line-soft/50 bg-[var(--admin-surface)]/92 px-4 py-3.5 backdrop-blur">
-      <Button type="submit" disabled={saving}>
-        {saving && <Spinner />}
-        {saving ? savingLabel : submitLabel}
-      </Button>
-      <Button variant="ghost" onClick={onCancel} disabled={saving}>
-        Cancel
-      </Button>
-      <span className="ml-auto flex items-center gap-1.5 text-xs font-medium">
-        {dirty ? (
-          <>
-            <span className="h-1.5 w-1.5 rounded-full bg-alloy" />
-            <span className="text-cta">Unsaved changes</span>
-          </>
-        ) : (
-          <>
-            <span className="h-1.5 w-1.5 rounded-full bg-accent-mid" />
-            <span className="text-ink-soft">All changes saved</span>
-          </>
-        )}
-      </span>
-    </div>
-  );
-}
-
 export function Spinner() {
   return (
     <svg viewBox="0 0 20 20" className="h-4 w-4 animate-spin" fill="none" aria-hidden="true">

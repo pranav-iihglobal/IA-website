@@ -21,10 +21,19 @@ export function useSaveShortcut(onSave: () => void, enabled = true) {
   useEffect(() => {
     if (!enabled) return;
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
-        e.preventDefault();
-        handler.current();
-      }
+      if (!((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s")) return;
+      /*
+        Not while an overlay is up.
+
+        This is a window listener, so it fired while a confirm dialog was
+        asking "delete this product?" and while a sheet was open over the
+        form — saving the page underneath something the person was reading.
+        An open <dialog> or a visible confirm overlay means the form behind
+        is not what is being edited.
+      */
+      if (document.querySelector("dialog[open], [role='alertdialog']")) return;
+      e.preventDefault();
+      handler.current();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

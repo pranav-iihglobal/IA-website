@@ -6,6 +6,7 @@ import { getProductOptions } from "@/lib/admin/products-options";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 
+export const metadata = { title: "New testimonial" };
 export const dynamic = "force-dynamic";
 
 export default async function NewTestimonialPage() {

@@ -893,7 +893,14 @@ export function ProductForm({
                     update("packSizes", values.packSizes.filter((_, idx) => idx !== i))
                   }
                   renderItem={(i) => (
-                    <div className="grid gap-3 sm:grid-cols-5">
+                    /*
+                      Seven fields, not five. The row was sm:grid-cols-5 with
+                      seven children in it, so the last two wrapped onto a
+                      second implicit row and landed under headings belonging
+                      to other fields — a cost sitting under "Label". Three up
+                      to lg, then a full seven so the row reads as one pack.
+                    */
+                    <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-7">
                       <TextField
                         label="Label"
                         value={values.packSizes[i].label}

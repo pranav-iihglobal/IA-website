@@ -9,6 +9,7 @@ import { can } from "@/lib/auth/permissions";
 import { dashboardFigures } from "@/lib/erp/reports";
 import { BusinessTiles } from "@/components/admin/BusinessTiles";
 
+export const metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
 
 async function getCounts(show: {

@@ -6,6 +6,7 @@ import {
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 
+export const metadata = { title: "New product" };
 export const dynamic = "force-dynamic";
 
 export default async function NewProductPage() {

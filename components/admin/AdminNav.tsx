@@ -7,6 +7,7 @@ import { signOut } from "next-auth/react";
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
@@ -310,6 +311,8 @@ export function AdminNav({ user }: { user: AdminUser }) {
   const pathname = usePathname();
   const [signingOut, setSigningOut] = useState(false);
   const [open, setOpen] = useState(false);
+  const drawerRef = useRef<HTMLElement>(null);
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
   const [avatarFailed, setAvatarFailed] = useState(false);
   const collapsed = useSyncExternalStore(
     subscribeCollapsed,
@@ -339,14 +342,58 @@ export function AdminNav({ user }: { user: AdminUser }) {
     };
   }, [open]);
 
-  // Close the drawer on Escape, like every other overlay in the panel.
+  /*
+    Escape closes it, and Tab stays inside it.
+
+    Escape, the scroll lock and removing the links from the tab order when
+    closed were all already right. What was missing is what a native <dialog>
+    would have given for free and this cannot use — the sidebar is the SAME
+    element on desktop, where it is not a dialog at all: focus never moved
+    into the drawer when it opened, so the first Tab went to whatever followed
+    the hamburger in the page, and focus never came back to the hamburger when
+    it closed.
+  */
   useEffect(() => {
     if (!open) return;
+
+    const drawer = drawerRef.current;
+    const opener = hamburgerRef.current;
+    // The first link, so the drawer announces itself and Tab continues from
+    // there rather than from wherever focus happened to be.
+    drawer?.querySelector<HTMLElement>("a, button")?.focus();
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        return;
+      }
+      if (e.key !== "Tab" || !drawer) return;
+
+      const focusable = [...drawer.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )].filter((el) => el.offsetParent !== null);
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      // Wrap at both ends, and pull focus back in if it has escaped — the
+      // page behind is still there, just covered.
+      if (e.shiftKey && (active === first || !drawer.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !drawer.contains(active))) {
+        e.preventDefault();
+        first.focus();
+      }
     };
+
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      // Back where it came from, so closing does not drop focus onto <body>.
+      opener?.focus();
+    };
   }, [open]);
 
   /*
@@ -395,12 +442,15 @@ export function AdminNav({ user }: { user: AdminUser }) {
         className={`admin-nav-link admin-tap flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold ${
           active
             ? "admin-nav-link-active bg-olive-dark/70 text-cornsilk-light"
-            : "text-cornsilk/75 hover:bg-olive-dark/45 hover:text-cornsilk-light"
+            /* Was cornsilk/75 — 3.66:1 against the olive sidebar, under the
+               4.5:1 this text needs. Full cornsilk is 5.09:1, and the active
+               link still reads as active by its background and weight. */
+            : "text-cornsilk hover:bg-olive-dark/45 hover:text-cornsilk-light"
         }`}
       >
         {item.icon}
         <span className="truncate">{item.label}</span>
-        {note && <BetaStar note={note} className="ml-auto text-[13px] text-laurel-light/80" />}
+        {note && <BetaStar note={note} className="ml-auto text-[13px] text-cornsilk" />}
       </Link>
     );
   };
@@ -433,7 +483,7 @@ export function AdminNav({ user }: { user: AdminUser }) {
               onClick={() => toggleGroup(entry.id)}
               aria-expanded={isOpen}
               aria-controls={`nav-group-${entry.id}`}
-              className="admin-nav-group flex w-full items-center gap-1.5 rounded-lg px-3 py-1 text-left text-[10px] font-bold uppercase tracking-[0.14em] text-laurel-light/70 transition-colors hover:text-cornsilk-light"
+              className="admin-nav-group flex w-full items-center gap-1.5 rounded-lg px-3 py-1 text-left text-[10px] font-bold uppercase tracking-[0.14em] text-cornsilk/95 transition-colors hover:text-cornsilk-light"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -451,7 +501,7 @@ export function AdminNav({ user }: { user: AdminUser }) {
               </svg>
               <span className="truncate">{entry.label}</span>
               {!isOpen && foldedBeta && (
-                <BetaStar note={foldedBeta} className="ml-1 text-[11px] text-laurel-light/80" />
+                <BetaStar note={foldedBeta} className="ml-1 text-[11px] text-cornsilk" />
               )}
               {hasActive && !isOpen && (
                 <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-alloy-light" />
@@ -495,9 +545,11 @@ export function AdminNav({ user }: { user: AdminUser }) {
           </span>
         </div>
         <button
+          ref={hamburgerRef}
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
+          aria-controls="admin-drawer"
           aria-label={open ? "Close menu" : "Open menu"}
           className="-mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-cornsilk-light hover:bg-olive-dark"
         >
@@ -524,7 +576,17 @@ export function AdminNav({ user }: { user: AdminUser }) {
         transitioned rather than switched so the slide-out still plays.
       */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col bg-olive text-cornsilk transition-[transform,visibility] duration-300 lg:visible lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+        ref={drawerRef}
+        id="admin-drawer"
+        /*
+          A dialog only while it IS one. On lg the same element is the
+          permanent sidebar, and announcing that as a modal dialog would be a
+          lie about a piece of furniture that is always there.
+        */
+        role={open ? "dialog" : undefined}
+        aria-modal={open ? true : undefined}
+        aria-label={open ? "Menu" : undefined}
+        className={`admin-drawer fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col bg-olive text-cornsilk transition-[transform,visibility] duration-300 lg:visible lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
           open ? "visible translate-x-0" : "invisible -translate-x-full"
         }`}
       >
@@ -541,7 +603,7 @@ export function AdminNav({ user }: { user: AdminUser }) {
             <p className="font-display text-base font-bold text-cornsilk-light">
               IKSARVA
             </p>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-laurel-light">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-cornsilk">
               Admin
             </p>
           </div>
@@ -553,7 +615,7 @@ export function AdminNav({ user }: { user: AdminUser }) {
           <Link
             href="/"
             target="_blank"
-            className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs font-semibold text-laurel-light transition-colors hover:bg-olive-dark/50 hover:text-cornsilk-light"
+            className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs font-semibold text-cornsilk transition-colors hover:bg-olive-dark/50 hover:text-cornsilk-light"
           >
             <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
               <path d="M11 3a1 1 0 1 0 0 2h1.6l-5.3 5.3a1 1 0 1 0 1.4 1.4L14 6.4V8a1 1 0 1 0 2 0V4a1 1 0 0 0-1-1h-4Z" />
@@ -588,7 +650,7 @@ export function AdminNav({ user }: { user: AdminUser }) {
                 {label}
               </p>
               {user.name && user.email && (
-                <p className="truncate text-xs text-cornsilk/65" title={user.email}>
+                <p className="truncate text-xs text-cornsilk" title={user.email}>
                   {user.email}
                 </p>
               )}
@@ -602,7 +664,7 @@ export function AdminNav({ user }: { user: AdminUser }) {
               type="button"
               onClick={handleSignOut}
               disabled={signingOut}
-              className="mt-2 flex min-h-11 w-full items-center justify-center rounded-lg bg-olive-dark/60 text-xs font-semibold text-alloy-light transition-colors hover:bg-olive-dark hover:text-cornsilk-light disabled:opacity-60"
+              className="mt-2 flex min-h-11 w-full items-center justify-center rounded-lg bg-olive-dark/60 text-xs font-semibold text-cornsilk-light transition-colors hover:bg-olive-dark disabled:opacity-60"
             >
               {signingOut ? "Signing out…" : "Sign out"}
             </button>

@@ -3,6 +3,7 @@ import { TestimonialList } from "@/components/admin/TestimonialList";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { can } from "@/lib/auth/permissions";
 
+export const metadata = { title: "Testimonials" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminTestimonialsPage() {

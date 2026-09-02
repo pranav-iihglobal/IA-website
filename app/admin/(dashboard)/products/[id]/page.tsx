@@ -16,6 +16,7 @@ import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { paiseToRupeeString } from "@/lib/money";
 
+export const metadata = { title: "Edit product" };
 export const dynamic = "force-dynamic";
 
 /**

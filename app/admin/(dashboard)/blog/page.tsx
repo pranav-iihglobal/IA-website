@@ -3,6 +3,7 @@ import { PostList } from "@/components/admin/PostList";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { can } from "@/lib/auth/permissions";
 
+export const metadata = { title: "Blog" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminBlogPage() {

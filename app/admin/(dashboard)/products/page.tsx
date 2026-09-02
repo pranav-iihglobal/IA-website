@@ -3,6 +3,7 @@ import { ProductList } from "@/components/admin/ProductList";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { can } from "@/lib/auth/permissions";
 
+export const metadata = { title: "Products" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminProductsPage() {

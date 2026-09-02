@@ -13,6 +13,7 @@ import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { istDateTimeInputValue } from "@/lib/time";
 
+export const metadata = { title: "Edit post" };
 export const dynamic = "force-dynamic";
 
 /**

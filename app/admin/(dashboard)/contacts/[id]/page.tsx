@@ -9,6 +9,7 @@ import { scopeFor } from "@/lib/crm/scopes";
 import { getProductOptions } from "@/lib/admin/products-options";
 import type { LeanDoc } from "@/lib/db/lean";
 
+export const metadata = { title: "Contact" };
 export const dynamic = "force-dynamic";
 
 /**
