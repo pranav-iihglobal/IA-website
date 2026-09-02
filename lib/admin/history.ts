@@ -1,6 +1,7 @@
 import { connectToDatabase } from "@/lib/db/connect";
 import { AuditLog } from "@/lib/db/models/AuditLog";
 import type { LeanDoc } from "@/lib/db/lean";
+import { auditQuery, type AuditFilter } from "./audit-filter";
 
 /**
  * What happened to THIS record.
@@ -21,10 +22,62 @@ export interface HistoryEntry {
   id: string;
   actor: string;
   action: string;
+  entity: string;
+  entityId: string;
+  /** The record as a person would name it — a number, a name, a title. */
+  summary: string;
   at: string;
   note: string;
   /** Field-by-field, only what actually changed. */
   changes: { field: string; from: string; to: string }[];
+}
+
+/**
+ * Where a record lives, by the entity name the log stores.
+ *
+ * The activity screen showed the entity and never the id, so a row saying
+ * "Invoice edited" could not be opened. Null for anything not listed rather
+ * than a guessed path — a link that 404s is worse than no link.
+ */
+export function recordHref(entity: string, entityId: string): string | null {
+  if (!entityId) return null;
+  switch (entity) {
+    case "Contact":
+      return `/admin/contacts/${entityId}`;
+    case "Invoice":
+      return `/admin/invoices/${entityId}`;
+    case "Purchase":
+      return `/admin/purchases/${entityId}`;
+    case "StockItem":
+      return `/admin/stock/${entityId}`;
+    case "Supplier":
+      return `/admin/suppliers/${entityId}`;
+    case "Product":
+      return `/admin/products/${entityId}`;
+    case "Post":
+      return `/admin/blog/${entityId}`;
+    case "Testimonial":
+      return `/admin/testimonials/${entityId}`;
+    case "User":
+      return "/admin/users";
+    default:
+      return null;
+  }
+}
+
+/** Only what a person would recognise. Ids and internals stay out of it. */
+export function summarise(entry: {
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+  note?: string;
+}): string {
+  const after = entry.after ?? {};
+  const before = entry.before ?? {};
+  for (const source of [after, before]) {
+    const named = source.number ?? source.name ?? source.title ?? source.supplier;
+    if (typeof named === "string" && named) return named;
+  }
+  return entry.note || "";
 }
 
 /**
@@ -63,6 +116,45 @@ function readable(value: unknown): string {
  */
 const HIDDEN = new Set(["updatedBy", "version", "__v", "_id", "id"]);
 
+function toEntry(doc: LeanDoc): HistoryEntry {
+  const before = (doc.before ?? {}) as Record<string, unknown>;
+  const after = (doc.after ?? {}) as Record<string, unknown>;
+  const fields = [...new Set([...Object.keys(before), ...Object.keys(after)])]
+    .filter((f) => !HIDDEN.has(f))
+    .sort();
+
+  return {
+    id: String(doc._id),
+    actor: doc.actor ?? "",
+    action: doc.action ?? "update",
+    entity: doc.entity ?? "",
+    entityId: doc.entityId ?? "",
+    summary: summarise({ before, after, note: doc.note }),
+    at: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
+    note: doc.note ?? "",
+    changes: fields.map((field) => ({
+      field,
+      from: readable(before[field]),
+      to: readable(after[field]),
+    })),
+  };
+}
+
+/**
+ * Entries matching a filter, newest first.
+ *
+ * The activity screen's query, generalised from recordHistory() so both
+ * render the same from → to changes through the same readable().
+ */
+export async function auditEntries(filter: AuditFilter, limit: number): Promise<HistoryEntry[]> {
+  await connectToDatabase();
+  const docs = (await AuditLog.find(auditQuery(filter))
+    .sort({ createdAt: -1, _id: -1 })
+    .limit(limit)
+    .lean()) as LeanDoc[];
+  return docs.map(toEntry);
+}
+
 export async function recordHistory(
   entity: string,
   entityId: string,
@@ -74,24 +166,5 @@ export async function recordHistory(
     .limit(MAX_ENTRIES)
     .lean()) as LeanDoc[];
 
-  return docs.map((doc) => {
-    const before = (doc.before ?? {}) as Record<string, unknown>;
-    const after = (doc.after ?? {}) as Record<string, unknown>;
-    const fields = [...new Set([...Object.keys(before), ...Object.keys(after)])]
-      .filter((f) => !HIDDEN.has(f))
-      .sort();
-
-    return {
-      id: String(doc._id),
-      actor: doc.actor ?? "",
-      action: doc.action ?? "update",
-      at: doc.createdAt ? new Date(doc.createdAt).toISOString() : "",
-      note: doc.note ?? "",
-      changes: fields.map((field) => ({
-        field,
-        from: readable(before[field]),
-        to: readable(after[field]),
-      })),
-    };
-  });
+  return docs.map(toEntry);
 }

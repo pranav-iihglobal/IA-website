@@ -48,6 +48,9 @@ const auditSchema = new Schema(
 auditSchema.index({ entity: 1, entityId: 1, createdAt: -1 });
 /** And: what did this person do. */
 auditSchema.index({ actor: 1, createdAt: -1 });
+/** The activity screen: everything in a date range, or one kind of record. */
+auditSchema.index({ createdAt: -1 });
+auditSchema.index({ entity: 1, createdAt: -1 });
 
 export type AuditLogDoc = InferSchemaType<typeof auditSchema>;
 

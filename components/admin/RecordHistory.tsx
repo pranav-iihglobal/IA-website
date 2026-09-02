@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { StatusPill } from "./ui";
 import { formatIstDateLong, istDateTimeInputValue } from "@/lib/time";
 import type { HistoryEntry } from "@/lib/admin/history";
@@ -34,54 +35,77 @@ export function RecordHistory({
       ) : (
         <ol className="mt-3 divide-y divide-line-soft">
           {entries.map((entry) => (
-            <li key={entry.id} className="py-3">
-              <div className="flex flex-wrap items-baseline gap-2">
-                <StatusPill status={entry.action} />
-                <span className="text-sm font-semibold text-ink-strong">
-                  {entry.actor}
-                </span>
-                {entry.at && (
-                  <time
-                    dateTime={entry.at}
-                    className="text-xs text-ink-faint"
-                    /* The full IST timestamp on hover; the date alone on the
-                       line, because a list of times is unreadable. */
-                    title={istDateTimeInputValue(new Date(entry.at))}
-                  >
-                    {formatIstDateLong(new Date(entry.at))}
-                  </time>
-                )}
-              </div>
-
-              {entry.note && (
-                <p className="mt-1 text-sm text-ink">{entry.note}</p>
-              )}
-
-              {entry.changes.length > 0 && (
-                <dl className="mt-1.5 space-y-0.5">
-                  {entry.changes.map((change) => (
-                    <div
-                      key={change.field}
-                      className="flex flex-wrap items-baseline gap-x-2 text-xs"
-                    >
-                      <dt className="font-semibold text-ink-muted">
-                        {change.field}
-                      </dt>
-                      <dd className="min-w-0 text-ink-soft">
-                        {/* Before and after, because "changed the total" is
-                            not an answer to what it used to say. */}
-                        <span className="line-through">{change.from}</span>
-                        {" → "}
-                        <span className="font-semibold text-ink">{change.to}</span>
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
-            </li>
+            <HistoryItem key={entry.id} entry={entry} />
           ))}
         </ol>
       )}
     </section>
+  );
+}
+
+/**
+ * One entry: who, what, when, and every field from → to.
+ *
+ * Shared with the activity screen, which used to list only the NAMES of the
+ * fields that changed — "changed total" is not an answer to what it used to
+ * say. With `href`, the entry names and links the record it is about.
+ */
+export function HistoryItem({ entry, href }: { entry: HistoryEntry; href?: string | null }) {
+  return (
+    <li className="py-3">
+      <div className="flex flex-wrap items-baseline gap-2">
+        <StatusPill status={entry.action} />
+        {href !== undefined && (
+          <span className="text-sm font-semibold text-ink-strong">
+            {href ? (
+              <Link href={href} className="hover:text-cta hover:underline">
+                {entry.summary || entry.entity}
+              </Link>
+            ) : (
+              entry.summary || entry.entity
+            )}
+            {entry.summary && (
+              <span className="ml-1.5 text-xs font-normal text-ink-faint">{entry.entity}</span>
+            )}
+          </span>
+        )}
+        <span className={`text-sm ${href === undefined ? "font-semibold text-ink-strong" : "text-ink-muted"}`}>
+          {entry.actor || "unknown"}
+        </span>
+        {entry.at && (
+          <time
+            dateTime={entry.at}
+            className="text-xs text-ink-faint"
+            /* The full IST timestamp on hover; the date alone on the
+               line, because a list of times is unreadable. */
+            title={istDateTimeInputValue(new Date(entry.at))}
+          >
+            {formatIstDateLong(new Date(entry.at))}
+            {href !== undefined && (
+              <span className="ml-1">{istDateTimeInputValue(new Date(entry.at)).slice(11)}</span>
+            )}
+          </time>
+        )}
+      </div>
+
+      {entry.note && <p className="mt-1 text-sm text-ink">{entry.note}</p>}
+
+      {entry.changes.length > 0 && (
+        <dl className="mt-1.5 space-y-0.5">
+          {entry.changes.map((change) => (
+            <div key={change.field} className="flex flex-wrap items-baseline gap-x-2 text-xs">
+              <dt className="font-semibold text-ink-muted">{change.field}</dt>
+              <dd className="min-w-0 text-ink-soft">
+                {/* Before and after, because "changed the total" is
+                    not an answer to what it used to say. */}
+                <span className="line-through">{change.from}</span>
+                {" → "}
+                <span className="font-semibold text-ink">{change.to}</span>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </li>
   );
 }
