@@ -203,9 +203,11 @@ export default async function OutstandingPage({
                   <p className="font-display text-lg font-bold tabular-nums text-danger">
                     {formatINR(row.owedPaise)}
                   </p>
-                  {row.paidPaise > 0 && (
+                  {(row.paidPaise > 0 || row.creditedPaise > 0) && (
                     <p className="text-xs text-ink-faint">
-                      {formatINR(row.paidPaise)} of {formatINR(row.grandTotalPaise)} paid
+                      {formatINR(row.grandTotalPaise)} invoiced
+                      {row.paidPaise > 0 && `, ${formatINR(row.paidPaise)} paid`}
+                      {row.creditedPaise > 0 && `, ${formatINR(row.creditedPaise)} credited`}
                     </p>
                   )}
                 </div>

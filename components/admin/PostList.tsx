@@ -7,6 +7,7 @@ import { CLD, cldUrl } from "@/lib/images";
 import { adminFetch } from "@/lib/admin/fetch";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { useToast } from "./Toast";
+import { formatIstDateLong } from "@/lib/time";
 import {
   EmptyState,
   ErrorBanner,
@@ -52,13 +53,14 @@ function Cover({ cover }: { cover: string | null }) {
   );
 }
 
-/** Publish date with the year, e.g. "1 Aug 2026". */
+/**
+ * Publish date with the year, e.g. "01 Aug 2026".
+ *
+ * On the IST clock, not the host's: this component is server-rendered first,
+ * and a post published at 02:00 IST showed the previous day until hydration.
+ */
 function formatLongDate(value: string): string {
-  return new Date(value).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatIstDateLong(new Date(value));
 }
 
 export function PostList() {

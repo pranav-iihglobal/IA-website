@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Invoice } from "@/lib/db/models/Invoice";
 import type { LeanDoc } from "@/lib/db/lean";
@@ -132,6 +133,19 @@ async function creditedByLine(invoiceId: string): Promise<Map<number, number>> {
     }
   }
   return taken;
+}
+
+/**
+ * How much issued credit notes have taken off one invoice, as a positive
+ * figure. What the payment form needs to prefill "the rest" correctly.
+ */
+export async function creditedPaiseAgainst(invoiceId: string): Promise<number> {
+  await connectToDatabase();
+  const [row] = await Invoice.aggregate<{ total: number }>([
+    { $match: { againstInvoiceId: new Types.ObjectId(invoiceId), documentType: "credit_note", status: "issued" } },
+    { $group: { _id: null, total: { $sum: { $abs: "$grandTotalPaise" } } } },
+  ]);
+  return row?.total ?? 0;
 }
 
 export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null> {

@@ -15,6 +15,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { PURCHASE_CATEGORIES } from "./PurchaseForm";
 import { useToast } from "./Toast";
 import { formatINR, formatRupees } from "@/lib/money";
+import { formatIstDate } from "@/lib/time";
 import { useListState } from "./useListState";
 import type {
   ListEnvelope,
@@ -255,7 +256,7 @@ export function PurchaseWorkspace({
                     </span>
                     {row.billDate && (
                       <span className="text-ink-faint">
-                        {new Date(row.billDate).toLocaleDateString("en-IN")}
+                        {formatIstDate(new Date(row.billDate))}
                       </span>
                     )}
                     {row.paidBy === "director" && (

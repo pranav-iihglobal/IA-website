@@ -13,6 +13,7 @@ import {
   StatusPill,
 } from "./ui";
 import { formatINR } from "@/lib/money";
+import { formatIstDate } from "@/lib/time";
 import { listQueryKey } from "@/lib/crm/scopes";
 import { invoiceListQuery } from "@/lib/erp/list-query";
 import type { InvoiceList, InvoiceRow } from "@/lib/erp/list";
@@ -200,7 +201,7 @@ export function InvoiceWorkspace({
                     {row.isHistorical && <StatusPill status="filed" />}
                     <span className="text-ink-faint">
                       {row.issuedAt
-                        ? new Date(row.issuedAt).toLocaleDateString("en-IN")
+                        ? formatIstDate(new Date(row.issuedAt))
                         : "not issued"}
                     </span>
                   </p>

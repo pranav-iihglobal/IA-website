@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { useToast } from "./Toast";
@@ -14,6 +14,7 @@ import {
 } from "./ui";
 import { adminFetch } from "@/lib/admin/fetch";
 import { formatINR, paiseToRupeeString } from "@/lib/money";
+import { owedOnInvoice } from "@/lib/erp/owed";
 
 /**
  * The three things you can do to an invoice that is already issued.
@@ -87,12 +88,15 @@ export function RecordPaymentForm({
   number,
   grandTotalPaise,
   paidPaise,
+  creditedPaise = 0,
   status,
 }: {
   invoiceId: string;
   number: string;
   grandTotalPaise: number;
   paidPaise: number;
+  /** Taken off by issued credit notes — not owed, and not to be paid twice. */
+  creditedPaise?: number;
   status: string;
 }) {
   const router = useRouter();
@@ -104,9 +108,11 @@ export function RecordPaymentForm({
     /*
       Prefilled with what is OWED, not with what has been paid. "Record a
       payment" almost always means "they have now paid the rest", and the
-      alternative is retyping a figure that is already on screen.
+      alternative is retyping a figure that is already on screen. Owed is net
+      of credit notes — it used to be grandTotal − paid, which prefilled a
+      part-credited invoice with money the customer no longer owes.
     */
-    paid: paiseToRupeeString(Math.max(grandTotalPaise - paidPaise, 0)),
+    paid: paiseToRupeeString(owedOnInvoice(grandTotalPaise, paidPaise, creditedPaise)),
     referenceNo: "",
   });
 
@@ -148,7 +154,7 @@ export function RecordPaymentForm({
         title="What arrived"
         description={`${formatINR(grandTotalPaise)} was invoiced${
           paidPaise > 0 ? `, ${formatINR(paidPaise)} already received` : ""
-        }.`}
+        }${creditedPaise > 0 ? `, ${formatINR(creditedPaise)} credited back` : ""}.`}
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <SelectField
@@ -293,10 +299,6 @@ export function CreditNoteForm({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setQuantities(lines.map((l) => String(l.invoiced)));
-  }, [lines]);
 
   const picked = lines
     .map((l, i) => ({ index: l.index, quantity: Number(quantities[i]) || 0 }))

@@ -192,8 +192,10 @@ export default async function PartyOutstandingPage({
                       ? formatIstDateLong(new Date(row.issuedAt))
                       : "not issued"}{" "}
                     · {row.daysOld} days
-                    {row.paidPaise > 0 &&
-                      ` · ${formatINR(row.paidPaise)} of ${formatINR(row.grandTotalPaise)} paid`}
+                    {(row.paidPaise > 0 || row.creditedPaise > 0) &&
+                      ` · ${formatINR(row.grandTotalPaise)} invoiced`}
+                    {row.paidPaise > 0 && `, ${formatINR(row.paidPaise)} paid`}
+                    {row.creditedPaise > 0 && `, ${formatINR(row.creditedPaise)} credited`}
                   </span>
                   <span
                     className={`text-sm font-bold tabular-nums ${

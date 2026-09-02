@@ -10,6 +10,7 @@ import type { HistoryEntry } from "@/lib/admin/history";
 import { telHref, whatsappHref } from "@/lib/crm/contact-links";
 import { FOLLOW_UP_LABELS, STATUS_LABELS } from "@/lib/crm/shape";
 import { formatINR, formatRupees } from "@/lib/money";
+import { formatIstDateLong } from "@/lib/time";
 import type { ProfileInvoice, Trading } from "@/lib/crm/profile";
 
 /**
@@ -160,11 +161,7 @@ function Stat({
 }
 
 function date(value: string | null): string | null {
-  return value ? new Date(value).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }) : null;
+  return value ? formatIstDateLong(new Date(value)) : null;
 }
 
 export function ContactProfile({

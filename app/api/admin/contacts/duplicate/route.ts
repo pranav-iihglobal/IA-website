@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isValidObjectId } from "mongoose";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Contact } from "@/lib/db/models/Contact";
 import { duplicatePhoneFilter, phoneKey } from "@/lib/crm/duplicates";
@@ -23,9 +24,12 @@ export async function GET(request: NextRequest) {
   if (unauthorized) return unauthorized;
 
   const params = request.nextUrl.searchParams;
+  // `exclude` goes into an ObjectId comparison; anything else is a CastError
+  // and a 500 on a warning that should never be able to fail loudly.
+  const exclude = params.get("exclude");
   const filter = duplicatePhoneFilter(
     phoneKey(params.get("phone") ?? ""),
-    params.get("exclude") ?? undefined,
+    exclude && isValidObjectId(exclude) ? exclude : undefined,
   );
   // Not an error: a half-typed number simply has no twins yet.
   if (!filter) return NextResponse.json({ matches: [] });

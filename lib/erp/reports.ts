@@ -3,9 +3,13 @@ import { Invoice } from "@/lib/db/models/Invoice";
 import { Purchase } from "@/lib/db/models/Purchase";
 import { StockItem, needsReorder } from "@/lib/db/models/StockItem";
 import { Contact } from "@/lib/db/models/Contact";
+import { Types, type PipelineStage } from "mongoose";
 import type { LeanDoc } from "@/lib/db/lean";
 import { istMonthStart, istParts } from "@/lib/time";
 import type { ExportableInvoice } from "./gst";
+import { owedOnInvoice } from "./owed";
+
+export { owedOnInvoice };
 
 /**
  * The read side of the ERP: what is owed, what sold, what is running out.
@@ -110,19 +114,77 @@ export interface OutstandingRow {
   contactId: string | null;
   grandTotalPaise: number;
   paidPaise: number;
+  /** What issued credit notes against this invoice have taken off it. */
+  creditedPaise: number;
   owedPaise: number;
   daysOld: number;
 }
 
-/**
- * Who owes what, oldest first.
- *
- * Oldest first rather than largest: an invoice unpaid for four months is a
- * different problem from a big one raised last week, and it is the one that
- * needs the call.
- */
-/** Rows shown on screen are capped; this is not. See outstandingTotal(). */
+/** Rows shown on screen are capped; the total is not. See outstandingTotal(). */
 const OUTSTANDING_ROW_CAP = 500;
+
+/**
+ * The stages that turn "issued, unpaid invoices" into rows carrying what is
+ * genuinely owed — the ONE definition the list, the total, the per-customer
+ * page and the dashboard all read, so they cannot disagree again.
+ *
+ * Credit notes are joined in from the same collection by `againstInvoiceId`
+ * (indexed for this). Only ISSUED notes count, the same rule creditedSoFar()
+ * applies when it decides how much of a line is left to credit: a cancelled
+ * note has released its amount back onto the invoice. Their totals are stored
+ * negative, so the magnitude is what came off.
+ */
+export function outstandingPipeline(match: Record<string, unknown> = {}): PipelineStage[] {
+  return [
+    {
+      $match: {
+        ...match,
+        status: "issued",
+        // A credit note is written already paid, so it never reaches here —
+        // but "what is owed" must not be able to go negative because one was
+        // written any other way.
+        documentType: { $ne: "credit_note" },
+        "payment.status": { $ne: "paid" },
+      },
+    },
+    {
+      $lookup: {
+        from: Invoice.collection.name,
+        let: { invoiceId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$againstInvoiceId", "$$invoiceId"] },
+              documentType: "credit_note",
+              status: "issued",
+            },
+          },
+          { $group: { _id: null, total: { $sum: { $abs: "$grandTotalPaise" } } } },
+        ],
+        as: "credits",
+      },
+    },
+    {
+      $addFields: {
+        paidPaise: { $ifNull: ["$payment.paidPaise", 0] },
+        creditedPaise: { $ifNull: [{ $first: "$credits.total" }, 0] },
+      },
+    },
+    {
+      $addFields: {
+        // Same arithmetic as owedOnInvoice(); the test asserts they agree.
+        owedPaise: {
+          $max: [
+            0,
+            { $subtract: [{ $subtract: ["$grandTotalPaise", "$paidPaise"] }, "$creditedPaise"] },
+          ],
+        },
+      },
+    },
+    // Fully credited, or overpaid by a rounding: not a debt, not on the list.
+    { $match: { owedPaise: { $gt: 0 } } },
+  ];
+}
 
 /**
  * What is owed in total, across every unpaid invoice.
@@ -135,26 +197,8 @@ const OUTSTANDING_ROW_CAP = 500;
 export async function outstandingTotal(): Promise<{ owedPaise: number; count: number }> {
   await connectToDatabase();
   const [row] = await Invoice.aggregate<{ owed: number; count: number }>([
-    {
-      $match: {
-        status: "issued",
-        // Belt and braces: a credit note is written already paid, so it never
-        // reaches here — but "what is owed" must not be able to go negative
-        // because one was written any other way.
-        documentType: { $ne: "credit_note" },
-        "payment.status": { $ne: "paid" },
-      },
-    },
-    {
-      $project: {
-        owed: {
-          $subtract: ["$grandTotalPaise", { $ifNull: ["$payment.paidPaise", 0] }],
-        },
-      },
-    },
-    // A rounding overpayment leaves a negative; it is not a debt.
-    { $match: { owed: { $gt: 0 } } },
-    { $group: { _id: null, owed: { $sum: "$owed" }, count: { $sum: 1 } } },
+    ...outstandingPipeline(),
+    { $group: { _id: null, owed: { $sum: "$owedPaise" }, count: { $sum: 1 } } },
   ]);
   return { owedPaise: row?.owed ?? 0, count: row?.count ?? 0 };
 }
@@ -177,47 +221,46 @@ export async function outstandingInvoices(
 ): Promise<OutstandingRow[]> {
   await connectToDatabase();
 
-  const docs = await Invoice.find({
-    ...(contactId ? { contactId } : {}),
-    status: "issued",
-    // Same reason as outstandingTotal: the list and the total must agree.
-    documentType: { $ne: "credit_note" },
-    "payment.status": { $ne: "paid" },
-  })
-    .select("number issuedAt party grandTotalPaise payment contactId")
+  const docs = await Invoice.aggregate<LeanDoc>([
+    ...outstandingPipeline(contactId ? { contactId: new Types.ObjectId(contactId) } : {}),
     /*
-      Sorted on the GRAND TOTAL, not on what is owed. Owed is
-      grandTotal − paid and is computed after the read, so the database
-      cannot order by it — and paging a capped list by a field it cannot
-      sort on would silently return the wrong 500 rows. Part-paid invoices
-      are the minority here and the ordering is a reading aid, not a figure.
+      "Biggest" sorts on what is OWED, now that the database computes it. It
+      used to sort on the grand total because owed was worked out after the
+      read — so a ₹50,000 invoice with ₹49,000 paid outranked a ₹20,000 one
+      with nothing paid, on a screen whose one question is where the money is.
     */
-    .sort(sort === "largest" ? { grandTotalPaise: -1 } : { issuedAt: 1 })
-    .limit(OUTSTANDING_ROW_CAP)
-    .lean();
+    { $sort: sort === "largest" ? { owedPaise: -1, issuedAt: 1 } : { issuedAt: 1, _id: 1 } },
+    { $limit: OUTSTANDING_ROW_CAP },
+    {
+      $project: {
+        number: 1,
+        issuedAt: 1,
+        party: 1,
+        contactId: 1,
+        grandTotalPaise: 1,
+        paidPaise: 1,
+        creditedPaise: 1,
+        owedPaise: 1,
+      },
+    },
+  ]);
 
   const now = Date.now();
-  return (docs as LeanDoc[])
-    .map((i) => {
-      const paid = i.payment?.paidPaise ?? 0;
-      const owed = (i.grandTotalPaise ?? 0) - paid;
-      return {
-        invoiceId: String(i._id),
-        number: i.number ?? "",
-        issuedAt: i.issuedAt ? new Date(i.issuedAt).toISOString() : null,
-        partyName: i.party?.businessName || i.party?.name || "",
-        partyPhone: i.party?.phone ?? "",
-        contactId: i.contactId ? String(i.contactId) : null,
-        grandTotalPaise: i.grandTotalPaise ?? 0,
-        paidPaise: paid,
-        owedPaise: owed,
-        daysOld: i.issuedAt
-          ? Math.floor((now - new Date(i.issuedAt).getTime()) / 86_400_000)
-          : 0,
-      };
-    })
-    // A rounding overpayment leaves a fraction owed; it is not a debt.
-    .filter((r) => r.owedPaise > 0);
+  return docs.map((i) => ({
+    invoiceId: String(i._id),
+    number: i.number ?? "",
+    issuedAt: i.issuedAt ? new Date(i.issuedAt).toISOString() : null,
+    partyName: i.party?.businessName || i.party?.name || "",
+    partyPhone: i.party?.phone ?? "",
+    contactId: i.contactId ? String(i.contactId) : null,
+    grandTotalPaise: i.grandTotalPaise ?? 0,
+    paidPaise: i.paidPaise ?? 0,
+    creditedPaise: i.creditedPaise ?? 0,
+    owedPaise: i.owedPaise ?? 0,
+    daysOld: i.issuedAt
+      ? Math.floor((now - new Date(i.issuedAt).getTime()) / 86_400_000)
+      : 0,
+  }));
 }
 
 export interface DashboardFigures {
@@ -278,14 +321,14 @@ export async function dashboardFigures(now = new Date()): Promise<DashboardFigur
       revenueBetween(fyStart, thisMonth.to),
       outstandingTotal(),
       // Just the oldest, for the "oldest N days" line — not the whole list.
-      Invoice.findOne({
-        status: "issued",
-        documentType: { $ne: "credit_note" },
-        "payment.status": { $ne: "paid" },
-      })
-        .select("issuedAt")
-        .sort({ issuedAt: 1 })
-        .lean(),
+      // Through the same pipeline, so a fully credited invoice that is still
+      // marked unpaid does not count as the oldest debt on the books.
+      Invoice.aggregate<{ issuedAt?: Date }>([
+        ...outstandingPipeline(),
+        { $sort: { issuedAt: 1, _id: 1 } },
+        { $limit: 1 },
+        { $project: { issuedAt: 1 } },
+      ]),
       StockItem.find().select("onHand reorderLevel").lean(),
       Contact.countDocuments({ kind: "customer", channel: "b2c" }),
       Contact.countDocuments({ kind: "customer", channel: "b2b" }),
@@ -303,8 +346,8 @@ export async function dashboardFigures(now = new Date()): Promise<DashboardFigur
     yearRevenuePaise: year.total,
     outstandingPaise: owed.owedPaise,
     outstandingCount: owed.count,
-    oldestOwedDays: oldest?.issuedAt
-      ? Math.floor((now.getTime() - new Date(oldest.issuedAt).getTime()) / 86_400_000)
+    oldestOwedDays: oldest[0]?.issuedAt
+      ? Math.floor((now.getTime() - new Date(oldest[0].issuedAt).getTime()) / 86_400_000)
       : null,
     customers,
     dealers,

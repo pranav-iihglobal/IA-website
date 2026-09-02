@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatIstDate,
   formatIstDateLong,
+  formatIstDateTime,
   istDateTimeInputValue,
   istDay,
   istFinancialYear,
@@ -168,6 +169,12 @@ describe("formatting a date for a document", () => {
     // The date printed on the invoice and on the filed CSV.
     expect(formatIstDate(EARLY_FIRST)).toBe("01-10-2026");
     expect(formatIstDateLong(EARLY_FIRST)).toBe("01 Oct 2026");
+  });
+
+  it("writes a timestamp on the IST clock", () => {
+    // 23:30Z on the 30th is 05:00 on the 1st in India.
+    expect(formatIstDateTime(EARLY_FIRST)).toBe("01 Oct 2026, 05:00");
+    expect(formatIstDateTime(new Date("2026-09-04T08:35:00.000Z"))).toBe("04 Sep 2026, 14:05");
   });
 
   it("pads a single-digit day and month", () => {

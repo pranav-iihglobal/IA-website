@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "./ui";
+import { formatIstDateTime } from "@/lib/time";
 
 export interface ContactNote {
   _id?: string;
@@ -106,13 +107,7 @@ export function ContactNotes({
               <p className="whitespace-pre-wrap text-sm text-ink">{note.body}</p>
               <p className="mt-1 text-[11px] text-ink-soft">
                 {note.author || "—"}
-                {note.at && ` · ${new Date(note.at).toLocaleString("en-IN", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                })}`}
+                {note.at && ` · ${formatIstDateTime(new Date(note.at))}`}
               </p>
             </li>
           ))}

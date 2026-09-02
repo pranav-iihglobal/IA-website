@@ -136,6 +136,19 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       );
     }
     /*
+      Only an ISSUED invoice can be paid against. The model's lock leaves
+      `payment` writable after issue — money arriving is a fact about the
+      world — but it leaves it writable on a CANCELLED one too, and nothing
+      here refused that: a payment could be recorded against a document that
+      no longer exists on the books. The page 404s on it; the request did not.
+    */
+    if (invoice.status !== "issued") {
+      return NextResponse.json(
+        { error: `This invoice is ${invoice.status}; there is nothing to record a payment against.` },
+        { status: 400 },
+      );
+    }
+    /*
       Not a credit note. It is money going the OTHER way and is written
       `payment: paid` for its full value at issue, so "recording a payment"
       against one would overwrite that on a filed document with a figure that

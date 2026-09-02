@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isValidObjectId } from "mongoose";
 import { connectToDatabase } from "@/lib/db/connect";
@@ -73,9 +74,9 @@ export default async function InvoicePrintPage({
       `}</style>
 
       <div className="no-print mb-6 flex items-center justify-between gap-4">
-        <a href="/admin/invoices" className="text-sm font-semibold underline">
+        <Link href="/admin/invoices" className="text-sm font-semibold underline">
           ← Back to invoices
-        </a>
+        </Link>
         <div className="flex flex-wrap items-center gap-2">
           {/*
             The funnel is WhatsApp, so getting the customer the NUMBER and the

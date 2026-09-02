@@ -124,6 +124,20 @@ export function formatIstDateLong(date: Date): string {
   return `${String(day).padStart(2, "0")} ${MONTH_NAMES[month - 1]} ${year}`;
 }
 
+/**
+ * "04 Sep 2026, 14:05", for a call log entry or an audit line.
+ *
+ * Client components render on the server first, so `toLocaleString("en-IN")`
+ * in one paints the UTC clock into the HTML and the phone's clock after
+ * hydration — a mismatch warning at best, and for the five and a half hours
+ * after midnight a different DAY on first paint. Same fix as the dates above.
+ */
+export function formatIstDateTime(date: Date): string {
+  const clock = asIstClock(date);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${formatIstDateLong(date)}, ${pad(clock.getUTCHours())}:${pad(clock.getUTCMinutes())}`;
+}
+
 /* -------------------------------------------------------------------------- */
 /* <input type="datetime-local">                                              */
 /* -------------------------------------------------------------------------- */

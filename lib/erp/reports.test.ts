@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { monthRange } from "./reports";
+import { monthRange, outstandingPipeline, owedOnInvoice } from "./reports";
 import { istDay, istMonth, istYear } from "@/lib/time";
 
 /**
@@ -57,5 +57,61 @@ describe("monthRange", () => {
   it("covers a leap February", () => {
     const { from, to } = monthRange(2028, 2);
     expect(Math.round((+to - +from) / 86_400_000)).toBe(29);
+  });
+});
+
+/**
+ * The owed arithmetic, and the shape of the pipeline that mirrors it.
+ *
+ * The outstanding list, its total, the per-customer page and the dashboard
+ * all used to compute owed as grandTotal − paid and never subtracted the
+ * credit notes raised against the invoice, so a part-credited invoice was
+ * chased for its full value while its own detail page showed the truth.
+ */
+describe("owedOnInvoice", () => {
+  it("subtracts what was paid AND what was credited", () => {
+    expect(owedOnInvoice(1_000_000, 300_000, 400_000)).toBe(300_000);
+  });
+
+  it("drops to zero, never negative, once credits cover the balance", () => {
+    expect(owedOnInvoice(1_000_000, 0, 1_000_000)).toBe(0);
+    expect(owedOnInvoice(1_000_000, 700_000, 400_000)).toBe(0);
+    // A rounding overpayment is not a debt either.
+    expect(owedOnInvoice(1_000_000, 1_000_012, 0)).toBe(0);
+  });
+});
+
+describe("outstandingPipeline", () => {
+  const stages = outstandingPipeline({ contactId: "x" });
+  const find = (key: string) => stages.filter((s) => key in s);
+
+  it("keeps the caller's filter and never admits a paid invoice or a credit note", () => {
+    const [{ $match }] = find("$match") as { $match: Record<string, unknown> }[];
+    expect($match).toMatchObject({
+      contactId: "x",
+      status: "issued",
+      documentType: { $ne: "credit_note" },
+      "payment.status": { $ne: "paid" },
+    });
+  });
+
+  it("joins only ISSUED credit notes, by the invoice they are against", () => {
+    const [{ $lookup }] = find("$lookup") as { $lookup: Record<string, unknown> }[];
+    const inner = ($lookup.pipeline as { $match?: Record<string, unknown> }[])[0].$match!;
+    expect(inner).toMatchObject({ documentType: "credit_note", status: "issued" });
+    expect(JSON.stringify(inner.$expr)).toContain("$againstInvoiceId");
+    // Same collection: the self-join must name the model's collection, not a
+    // string that drifts when the model is renamed.
+    expect(typeof $lookup.from).toBe("string");
+    expect($lookup.from).toBe("invoices");
+  });
+
+  it("filters on the computed owed AFTER the join, so a fully credited invoice drops off", () => {
+    const matches = find("$match") as { $match: Record<string, unknown> }[];
+    const last = matches[matches.length - 1].$match;
+    expect(last).toEqual({ owedPaise: { $gt: 0 } });
+    expect(stages.indexOf(matches[matches.length - 1])).toBeGreaterThan(
+      stages.indexOf(find("$lookup")[0]),
+    );
   });
 });
