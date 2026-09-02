@@ -1,25 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Button,
   EmptyState,
   ErrorBanner,
   FilterTabs,
   TableSkeleton,
   SearchInput,
-  SelectField,
   StatusPill,
-  TextareaField,
-  TextField,
-  Toggle,
 } from "./ui";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { FormSheet } from "./FormSheet";
+// One list of categories, shared with the form that writes them.
+import { PURCHASE_CATEGORIES } from "./PurchaseForm";
 import { useToast } from "./Toast";
-import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
-import { purchaseSchema } from "@/lib/schemas";
-import { formatINR, formatRupees, paiseToRupeeString, rupeesToPaise } from "@/lib/money";
+import { formatINR, formatRupees } from "@/lib/money";
 import { useListState } from "./useListState";
 import type {
   ListEnvelope,
@@ -32,8 +27,11 @@ import type {
  *
  * Nothing here is computed. The totals are transcribed from the supplier's
  * bill exactly as printed — if their arithmetic disagrees with ours, theirs is
- * the one that was filed. The form does add the parts up and SAY so when it
- * does not match, which is a different thing from silently correcting it.
+ * the one that was filed. The form does add the parts up and SAY so when they
+ * do not match, which is a different thing from silently correcting them.
+ *
+ * The form is its own page — /admin/purchases/new and /admin/purchases/<id>.
+ * Sixteen fields was the widest thing in the panel and it lived in a dialog.
  */
 
 /**
@@ -42,16 +40,6 @@ import type {
  */
 export type PurchaseRow = PurchaseRowShape;
 
-const CATEGORIES = [
-  { value: "raw_material", label: "Raw material" },
-  { value: "packaging", label: "Packaging" },
-  { value: "job_work", label: "Job work" },
-  { value: "freight", label: "Freight" },
-  { value: "marketing", label: "Marketing" },
-  { value: "services", label: "Services" },
-  { value: "other", label: "Other" },
-];
-
 const FILTERS = [
   { value: "", label: "All" },
   { value: "unpaid", label: "Unpaid" },
@@ -59,23 +47,6 @@ const FILTERS = [
   { value: "director", label: "Paid by a director" },
 ];
 
-interface FormValues {
-  supplier: string; supplierGstin: string; billNo: string; billDate: string;
-  category: string; description: string;
-  taxableValue: string; cgst: string; sgst: string; igst: string; total: string;
-  inputCreditEligible: boolean; paidBy: string; paidByName: string;
-  paymentStatus: string; paid: string; notes: string;
-}
-
-const EMPTY: FormValues = {
-  supplier: "", supplierGstin: "", billNo: "", billDate: "",
-  category: "raw_material", description: "",
-  taxableValue: "", cgst: "", sgst: "", igst: "", total: "",
-  inputCreditEligible: true, paidBy: "company", paidByName: "",
-  paymentStatus: "unpaid", paid: "", notes: "",
-};
-
-const paise = (v: string) => rupeesToPaise(v) ?? 0;
 
 export function PurchaseWorkspace({
   initial,
@@ -102,12 +73,7 @@ export function PurchaseWorkspace({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [editing, setEditing] = useState<PurchaseRow | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [values, setValues] = useState<FormValues>(EMPTY);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const [dirty, setDirty] = useState(false);
   const [deleting, setDeleting] = useState<PurchaseRow | null>(null);
 
   const load = useCallback(async () => {
@@ -168,89 +134,9 @@ export function PurchaseWorkspace({
   */
   const owedToDirectors = summary.owedToDirectorsPaise;
 
-  function open(row: PurchaseRow | null) {
-    setFieldErrors({});
-    setDirty(false);
-    if (row) {
-      setEditing(row);
-      setValues({
-        supplier: row.supplier, supplierGstin: row.supplierGstin, billNo: row.billNo,
-        billDate: row.billDate ? row.billDate.slice(0, 10) : "",
-        category: row.category, description: row.description,
-        taxableValue: paiseToRupeeString(row.taxableValuePaise),
-        cgst: paiseToRupeeString(row.cgstPaise),
-        sgst: paiseToRupeeString(row.sgstPaise),
-        igst: paiseToRupeeString(row.igstPaise),
-        total: paiseToRupeeString(row.totalPaise),
-        inputCreditEligible: row.inputCreditEligible,
-        paidBy: row.paidBy || "company",
-        paidByName: row.paidByName ?? "",
-        paymentStatus: row.paymentStatus,
-        paid: paiseToRupeeString(row.paidPaise),
-        notes: row.notes,
-      });
-    } else {
-      setCreating(true);
-      setValues(EMPTY);
-    }
-  }
-
-  const close = () => {
-    setEditing(null);
-    setCreating(false);
-    setDirty(false);
-  };
-
   async function reload() {
     const res = await fetch("/api/admin/purchases", { cache: "no-store" });
     if (res.ok) setRows((await res.json()).items);
-  }
-
-  async function save() {
-    /*
-      The same schema the route runs, before the round trip. An early exit
-      only — the server still checks, and a client stricter than the server
-      would be a form that cannot be saved.
-    */
-    const check = validateWith(purchaseSchema, { ...values, billDate: values.billDate || null });
-    if (!check.ok) {
-      setFieldErrors(check.errors);
-      // Next paint, once the errors have rendered their aria-invalid.
-      requestAnimationFrame(() => focusFirstInvalid());
-      return;
-    }
-
-    setSaving(true);
-    setFieldErrors({});
-    try {
-      const res = await fetch(
-        editing ? `/api/admin/purchases/${editing.id}` : "/api/admin/purchases",
-        {
-          method: editing ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...values,
-            billDate: values.billDate || null,
-            // Only when editing: a create has no version to conflict with.
-            version: editing?.version,
-          }),
-        },
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.fields) setFieldErrors(data.fields);
-        throw new Error(data.error ?? "Could not save");
-      }
-      toast(editing ? `${values.supplier} saved` : `${values.supplier} added`);
-      close();
-      await reload();
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Could not save";
-      setError(message);
-      toast(message, "error");
-    } finally {
-      setSaving(false);
-    }
   }
 
   async function confirmDelete() {
@@ -270,31 +156,6 @@ export function PurchaseWorkspace({
       setSaving(false);
     }
   }
-
-  function set(patch: Partial<FormValues>) {
-    setValues({ ...values, ...patch });
-    setDirty(true);
-    /*
-      Clear the errors for the fields being changed. They were only ever
-      cleared at the top of save(), so a corrected field stayed red until you
-      submitted again and found out.
-    */
-    setFieldErrors((current) => {
-      const next = { ...current };
-      for (const key of Object.keys(patch)) delete next[key];
-      return next;
-    });
-  }
-
-  /*
-    The parts, added up. NOT written into the total — the total is what the
-    supplier's bill says, and their document is the one that was filed. This
-    only points out a disagreement so somebody can look at the paper again.
-  */
-  const computed =
-    paise(values.taxableValue) + paise(values.cgst) + paise(values.sgst) + paise(values.igst);
-  const stated = paise(values.total);
-  const mismatch = stated > 0 && computed > 0 && stated !== computed;
 
   return (
     <div className="space-y-4">
@@ -323,7 +184,13 @@ export function PurchaseWorkspace({
             )}
           </p>
         </div>
-        {canWrite && <Button onClick={() => open(null)}>Add purchase</Button>}
+        {canWrite && (
+          /* A link, not a button: the form is a page now, so it should
+             middle-click, open in a tab and prefetch like any other. */
+          <Link href="/admin/purchases/new" className="admin-btn admin-btn-primary admin-tap">
+            Add purchase
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -355,7 +222,9 @@ export function PurchaseWorkspace({
           }
           action={
             canWrite && !filter && !search ? (
-              <Button onClick={() => open(null)}>Add purchase</Button>
+              <Link href="/admin/purchases/new" className="admin-btn admin-btn-primary admin-tap">
+                Add purchase
+              </Link>
             ) : undefined
           }
         />
@@ -377,7 +246,7 @@ export function PurchaseWorkspace({
                   <p className="mt-1 flex flex-wrap items-center gap-2 text-xs">
                     <StatusPill status={row.paymentStatus} />
                     <span className="text-ink-faint">
-                      {CATEGORIES.find((c) => c.value === row.category)?.label ?? row.category}
+                      {PURCHASE_CATEGORIES.find((c) => c.value === row.category)?.label ?? row.category}
                     </span>
                     {row.billDate && (
                       <span className="text-ink-faint">
@@ -404,13 +273,12 @@ export function PurchaseWorkspace({
                     </p>
                   </div>
                   {canWrite && (
-                    <button
-                      type="button"
-                      onClick={() => open(row)}
-                      className="admin-tap rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-ink-muted hover:border-olive"
+                    <Link
+                      href={`/admin/purchases/${row.id}`}
+                      className="admin-tap inline-flex items-center rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-ink-muted hover:border-olive"
                     >
                       Edit
-                    </button>
+                    </Link>
                   )}
                   {canDelete && (
                     <button
@@ -430,120 +298,6 @@ export function PurchaseWorkspace({
           ))}
         </ul>
       )}
-
-      <FormSheet
-        open={creating || Boolean(editing)}
-        title={editing ? `Edit ${editing.supplier}` : "Add purchase"}
-        description="Copy the figures from the supplier's bill exactly. Nothing here is recalculated."
-        busy={saving}
-        /* Was missing entirely: Escape or a stray backdrop tap
-           silently destroyed a filled-in form. */
-        dirty={dirty}
-        onClose={close}
-        onSubmit={save}
-        wide
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={close}>Cancel</Button>
-            <Button onClick={save} disabled={saving}>Save</Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TextField label="Supplier" value={values.supplier} onChange={(supplier) => set({ supplier })} error={fieldErrors.supplier} />
-            <TextField
-              label="Supplier GSTIN" kind="gstin"
-              hint="Without one there is no input credit to claim."
-              value={values.supplierGstin}
-              onChange={(supplierGstin) => set({ supplierGstin })}
-            />
-            <TextField label="Their bill number" kind="code" value={values.billNo} onChange={(billNo) => set({ billNo })} />
-            <TextField label="Bill date" type="date" value={values.billDate} onChange={(billDate) => set({ billDate })} />
-            <SelectField label="Category" value={values.category} onChange={(category) => set({ category })} options={CATEGORIES} />
-            <TextField label="Description" value={values.description} onChange={(description) => set({ description })} />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <TextField label="Taxable value" kind="money" prefix="₹" value={values.taxableValue} onChange={(taxableValue) => set({ taxableValue })} />
-            <TextField label="CGST" kind="money" prefix="₹" value={values.cgst} onChange={(cgst) => set({ cgst })} />
-            <TextField label="SGST" kind="money" prefix="₹" value={values.sgst} onChange={(sgst) => set({ sgst })} />
-            <TextField label="IGST" kind="money" prefix="₹" value={values.igst} onChange={(igst) => set({ igst })} />
-            <TextField label="Bill total" kind="money" prefix="₹" value={values.total} onChange={(total) => set({ total })} />
-          </div>
-
-          {mismatch && (
-            <p className="rounded-xl bg-danger/10 px-3 py-2 text-xs font-semibold text-danger">
-              The parts add up to {formatINR(computed)}, but the bill total says{" "}
-              {formatINR(stated)}. Saved as entered — check the paper. Nothing here
-              is corrected automatically, because their document is the one that
-              was filed.
-            </p>
-          )}
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <SelectField
-              label="Payment"
-              value={values.paymentStatus}
-              onChange={(paymentStatus) => set({ paymentStatus })}
-              options={[
-                { value: "unpaid", label: "Unpaid" },
-                { value: "partial", label: "Part paid" },
-                { value: "paid", label: "Paid" },
-              ]}
-            />
-            <TextField label="Paid" kind="money" prefix="₹" value={values.paid} onChange={(paid) => set({ paid })} />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <SelectField
-              label="Paid by"
-              hint="Directors fund some costs personally — freight, most often."
-              value={values.paidBy}
-              onChange={(paidBy) =>
-                set({
-                  paidBy,
-                  /*
-                    A personal payment is not the company's input credit to
-                    claim, so switching to a director turns it off rather than
-                    leaving a claim nobody meant to make. Still overridable —
-                    that call belongs to the CA, not to this form.
-                  */
-                  inputCreditEligible:
-                    paidBy === "director" ? false : values.inputCreditEligible,
-                })
-              }
-              options={[
-                { value: "company", label: "The company" },
-                { value: "director", label: "A director, personally" },
-              ]}
-            />
-            {values.paidBy === "director" && (
-              <TextField
-                label="Which director"
-                value={values.paidByName}
-                onChange={(paidByName) => set({ paidByName })}
-              />
-            )}
-          </div>
-
-          {values.paidBy === "director" && (
-            <p className="rounded-xl bg-surface-muted/50 px-3 py-2 text-xs text-ink-muted">
-              Recorded as a cost the company owes back. This app does not keep a
-              ledger — the figure is here so your CA does not have to
-              reconstruct it.
-            </p>
-          )}
-
-          <Toggle
-            label="Input credit can be claimed"
-            hint="Your CA's call. Defaults on where a GSTIN is present, off where a director paid personally."
-            checked={values.inputCreditEligible}
-            onChange={(inputCreditEligible) => set({ inputCreditEligible })}
-          />
-          <TextareaField label="Notes" value={values.notes} onChange={(notes) => set({ notes })} />
-        </div>
-      </FormSheet>
 
       <ConfirmDialog
         open={Boolean(deleting)}

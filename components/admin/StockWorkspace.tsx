@@ -1,24 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Button,
   EmptyState,
   ErrorBanner,
   FilterTabs,
   TableSkeleton,
   SearchInput,
-  SelectField,
   StatusPill,
-  TextareaField,
-  TextField,
 } from "./ui";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { FormSheet } from "./FormSheet";
 import { useToast } from "./Toast";
-import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
-import { stockItemSchema } from "@/lib/schemas";
-import { formatRupees, paiseToRupeeString, rupeesToPaise } from "@/lib/money";
+import { formatRupees } from "@/lib/money";
 import { useListState } from "./useListState";
 import type {
   ListEnvelope,
@@ -32,6 +26,10 @@ import type {
  * `onHand` is a counted number, not a derived one. Stock moves for reasons no
  * invoice records — a sample handed to a farmer, a bag split in transit, a
  * recount that found six more than the book said. See lib/db/models/StockItem.
+ *
+ * Recording a count is its own page — /admin/stock/new and /admin/stock/<id>
+ * — rather than a dialog over this list. This screen is the list and its
+ * figures; the form is a form.
  */
 
 /**
@@ -58,24 +56,6 @@ function low(row: { onHand: number; reorderLevel: number }): boolean {
   return row.reorderLevel > 0 && row.onHand <= row.reorderLevel;
 }
 
-interface FormValues {
-  name: string;
-  sku: string;
-  kind: string;
-  unit: string;
-  onHand: string;
-  reorderLevel: string;
-  unitCost: string;
-  supplier: string;
-  location: string;
-  notes: string;
-}
-
-const EMPTY: FormValues = {
-  name: "", sku: "", kind: "finished", unit: "unit",
-  onHand: "0", reorderLevel: "0", unitCost: "",
-  supplier: "", location: "", notes: "",
-};
 
 export function StockWorkspace({
   initial,
@@ -102,12 +82,7 @@ export function StockWorkspace({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [editing, setEditing] = useState<StockRow | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [values, setValues] = useState<FormValues>(EMPTY);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const [dirty, setDirty] = useState(false);
   const [deleting, setDeleting] = useState<StockRow | null>(null);
 
   const load = useCallback(async () => {
@@ -162,71 +137,6 @@ export function StockWorkspace({
   const lowCount = summary.lowCount;
   const stockValue = summary.valuePaise;
 
-  function open(row: StockRow | null) {
-    setFieldErrors({});
-    setDirty(false);
-    if (row) {
-      setEditing(row);
-      setValues({
-        name: row.name, sku: row.sku, kind: row.kind, unit: row.unit,
-        onHand: String(row.onHand), reorderLevel: String(row.reorderLevel),
-        unitCost: row.unitCostPaise ? paiseToRupeeString(row.unitCostPaise) : "",
-        supplier: row.supplier, location: row.location, notes: row.notes,
-      });
-    } else {
-      setCreating(true);
-      setValues(EMPTY);
-    }
-  }
-
-  function close() {
-    setEditing(null);
-    setCreating(false);
-    setDirty(false);
-  }
-
-  async function save() {
-    /*
-      The same schema the route runs, before the round trip. An early exit
-      only — the server still checks, and a client stricter than the server
-      would be a form that cannot be saved.
-    */
-    const check = validateWith(stockItemSchema, values);
-    if (!check.ok) {
-      setFieldErrors(check.errors);
-      // Next paint, once the errors have rendered their aria-invalid.
-      requestAnimationFrame(() => focusFirstInvalid());
-      return;
-    }
-
-    setSaving(true);
-    setFieldErrors({});
-    try {
-      const res = await fetch(
-        editing ? `/api/admin/stock/${editing.id}` : "/api/admin/stock",
-        {
-          method: editing ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...values, version: editing?.version }),
-        },
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.fields) setFieldErrors(data.fields);
-        throw new Error(data.error ?? "Could not save");
-      }
-      toast(editing ? `${values.name} saved` : `${values.name} added`);
-      close();
-      await reload();
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Could not save";
-      setError(message);
-      toast(message, "error");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   async function reload() {
     const res = await fetch("/api/admin/stock", { cache: "no-store" });
     if (res.ok) setRows((await res.json()).items);
@@ -250,20 +160,6 @@ export function StockWorkspace({
     }
   }
 
-  function set(patch: Partial<FormValues>) {
-    setValues({ ...values, ...patch });
-    setDirty(true);
-    /*
-      Clear the errors for the fields being changed. They were only ever
-      cleared at the top of save(), so a corrected field stayed red until you
-      submitted again and found out.
-    */
-    setFieldErrors((current) => {
-      const next = { ...current };
-      for (const key of Object.keys(patch)) delete next[key];
-      return next;
-    });
-  }
 
   return (
     <div className="space-y-4">
@@ -293,7 +189,13 @@ export function StockWorkspace({
             )}
           </p>
         </div>
-        {canWrite && <Button onClick={() => open(null)}>Add item</Button>}
+        {canWrite && (
+          /* A link, not a button: the form is a page now, so it should
+             middle-click, open in a tab and prefetch like any other. */
+          <Link href="/admin/stock/new" className="admin-btn admin-btn-primary admin-tap">
+            Add item
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -320,7 +222,9 @@ export function StockWorkspace({
           }
           action={
             canWrite && !filter && !search ? (
-              <Button onClick={() => open(null)}>Add item</Button>
+              <Link href="/admin/stock/new" className="admin-btn admin-btn-primary admin-tap">
+                Add item
+              </Link>
             ) : undefined
           }
         />
@@ -359,13 +263,12 @@ export function StockWorkspace({
                     </p>
                   </div>
                   {canWrite && (
-                    <button
-                      type="button"
-                      onClick={() => open(row)}
-                      className="admin-tap rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-ink-muted hover:border-olive"
+                    <Link
+                      href={`/admin/stock/${row.id}`}
+                      className="admin-tap inline-flex items-center rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-ink-muted hover:border-olive"
                     >
-                      Edit
-                    </button>
+                      Count
+                    </Link>
                   )}
                   {canDelete && (
                     <button
@@ -385,52 +288,6 @@ export function StockWorkspace({
           ))}
         </ul>
       )}
-
-      <FormSheet
-        open={creating || Boolean(editing)}
-        title={editing ? `Edit ${editing.name}` : "Add stock item"}
-        description="Saving records a count — the date updates whenever you save."
-        busy={saving}
-        /* Was missing entirely: Escape or a stray backdrop tap
-           silently destroyed a filled-in form. */
-        dirty={dirty}
-        onClose={close}
-        onSubmit={save}
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={close}>Cancel</Button>
-            <Button onClick={save} disabled={saving}>Save</Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <TextField label="Name" value={values.name} onChange={(name) => set({ name })} error={fieldErrors.name} />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TextField label="SKU" kind="code" value={values.sku} onChange={(sku) => set({ sku })} />
-            <SelectField label="Kind" value={values.kind} onChange={(kind) => set({ kind })} options={KINDS} />
-            <TextField label="On hand" kind="quantity" value={values.onHand} onChange={(onHand) => set({ onHand })} error={fieldErrors.onHand} />
-            <TextField label="Unit" hint="sachet, canister, kg, piece" value={values.unit} onChange={(unit) => set({ unit })} />
-            <TextField
-              label="Reorder level"
-              kind="integer"
-              min={0}
-              hint="Zero means no alert. Otherwise it flags at or below this."
-              value={values.reorderLevel}
-              onChange={(reorderLevel) => set({ reorderLevel })}
-            />
-            <TextField label="Unit cost" kind="money" prefix="₹" value={values.unitCost} onChange={(unitCost) => set({ unitCost })} />
-            <TextField label="Supplier" value={values.supplier} onChange={(supplier) => set({ supplier })} />
-            <TextField label="Location" value={values.location} onChange={(location) => set({ location })} />
-          </div>
-          <TextareaField label="Notes" value={values.notes} onChange={(notes) => set({ notes })} />
-          {rupeesToPaise(values.unitCost) !== null && Number(values.onHand) > 0 && (
-            <p className="text-xs font-semibold text-ink-soft">
-              Value at cost:{" "}
-              {formatRupees((rupeesToPaise(values.unitCost) ?? 0) * Number(values.onHand))}
-            </p>
-          )}
-        </div>
-      </FormSheet>
 
       <ConfirmDialog
         open={Boolean(deleting)}
