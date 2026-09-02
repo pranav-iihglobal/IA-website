@@ -21,14 +21,31 @@ export function ApplicationSteps({ steps }: { steps: ApplicationStepItem[] }) {
 
   return (
     <section className="mt-10">
-      <h2 className="font-display text-2xl font-bold text-russet">
+      <h2
+        id="application-steps-heading"
+        className="font-display text-2xl font-bold text-russet"
+      >
         <T text={UI.howToUse} />
       </h2>
       <p className="mt-1 text-sm text-olive-dark">
         <T text={UI.howToUseNote} />
       </p>
 
-      <ol className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3">
+      {/*
+        Focusable, so it can be scrolled with the arrow keys. Nothing inside
+        these cards is focusable — they are photographs and captions — so
+        without this there was no way to reach the third step at all without
+        a mouse or a finger.
+      */}
+      <ol
+        tabIndex={0}
+        role="group"
+        /* Labelled BY the heading rather than with a string: this is a
+           server component with no locale in hand, and a hardcoded English
+           label would be read out over a Gujarati page. */
+        aria-labelledby="application-steps-heading"
+        className="scroll-rail mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3"
+      >
         {steps.map((step, i) => {
           const photo = cldUrl(step.imageUrl, CLD.cardThumb);
           return (
@@ -47,7 +64,7 @@ export function ApplicationSteps({ steps }: { steps: ApplicationStepItem[] }) {
                     sizes="256px"
                   />
                 )}
-                <span className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-alloy font-display text-sm font-bold text-cornsilk-light shadow-sm">
+                <span className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-alloy-dark font-display text-sm font-bold text-cornsilk-light shadow-sm">
                   {i + 1}
                 </span>
               </div>

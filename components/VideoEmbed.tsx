@@ -58,7 +58,7 @@ export function VideoEmbed({
           className="flex aspect-video w-full flex-col items-center justify-center gap-3 transition-colors hover:bg-meringue"
           aria-label={`Play ${platformName} video`}
         >
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-alloy text-cornsilk-light shadow-md">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-alloy-dark text-cornsilk-light shadow-md">
             <svg viewBox="0 0 24 24" className="h-6 w-6 translate-x-0.5" fill="currentColor">
               <path d="M8 5v14l11-7z" />
             </svg>

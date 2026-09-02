@@ -25,7 +25,7 @@ export function WhatsAppButton({
 }) {
   const styles =
     variant === "primary"
-      ? "bg-alloy text-cornsilk-light hover:bg-alloy-dark"
+      ? "bg-alloy-dark text-cornsilk-light hover:bg-russet"
       : "bg-cornsilk-light text-russet hover:bg-cornsilk";
   return (
     <a

@@ -36,7 +36,7 @@ export function ShareResultCta({
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn-shine mt-5 inline-flex items-center gap-2 rounded-full bg-alloy px-6 py-3 text-base font-semibold text-cornsilk-light shadow-sm transition-colors hover:bg-alloy-dark"
+          className="btn-shine mt-5 inline-flex items-center gap-2 rounded-full bg-alloy-dark px-6 py-3 text-base font-semibold text-cornsilk-light shadow-sm transition-colors hover:bg-russet"
         >
           <WhatsAppIcon />
           {t(TESTIMONIALS_PAGE.shareCtaLabel)}
@@ -59,7 +59,7 @@ export function ShareResultCta({
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-shine inline-flex items-center gap-2 rounded-full bg-alloy px-6 py-3 text-base font-semibold text-cornsilk-light shadow-sm transition-colors hover:bg-alloy-dark"
+            className="btn-shine inline-flex items-center gap-2 rounded-full bg-alloy-dark px-6 py-3 text-base font-semibold text-cornsilk-light shadow-sm transition-colors hover:bg-russet"
           >
             <WhatsAppIcon />
             {t(TESTIMONIALS_PAGE.shareCtaLabel)}

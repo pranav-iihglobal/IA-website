@@ -85,7 +85,7 @@ export default async function ArticlePage({
       <h1 className="font-display text-3xl font-bold leading-tight text-russet sm:text-4xl">
         <T text={article.title} />
       </h1>
-      <p className="mt-2 flex flex-wrap items-center gap-x-2 text-xs font-medium uppercase tracking-wide text-camel-dark">
+      <p className="mt-2 flex flex-wrap items-center gap-x-2 text-xs font-medium uppercase tracking-wide text-olive-dark">
         {article.publishedAt && (
           <>
             <T text={formatArticleDate(article.publishedAt)} />

@@ -1,27 +1,85 @@
 "use client";
 
-import Link from "next/link";
 import { LocaleLink } from "@/components/LocaleLink";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { NAV, SITE } from "@/lib/content";
 import { useLanguage } from "./LanguageProvider";
-import { localePath, stripLocale } from "@/lib/i18n";
+import { stripLocale } from "@/lib/i18n";
+import { LanguageSwitch } from "./LanguageSwitch";
 
 export function Header() {
   const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
-  const { lang, t } = useLanguage();
+  const { t } = useLanguage();
+
+  // The language link lives in components/LanguageSwitch.tsx now — the
+  // footer needs one too, and one copy cannot drift from the other.
 
   /*
-    Switching language is a navigation now, not a state change. That is the
-    whole point of the locale routes: the other language has its own URL, so
-    it can be linked, shared, bookmarked and — the reason for all of this —
-    crawled. `stripLocale` gives the path without a prefix, which is the same
-    page in either language.
+    The mobile menu had aria-expanded and nothing else.
+
+    Escape did not close it, Tab walked straight past it into the page it was
+    covering, and the page behind kept scrolling underneath — so a swipe meant
+    to scroll the menu scrolled the article instead, on the only device this
+    menu exists for. The admin drawer already does all three; this is the same
+    treatment.
   */
-  const twin = localePath(stripLocale(pathname), lang === "en" ? "gu" : "en");
+  useEffect(() => {
+    if (!open) return;
+
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+    const toggle = toggleRef.current;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        return;
+      }
+      if (e.key !== "Tab" || !menuRef.current) return;
+
+      const focusable = [
+        ...menuRef.current.querySelectorAll<HTMLElement>("a[href], button:not([disabled])"),
+      ];
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      /*
+        The toggle is OUTSIDE the menu and has to stay reachable — it is the
+        close button. So the cycle runs toggle → links → toggle rather than
+        being sealed inside the list.
+      */
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        toggle?.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        toggle?.focus();
+      } else if (!e.shiftKey && active === toggle) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+    };
+  }, [open]);
+
+  // Any navigation closes it — Back and a redirect change the route without a
+  // click, and either left the menu open over the page it had moved to.
+  const [lastPath, setLastPath] = useState(pathname);
+  if (lastPath !== pathname) {
+    setLastPath(pathname);
+    if (open) setOpen(false);
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-olive-dark bg-olive/95 backdrop-blur">
@@ -72,10 +130,20 @@ export function Header() {
               // min-h-11: a tablet is a touch device too, and these were 20px
               // tall targets. The header is already taller than 44px, so this
               // costs nothing visually.
-              className={`flex min-h-11 items-center rounded-md px-2 text-sm font-medium transition-colors hover:text-alloy-light ${
+              /*
+                The "you are here" signal was text-alloy-light on olive —
+                1.68:1, recomputed by hand. Effectively invisible, on the one
+                thing in the bar whose whole job is to be seen.
+
+                Colour cannot carry it on its own anyway (WCAG 1.4.1), so
+                active is now the brightest text plus an underline, and
+                inactive is full cornsilk at 5.09:1 rather than 4.48:1.
+              */
+              aria-current={stripLocale(pathname) === item.href ? "page" : undefined}
+              className={`flex min-h-11 items-center rounded-md px-2 text-sm transition-colors hover:text-cornsilk-light ${
                 stripLocale(pathname) === item.href
-                  ? "text-alloy-light"
-                  : "text-cornsilk/90"
+                  ? "font-semibold text-cornsilk-light underline decoration-2 underline-offset-[6px]"
+                  : "font-medium text-cornsilk"
               }`}
             >
               {t(item.label)}
@@ -84,29 +152,13 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Link
-            href={twin}
-            // hreflang tells a crawler what is on the other end, and this is
-            // the one link on the page that points across languages.
-            hrefLang={lang === "en" ? "gu" : "en"}
-            onClick={() => setOpen(false)}
+          <LanguageSwitch
+            onNavigate={() => setOpen(false)}
             className="flex min-h-11 items-center rounded-full border border-camel bg-meringue-light px-3 text-sm font-medium text-russet transition-colors hover:bg-meringue sm:px-4"
-            /*
-              The accessible name has to START WITH the visible text, or
-              speech-input users who say what they see cannot activate it —
-              WCAG 2.5.3 Label in Name. It read "Switch to Gujarati" over a
-              button labelled "ગુજરાતી", which shares not one character.
-            */
-            aria-label={
-              lang === "en"
-                ? "ગુજરાતી — switch to Gujarati"
-                : "English — અંગ્રેજીમાં જુઓ"
-            }
-          >
-            {lang === "en" ? "ગુજરાતી" : "English"}
-          </Link>
+          />
 
           <button
+            ref={toggleRef}
             type="button"
             className="flex h-11 w-11 items-center justify-center rounded-md text-cornsilk-light lg:hidden"
             onClick={() => setOpen(!open)}
@@ -142,6 +194,7 @@ export function Header() {
 
       {open && (
         <nav
+          ref={menuRef}
           id="mobile-nav"
           className="border-t border-olive-dark bg-olive lg:hidden"
           aria-label="Mobile"
@@ -152,10 +205,19 @@ export function Header() {
                 <LocaleLink
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className={`block border-b border-olive-dark/60 py-3 text-base font-medium last:border-b-0 ${
+                  aria-current={
+                    stripLocale(pathname) === item.href ? "page" : undefined
+                  }
+                  /*
+                    min-h-11 like the desktop links, which got it with a
+                    comment explaining why; this list did not, and its rows
+                    were about 40px — on the phone, where they are the only
+                    way to navigate.
+                  */
+                  className={`flex min-h-11 items-center border-b border-olive-dark/60 py-3 text-base last:border-b-0 ${
                     stripLocale(pathname) === item.href
-                      ? "text-alloy-light"
-                      : "text-cornsilk/90"
+                      ? "font-semibold text-cornsilk-light underline decoration-2 underline-offset-[6px]"
+                      : "font-medium text-cornsilk"
                   }`}
                 >
                   {t(item.label)}

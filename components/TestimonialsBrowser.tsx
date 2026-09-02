@@ -278,7 +278,7 @@ export function TestimonialsBrowser({
           <button
             type="button"
             onClick={clearAll}
-            className="mt-5 rounded-full bg-alloy px-5 py-2.5 text-sm font-semibold text-cornsilk-light transition-colors hover:bg-alloy-dark"
+            className="mt-5 rounded-full bg-alloy-dark px-5 py-2.5 text-sm font-semibold text-cornsilk-light transition-colors hover:bg-russet"
           >
             {t(TESTIMONIALS_PAGE.clearFilters)}
           </button>

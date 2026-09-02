@@ -3,6 +3,7 @@ import Image from "next/image";
 import { NAV, SITE, UI } from "@/lib/content";
 import { T } from "./T";
 import { SocialLinks } from "./SocialLinks";
+import { LanguageSwitch } from "./LanguageSwitch";
 
 export function Footer() {
   return (
@@ -86,6 +87,13 @@ export function Footer() {
           <p className="text-xs text-cornsilk/60">
             © {new Date().getFullYear()} {SITE.name}. All rights reserved.
           </p>
+          {/*
+            The other language, at the bottom of the page as well as the top.
+            The learn articles run to several screens, and deciding halfway
+            down that you would rather read the Gujarati meant scrolling all
+            the way back to the header to say so.
+          */}
+          <LanguageSwitch className="inline-flex min-h-11 items-center rounded-full border border-camel/60 px-4 text-xs font-medium text-cornsilk transition-colors hover:bg-russet/40 hover:text-cornsilk-light" />
           {/* Staff entry point to the admin panel. Deliberately quiet: it is
               not navigation for visitors, and /admin is disallowed in
               robots.txt, so it is marked nofollow too. */}

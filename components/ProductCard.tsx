@@ -85,7 +85,7 @@ export function ProductCard({
           </div>
         )}
         {product.featured && (
-          <span className="absolute left-4 top-4 rounded-full bg-alloy px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cornsilk-light">
+          <span className="absolute left-4 top-4 rounded-full bg-alloy-dark px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cornsilk-light">
             <T text={UI.flagship} />
           </span>
         )}

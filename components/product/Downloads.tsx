@@ -89,7 +89,7 @@ export function Downloads({
                   href={item.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-full bg-alloy px-4 py-2 text-sm font-semibold text-cornsilk-light transition-colors hover:bg-alloy-dark"
+                  className="rounded-full bg-alloy-dark px-4 py-2 text-sm font-semibold text-cornsilk-light transition-colors hover:bg-russet"
                 >
                   <T text={UI.download} />
                 </a>

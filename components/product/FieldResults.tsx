@@ -49,14 +49,28 @@ export function FieldResults({ results }: { results: FieldResultItem[] }) {
 
   return (
     <section className="mt-10">
-      <h2 className="font-display text-2xl font-bold text-russet">
+      <h2
+        id="field-results-heading"
+        className="font-display text-2xl font-bold text-russet"
+      >
         <T text={UI.fieldResults} />
       </h2>
       <p className="mt-1 text-sm text-olive-dark">
         <T text={UI.fieldResultsNote} />
       </p>
 
-      <div className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 2xl:grid-cols-3">
+      {/*
+        Focusable below sm, where this is a rail. From sm up it is a grid and
+        the tabIndex is harmless — a non-scrolling region simply takes focus
+        and passes the arrow keys on.
+      */}
+      <div
+        tabIndex={0}
+        role="group"
+        /* The heading, in whatever language the page is in. */
+        aria-labelledby="field-results-heading"
+        className="scroll-rail mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 2xl:grid-cols-3"
+      >
         {results.map((result, i) => (
           <article
             key={i}
@@ -87,7 +101,7 @@ export function FieldResults({ results }: { results: FieldResultItem[] }) {
             </p>
 
             {result.farmerName && (
-              <p className="mt-2 text-xs font-semibold text-camel-dark">
+              <p className="mt-2 text-xs font-semibold text-olive-dark">
                 — {result.farmerName}
               </p>
             )}

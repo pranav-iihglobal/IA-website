@@ -63,7 +63,7 @@ export default async function LearnPage() {
                   </h2>
                   {/* Date, category and reading time — the first two reached
                       the public layer but nothing ever rendered them. */}
-                  <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs font-medium uppercase tracking-wide text-camel-dark">
+                  <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs font-medium uppercase tracking-wide text-olive-dark">
                     {a.publishedAt && (
                       <>
                         <T text={formatArticleDate(a.publishedAt)} />

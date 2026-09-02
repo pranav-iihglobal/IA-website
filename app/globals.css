@@ -368,6 +368,43 @@ body {
   }
 }
 
+/*
+ * 44px tap targets on the public site.
+ *
+ * The same invariant the admin holds to, with its own class. Gallery.tsx was
+ * reaching for `.admin-tap-square` — which worked only because that rule was
+ * written unscoped, quietly making the promise below ("none of this can
+ * affect the public site") untrue.
+ */
+.tap-square {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+
+/*
+ * A row of cards that scrolls sideways.
+ *
+ * The rails on the product pages had no keyboard path at all: nothing inside
+ * them is focusable, so there was no way to reach the cards past the second
+ * one without a mouse or a finger. Making the CONTAINER focusable is what
+ * WCAG asks for here — a focusable scroll region takes arrow keys — and it
+ * costs no JavaScript, which matters on a page that is otherwise static.
+ *
+ * The fade says "more this way", the same cue the admin's filter strip uses.
+ * Both are dropped once the rail stops scrolling.
+ */
+.scroll-rail:focus-visible {
+  outline: 2px solid var(--color-olive);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+@media (max-width: 639px) {
+  .scroll-rail {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
+  }
+}
+
 /* --- CTA shine sweep + press feedback --- */
 .btn-shine {
   position: relative;
@@ -945,14 +982,17 @@ select.admin-input {
 
   `.admin-tap` opts in anything that is not a button or an input — filter
   pills, wizard step pills, breadcrumbs, nav links.
+
+  Scoped under .admin-ui like everything else in this block. They were not,
+  which is what let a public component pick one up — see `.tap-square` above.
 */
-.admin-btn,
-.admin-input,
-.admin-tap {
+.admin-ui .admin-btn,
+.admin-ui .admin-input,
+.admin-ui .admin-tap {
   min-height: 2.75rem;
 }
 /* Icon-only controls need the width too, not just the height. */
-.admin-tap-square {
+.admin-ui .admin-tap-square {
   min-width: 2.75rem;
   min-height: 2.75rem;
 }

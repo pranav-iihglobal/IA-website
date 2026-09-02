@@ -46,7 +46,7 @@ export default function OfflinePage() {
 
       <Link
         href="/"
-        className="btn-shine mt-8 inline-flex min-h-11 items-center rounded-full bg-alloy px-6 py-3 text-base font-semibold text-cornsilk-light hover:bg-alloy-dark"
+        className="btn-shine mt-8 inline-flex min-h-11 items-center rounded-full bg-alloy-dark px-6 py-3 text-base font-semibold text-cornsilk-light hover:bg-russet"
       >
         <T text={{ en: "Go to the home page", gu: "હોમ પેજ પર જાઓ" }} />
       </Link>

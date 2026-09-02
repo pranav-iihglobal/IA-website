@@ -183,7 +183,7 @@ export default async function ProductPage({
         )}
         <div>
           {product.featured && (
-            <span className="mb-2 inline-block rounded-full bg-alloy px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cornsilk-light">
+            <span className="mb-2 inline-block rounded-full bg-alloy-dark px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cornsilk-light">
               <T text={UI.flagship} />
             </span>
           )}
@@ -197,7 +197,7 @@ export default async function ProductPage({
             <T text={product.tagline} />
           </p>
           {product.format.en && (
-            <p className="mt-2 text-sm font-medium text-camel-dark">
+            <p className="mt-2 text-sm font-medium text-olive-dark">
               <T text={product.format} />
             </p>
           )}

@@ -63,7 +63,7 @@ export function Gallery({
                 onClick={() => setActive(i)}
                 aria-label={altFor(image)}
                 aria-current={i === active ? "true" : undefined}
-                className={`admin-tap-square block h-14 w-14 overflow-hidden rounded-xl border-2 transition-colors ${
+                className={`tap-square block h-14 w-14 overflow-hidden rounded-xl border-2 transition-colors ${
                   i === active
                     ? "border-olive"
                     : "border-camel-light hover:border-camel"

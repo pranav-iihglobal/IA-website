@@ -101,7 +101,7 @@ export default async function HomePage() {
         <div className="mt-8 overflow-hidden rounded-3xl bg-olive text-cornsilk-light shadow-md">
           <div className="grid items-center gap-8 p-5 sm:p-8 md:grid-cols-[1fr_auto] md:p-12">
             <div>
-              <span className="rounded-full bg-alloy px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+              <span className="rounded-full bg-alloy-dark px-3 py-1 text-xs font-semibold uppercase tracking-wide">
                 <T text={UI.flagship} />
               </span>
               <h3 className="mt-4 font-display text-3xl font-bold sm:text-4xl">
