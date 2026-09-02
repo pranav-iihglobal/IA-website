@@ -5,6 +5,8 @@ import Link from "next/link";
 import { StatusPill } from "./ui";
 import type { SampledProduct } from "@/lib/crm/profile";
 import { ContactNotes, type ContactNote } from "./ContactNotes";
+import { RecordHistory } from "./RecordHistory";
+import type { HistoryEntry } from "@/lib/admin/history";
 import { telHref, whatsappHref } from "@/lib/crm/contact-links";
 import { STATUS_LABELS } from "@/lib/crm/shape";
 import { formatINR, formatRupees } from "@/lib/money";
@@ -169,6 +171,7 @@ export function ContactProfile({
   invoices,
   trading,
   notes: initialNotes,
+  history,
   canEdit,
   canSeeMoney,
   canBill = false,
@@ -180,6 +183,8 @@ export function ContactProfile({
   invoices: ProfileInvoice[];
   trading: Trading;
   notes: ContactNote[];
+  /** Every change to this record, from the audit log. */
+  history: HistoryEntry[];
   canEdit: boolean;
   /** billing:read. Someone doing follow-up calls does not see the money. */
   canSeeMoney: boolean;
@@ -473,6 +478,17 @@ export function ContactProfile({
               />
             </div>
           </section>
+
+          {/*
+            The call log says what was DISCUSSED. This says what was CHANGED —
+            who moved the follow-up date, who corrected the phone number. Both
+            are appended and neither can be edited; they answer different
+            questions and the profile had only the first.
+          */}
+          <RecordHistory
+            entries={history}
+            emptyMessage="Nothing has been changed since this record was created."
+          />
         </div>
       </div>
 

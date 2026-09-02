@@ -1,69 +1,192 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isValidObjectId } from "mongoose";
-import { StockForm, type StockFormValues } from "@/components/admin/StockForm";
-import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
+import { can } from "@/lib/auth/permissions";
+import { recordHistory } from "@/lib/admin/history";
+import { RecordHistory } from "@/components/admin/RecordHistory";
+import { StatusPill } from "@/components/admin/ui";
 import { connectToDatabase } from "@/lib/db/connect";
-import { StockItem } from "@/lib/db/models/StockItem";
-import { paiseToRupeeString } from "@/lib/money";
+import { StockItem, needsReorder } from "@/lib/db/models/StockItem";
+import { formatINR, formatRupees } from "@/lib/money";
 import { formatIstDateLong } from "@/lib/time";
 import type { LeanDoc } from "@/lib/db/lean";
 
-export const metadata = { title: "Edit stock item" };
+export const metadata = { title: "Stock item" };
 export const dynamic = "force-dynamic";
 
-function toFormValues(doc: LeanDoc): StockFormValues {
-  return {
-    name: doc.name ?? "",
-    sku: doc.sku ?? "",
-    kind: doc.kind ?? "finished",
-    unit: doc.unit ?? "unit",
-    onHand: String(doc.onHand ?? 0),
-    reorderLevel: String(doc.reorderLevel ?? 0),
-    // paiseToRupeeString, not String(paise / 100): the latter reads 105050
-    // paise back as "1050.5" rather than "1050.50", on a money field.
-    unitCost: doc.unitCostPaise ? paiseToRupeeString(doc.unitCostPaise) : "",
-    supplier: doc.supplier ?? "",
-    location: doc.location ?? "",
-    notes: doc.notes ?? "",
-  };
-}
+const KIND_LABELS: Record<string, string> = {
+  finished: "Finished goods",
+  packaging: "Packaging",
+  raw: "Raw material",
+};
 
-export default async function EditStockItemPage({
+/**
+ * One stock item.
+ *
+ * Stock here is a COUNT, not a derived figure — it moves for reasons no
+ * invoice records: a sample handed to a farmer, a bag split in transit, a
+ * recount that found six more than the book said. Which makes "who counted
+ * this, and what did they say it was before" the question about a stock
+ * record, and it was unanswerable: every count has been written to the audit
+ * log since the log was wired up, and the only screen that could read it
+ * showed all changes to all records in one stream.
+ *
+ * So the history is the point of this page, and the figures above it are
+ * there to be read rather than typed — the previous /admin/stock/<id> was the
+ * edit form, which showed the same ten fields but as inputs, and could not
+ * show the one thing that is not a field.
+ */
+export default async function StockDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requirePageAccess("billing:write");
+  const me = await requirePageAccess("billing:read");
 
   const { id } = await params;
   if (!isValidObjectId(id)) notFound();
 
   await connectToDatabase();
-  const doc = (await StockItem.findById(id).lean()) as LeanDoc | null;
+  const [doc, history] = await Promise.all([
+    StockItem.findById(id).lean() as Promise<LeanDoc | null>,
+    recordHistory("StockItem", id),
+  ]);
   if (!doc) notFound();
 
+  const onHand = doc.onHand ?? 0;
+  const unitCostPaise = doc.unitCostPaise ?? 0;
+  const low = needsReorder(doc);
+
   return (
-    <>
-      <FormPageHeader
-        backHref="/admin/stock"
-        backLabel="Stock"
-        title={<>Count {doc.name}</>}
-        description={
-          doc.countedAt
-            ? `Last counted ${formatIstDateLong(new Date(doc.countedAt))}.`
-            : "Never counted through this system."
-        }
+    <div className="space-y-5">
+      <Link
+        href="/admin/stock"
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-muted hover:text-ink"
+      >
+        ← Stock
+      </Link>
+
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="font-display text-2xl font-bold text-ink-strong">
+            {doc.name}
+          </h1>
+          <p className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+            {low && <StatusPill status="unpaid" />}
+            {doc.isSample && <StatusPill status="sample" />}
+            <span className="text-ink-faint">
+              {KIND_LABELS[doc.kind ?? "finished"] ?? doc.kind}
+            </span>
+            {doc.sku && <span className="text-ink-faint">{doc.sku}</span>}
+          </p>
+        </div>
+        {can(me, "billing:write") && (
+          <Link
+            href={`/admin/stock/${id}/edit`}
+            className="admin-btn admin-btn-primary admin-tap"
+          >
+            Record a count
+          </Link>
+        )}
+      </header>
+
+      {low && (
+        <p className="admin-card px-4 py-3 text-sm font-semibold text-danger">
+          At or below the reorder level of {doc.reorderLevel}. This alert is
+          only as fresh as the last count — selling does not decrement stock in
+          this system, by design.
+        </p>
+      )}
+
+      <section className="admin-card p-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Stat
+            label="On hand"
+            value={`${onHand} ${doc.unit ?? "unit"}${onHand === 1 ? "" : "s"}`}
+            tone={low ? "danger" : undefined}
+          />
+          <Stat
+            label="Reorder at"
+            value={
+              (doc.reorderLevel ?? 0) > 0 ? String(doc.reorderLevel) : "not tracked"
+            }
+            hint={(doc.reorderLevel ?? 0) > 0 ? undefined : "zero means no alert"}
+          />
+          <Stat
+            label="Unit cost"
+            value={unitCostPaise ? formatINR(unitCostPaise) : "—"}
+          />
+          <Stat
+            label="Value at cost"
+            value={formatRupees(unitCostPaise * onHand)}
+          />
+        </div>
+
+        <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line-soft pt-3 sm:grid-cols-4">
+          <Field label="Supplier" value={doc.supplier} />
+          <Field label="Location" value={doc.location} />
+          <Field
+            label="Last counted"
+            value={
+              doc.countedAt
+                ? formatIstDateLong(new Date(doc.countedAt))
+                : "never through this system"
+            }
+          />
+        </dl>
+
+        {doc.notes && (
+          <p className="mt-3 border-t border-line-soft pt-3 text-sm text-ink-muted">
+            {doc.notes}
+          </p>
+        )}
+      </section>
+
+      <RecordHistory
+        entries={history}
+        emptyMessage="No count has been recorded through this system yet."
       />
-      <div className="mt-8">
-        <StockForm
-          initial={toFormValues(doc)}
-          itemId={id}
-          /* Sent back on save, so a count taken on one phone cannot silently
-             erase one taken on another. */
-          version={typeof doc.__v === "number" ? doc.__v : 0}
-        />
-      </div>
-    </>
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "danger";
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-ink-faint">
+        {label}
+      </p>
+      <p
+        className={`mt-0.5 font-display text-lg font-bold tabular-nums ${
+          tone === "danger" ? "text-danger" : "text-ink-strong"
+        }`}
+      >
+        {value}
+      </p>
+      {hint && <p className="text-xs text-ink-faint">{hint}</p>}
+    </div>
+  );
+}
+
+function Field({ label, value }: { label: string; value?: string }) {
+  if (!value) return null;
+  return (
+    <div className="min-w-0">
+      <dt className="text-[11px] font-bold uppercase tracking-wider text-ink-faint">
+        {label}
+      </dt>
+      <dd className="mt-0.5 text-sm text-ink">{value}</dd>
+    </div>
   );
 }

@@ -238,7 +238,15 @@ export function StockWorkspace({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-display text-base font-bold text-ink-strong">
-                    {row.name}
+                    {/* Opens the record. "Count" beside it goes straight to
+                        the form, because that is the frequent act — but the
+                        count HISTORY is only on the record. */}
+                    <Link
+                      href={`/admin/stock/${row.id}`}
+                      className="hover:text-cta hover:underline"
+                    >
+                      {row.name}
+                    </Link>
                   </p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-ink-muted">
                     {row.sku && <span>{row.sku}</span>}
@@ -264,7 +272,7 @@ export function StockWorkspace({
                   </div>
                   {canWrite && (
                     <Link
-                      href={`/admin/stock/${row.id}`}
+                      href={`/admin/stock/${row.id}/edit`}
                       className="admin-tap inline-flex items-center rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-ink-muted hover:border-olive"
                     >
                       Count

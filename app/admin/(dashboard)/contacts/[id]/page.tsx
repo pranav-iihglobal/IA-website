@@ -7,6 +7,7 @@ import { getContactProfile, sampledOutcome } from "@/lib/crm/profile";
 import { joinPlace } from "@/lib/crm/shape";
 import { scopeFor } from "@/lib/crm/scopes";
 import { getProductOptions } from "@/lib/admin/products-options";
+import { recordHistory } from "@/lib/admin/history";
 import type { LeanDoc } from "@/lib/db/lean";
 
 export const metadata = { title: "Contact" };
@@ -30,9 +31,11 @@ export default async function ContactProfilePage({
   const { id } = await params;
   if (!isValidObjectId(id)) notFound();
 
-  const [data, productOptions] = await Promise.all([
+  const [data, productOptions, history] = await Promise.all([
     getContactProfile(id),
     getProductOptions(),
+    // What was CHANGED, as against the call log's what was DISCUSSED.
+    recordHistory("Contact", id),
   ]);
   if (!data) notFound();
 
@@ -133,6 +136,7 @@ export default async function ContactProfilePage({
       trading={data.trading}
       sampling={sampling}
       notes={notes}
+      history={history}
       canEdit={can(me, "crm:write")}
       /* billing:read, deliberately separate from crm:read. */
       canSeeMoney={can(me, "billing:read")}
