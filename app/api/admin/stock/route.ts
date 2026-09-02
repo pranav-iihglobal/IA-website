@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/db/connect";
 import { StockItem } from "@/lib/db/models/StockItem";
-import { listStock } from "@/lib/erp/inventory-list";
+import { exportStock, listStock } from "@/lib/erp/inventory-list";
+import { STOCK_EXPORT_HEADERS, stockExportRow } from "@/lib/erp/export";
+import { EXPORT_READ, csvResponse } from "@/lib/admin/csv-response";
 import { stockItemSchema } from "@/lib/schemas";
 import {
   currentEditor,
@@ -19,8 +21,14 @@ export async function GET(request: NextRequest) {
   if (unauthorized) return unauthorized;
 
   try {
+    const params = request.nextUrl.searchParams;
+    // The list as a file, same filter and sort. See contacts/route.ts.
+    if (params.get("format") === "csv") {
+      const rows = await exportStock(params, EXPORT_READ);
+      return csvResponse("stock", STOCK_EXPORT_HEADERS, rows.map(stockExportRow));
+    }
     // Rows paged, totals over everything — see lib/erp/inventory-list.ts.
-    return NextResponse.json(await listStock(request.nextUrl.searchParams));
+    return NextResponse.json(await listStock(params));
   } catch (error) {
     return errorResponse(error);
   }

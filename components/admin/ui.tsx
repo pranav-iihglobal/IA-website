@@ -1044,6 +1044,30 @@ export function SearchInput({
 }
 
 /**
+ * "Export CSV" — the list on screen, as a file.
+ *
+ * A link, not a button with a fetch behind it: the browser handles a
+ * `content-disposition: attachment` response by saving it, which is the
+ * whole feature, and a link middle-clicks and copies like any other.
+ * `prefetch={false}` is load-bearing — Next would otherwise fetch the
+ * download while the page was still rendering.
+ */
+export function DownloadLink({ href, label = "Export CSV" }: { href: string; label?: string }) {
+  return (
+    <Link
+      href={href}
+      prefetch={false}
+      className="admin-tap inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-ink-muted hover:border-olive"
+    >
+      <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+        <path d="M10 2a1 1 0 0 1 1 1v8.6l2.3-2.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L9 11.6V3a1 1 0 0 1 1-1ZM4 15a1 1 0 0 1 1 1v1h10v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z" />
+      </svg>
+      {label}
+    </Link>
+  );
+}
+
+/**
  * "Sort: Newest first" — the order a list is in, as a native select.
  *
  * Native for the same reason SelectField is: iOS opens its wheel for a

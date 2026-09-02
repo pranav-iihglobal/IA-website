@@ -218,6 +218,8 @@ export async function outstandingInvoices(
   sort: OutstandingSort = "oldest",
   /** One customer only, for their own outstanding page. */
   contactId?: string,
+  /** The screen's cap by default; an export asks for more and says if cut. */
+  limit: number = OUTSTANDING_ROW_CAP,
 ): Promise<OutstandingRow[]> {
   await connectToDatabase();
 
@@ -230,7 +232,7 @@ export async function outstandingInvoices(
       with nothing paid, on a screen whose one question is where the money is.
     */
     { $sort: sort === "largest" ? { owedPaise: -1, issuedAt: 1 } : { issuedAt: 1, _id: 1 } },
-    { $limit: OUTSTANDING_ROW_CAP },
+    { $limit: limit },
     {
       $project: {
         number: 1,

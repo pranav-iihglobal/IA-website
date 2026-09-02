@@ -2,8 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Contact } from "@/lib/db/models/Contact";
 import { contactSchema } from "@/lib/schemas";
-import { listContacts } from "@/lib/crm/list";
+import { exportContacts, listContacts } from "@/lib/crm/list";
 import { allocateContactId } from "@/lib/crm/contact-id";
+import { CONTACT_EXPORT_HEADERS, contactExportRow } from "@/lib/crm/export";
+import { EXPORT_READ, csvResponse } from "@/lib/admin/csv-response";
 import {
   currentEditor,
   errorResponse,
@@ -26,7 +28,18 @@ export async function GET(request: NextRequest) {
   if (unauthorized) return unauthorized;
 
   try {
-    return NextResponse.json(await listContacts(request.nextUrl.searchParams));
+    const params = request.nextUrl.searchParams;
+    /*
+      The same filter and sort as the list, as a file. Rides on crm:read —
+      there is no export level, and the list is already on this person's
+      screen; a CSV of it is the same information in a form they can keep.
+    */
+    if (params.get("format") === "csv") {
+      const rows = await exportContacts(params, EXPORT_READ);
+      const name = params.get("kind") === "lead" ? "leads" : params.get("channel") === "b2b" ? "dealers" : "customers";
+      return csvResponse(name, CONTACT_EXPORT_HEADERS, rows.map(contactExportRow));
+    }
+    return NextResponse.json(await listContacts(params));
   } catch (error) {
     return errorResponse(error);
   }

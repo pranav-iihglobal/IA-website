@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { requirePageAccess } from "@/lib/admin/page-guard";
+import { DownloadLink } from "@/components/admin/ui";
 import { invoicesForPeriod, sampleInvoicesInPeriod } from "@/lib/erp/reports";
 import {
   ASSUMED_UQC,
@@ -379,13 +379,5 @@ function CdnSection({
 }
 
 function Download({ href }: { href: string }) {
-  return (
-    <Link
-      href={href}
-      prefetch={false}
-      className="admin-tap inline-flex items-center rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-ink-muted hover:border-olive"
-    >
-      Download CSV
-    </Link>
-  );
+  return <DownloadLink href={href} label="Download CSV" />;
 }

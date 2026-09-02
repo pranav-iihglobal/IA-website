@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Purchase } from "@/lib/db/models/Purchase";
-import { listPurchases } from "@/lib/erp/inventory-list";
+import { exportPurchases, listPurchases } from "@/lib/erp/inventory-list";
+import { PURCHASE_EXPORT_HEADERS, purchaseExportRow } from "@/lib/erp/export";
+import { EXPORT_READ, csvResponse } from "@/lib/admin/csv-response";
 import { purchaseSchema } from "@/lib/schemas";
 import {
   currentEditor,
@@ -19,8 +21,14 @@ export async function GET(request: NextRequest) {
   if (unauthorized) return unauthorized;
 
   try {
+    const params = request.nextUrl.searchParams;
+    // The list as a file, same filter and sort. See contacts/route.ts.
+    if (params.get("format") === "csv") {
+      const rows = await exportPurchases(params, EXPORT_READ);
+      return csvResponse("purchases", PURCHASE_EXPORT_HEADERS, rows.map(purchaseExportRow));
+    }
     // Rows paged, totals over everything — see lib/erp/inventory-list.ts.
-    return NextResponse.json(await listPurchases(request.nextUrl.searchParams));
+    return NextResponse.json(await listPurchases(params));
   } catch (error) {
     return errorResponse(error);
   }

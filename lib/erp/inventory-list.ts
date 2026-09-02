@@ -133,36 +133,47 @@ export const STOCK_SORT_SPECS: Record<string, Record<string, 1 | -1>> = {
   value: { value: -1, name: 1, _id: 1 },
 };
 
+/** The stock query, sorted on its derived fields, from `skip` for `limit` rows. */
+function stockRows(params: URLSearchParams, skip: number, limit: number): Promise<LeanDoc[]> {
+  const sort = STOCK_SORT_SPECS[sortKey(STOCK_SORTS, params.get("sort"))];
+  return StockItem.aggregate<LeanDoc>([
+    { $match: buildStockFilter(params) },
+    {
+      $addFields: {
+        shortfall: {
+          $cond: [
+            { $gt: [{ $ifNull: ["$reorderLevel", 0] }, 0] },
+            { $subtract: [{ $ifNull: ["$onHand", 0] }, "$reorderLevel"] },
+            // Untracked: never "low", so it sorts after everything tracked.
+            Number.MAX_SAFE_INTEGER,
+          ],
+        },
+        value: {
+          $multiply: [{ $ifNull: ["$onHand", 0] }, { $ifNull: ["$unitCostPaise", 0] }],
+        },
+      },
+    },
+    { $sort: sort },
+    { $skip: skip },
+    { $limit: limit },
+  ]);
+}
+
+/** Every matching row, same filter and order as the page, for a CSV. */
+export async function exportStock(params: URLSearchParams, limit: number): Promise<StockRowShape[]> {
+  await connectToDatabase();
+  return (await stockRows(params, 0, limit)).map(toStockRow);
+}
+
 export async function listStock(
   params: URLSearchParams = new URLSearchParams(),
 ): Promise<ListEnvelope<StockRowShape, StockSummary>> {
   await connectToDatabase();
   const filter = buildStockFilter(params);
   const page = paged(params);
-  const sort = STOCK_SORT_SPECS[sortKey(STOCK_SORTS, params.get("sort"))];
 
   const [docs, total, summary] = await Promise.all([
-    StockItem.aggregate<LeanDoc>([
-      { $match: filter },
-      {
-        $addFields: {
-          shortfall: {
-            $cond: [
-              { $gt: [{ $ifNull: ["$reorderLevel", 0] }, 0] },
-              { $subtract: [{ $ifNull: ["$onHand", 0] }, "$reorderLevel"] },
-              // Untracked: never "low", so it sorts after everything tracked.
-              Number.MAX_SAFE_INTEGER,
-            ],
-          },
-          value: {
-            $multiply: [{ $ifNull: ["$onHand", 0] }, { $ifNull: ["$unitCostPaise", 0] }],
-          },
-        },
-      },
-      { $sort: sort },
-      { $skip: (page - 1) * PAGE_SIZE },
-      { $limit: PAGE_SIZE },
-    ]),
+    stockRows(params, (page - 1) * PAGE_SIZE, PAGE_SIZE),
     StockItem.countDocuments(filter),
     StockItem.aggregate<{ items: number; valuePaise: number; lowCount: number }>([
       {
@@ -287,6 +298,17 @@ export const PURCHASE_SORT_SPECS: Record<string, Record<string, 1 | -1>> = {
   amount: { totalPaise: -1, billDate: -1, _id: 1 },
   supplier: { supplier: 1, billDate: -1, _id: 1 },
 };
+
+/** Every matching row, same filter and order as the page, for a CSV. */
+export async function exportPurchases(
+  params: URLSearchParams,
+  limit: number,
+): Promise<PurchaseRowShape[]> {
+  await connectToDatabase();
+  const sort = PURCHASE_SORT_SPECS[sortKey(PURCHASE_SORTS, params.get("sort"))];
+  const docs = await Purchase.find(buildPurchaseFilter(params)).sort(sort).limit(limit).lean();
+  return (docs as LeanDoc[]).map(toPurchaseRow);
+}
 
 export async function listPurchases(
   params: URLSearchParams = new URLSearchParams(),

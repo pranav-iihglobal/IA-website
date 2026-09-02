@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { issueInvoiceSchema } from "@/lib/schemas";
 import { InvoiceError, issueInvoice } from "@/lib/erp/invoice";
-import { listInvoices } from "@/lib/erp/list";
+import { exportInvoices, listInvoices } from "@/lib/erp/list";
+import { INVOICE_EXPORT_HEADERS, invoiceExportRow } from "@/lib/erp/export";
+import { EXPORT_READ, csvResponse } from "@/lib/admin/csv-response";
 import {
   currentEditor,
   errorResponse,
@@ -17,7 +19,13 @@ export async function GET(request: NextRequest) {
   if (unauthorized) return unauthorized;
 
   try {
-    return NextResponse.json(await listInvoices(request.nextUrl.searchParams));
+    const params = request.nextUrl.searchParams;
+    // The list as a file, same filter and sort. See contacts/route.ts.
+    if (params.get("format") === "csv") {
+      const rows = await exportInvoices(params, EXPORT_READ);
+      return csvResponse("invoices", INVOICE_EXPORT_HEADERS, rows.map(invoiceExportRow));
+    }
+    return NextResponse.json(await listInvoices(params));
   } catch (error) {
     return errorResponse(error);
   }

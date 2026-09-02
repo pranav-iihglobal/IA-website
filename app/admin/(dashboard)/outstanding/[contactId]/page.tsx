@@ -10,7 +10,7 @@ import { Contact } from "@/lib/db/models/Contact";
 import { formatINR, formatRupees } from "@/lib/money";
 import { formatIstDateLong } from "@/lib/time";
 import { paymentReminder, telHref, whatsappHref } from "@/lib/crm/contact-links";
-import { EmptyState, StatusPill } from "@/components/admin/ui";
+import { DownloadLink, EmptyState, StatusPill } from "@/components/admin/ui";
 import type { LeanDoc } from "@/lib/db/lean";
 
 export const metadata = { title: "Outstanding — customer" };
@@ -129,6 +129,9 @@ export default async function PartyOutstandingPage({
             >
               WhatsApp the total
             </a>
+          )}
+          {rows.length > 0 && (
+            <DownloadLink href={`/api/admin/outstanding?contactId=${contactId}&format=csv`} />
           )}
         </div>
       </header>

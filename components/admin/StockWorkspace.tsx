@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  DownloadLink,
   EmptyState,
   ErrorBanner,
   FilterTabs,
@@ -187,6 +188,7 @@ export function StockWorkspace({
         <SearchInput value={search} onChange={setSearch} placeholder="Search name, SKU, supplier" />
         <FilterTabs value={filter} onChange={setFilter} options={FILTERS} />
         <SortMenu value={sort} onChange={setSort} options={STOCK_SORTS} />
+        <DownloadLink href={`/api/admin/stock?${query}&format=csv`} />
       </div>
 
       <ErrorBanner message={error} onRetry={() => void load()} />

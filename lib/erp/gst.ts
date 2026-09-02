@@ -1,5 +1,6 @@
 import { paiseToRupeeString } from "@/lib/money";
 import { formatIstDate } from "@/lib/time";
+import { PORTAL_CSV, toCsv as writeCsv } from "@/lib/csv";
 import type { SupplyType } from "./tax";
 
 /**
@@ -274,14 +275,13 @@ function rate(bps: number): string {
   return String(bps / 100);
 }
 
-/** One CSV cell, quoted only when it has to be. */
-function cell(value: string | number): string {
-  const text = String(value);
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
+/**
+ * The portal's bytes, exactly as filed before: LF, no BOM, nothing
+ * rewritten. The quoting itself now lives in lib/csv.ts with the list
+ * exports, which need a different reader in mind — see there.
+ */
 function toCsv(headers: string[], rows: (string | number)[][]): string {
-  return [headers, ...rows].map((r) => r.map(cell).join(",")).join("\n");
+  return writeCsv(headers, rows, PORTAL_CSV);
 }
 
 /**

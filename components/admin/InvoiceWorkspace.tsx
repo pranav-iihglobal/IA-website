@@ -6,6 +6,7 @@ import {
   BetaStar,
   EmptyState,
   ErrorBanner,
+  DownloadLink,
   FilterTabs,
   SortMenu,
   TableSkeleton,
@@ -139,6 +140,7 @@ export function InvoiceWorkspace({
         />
         <FilterTabs value={filter} onChange={setFilter} options={FILTERS} />
         <SortMenu value={sort} onChange={setSort} options={INVOICE_SORTS} />
+        <DownloadLink href={`/api/admin/invoices?${query}&format=csv`} />
       </div>
 
       <ErrorBanner message={error} onRetry={() => void load()} />

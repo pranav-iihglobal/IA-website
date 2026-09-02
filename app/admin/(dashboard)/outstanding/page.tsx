@@ -5,7 +5,7 @@ import type { OutstandingRow, OutstandingSort } from "@/lib/erp/reports";
 import { formatINR, formatRupees } from "@/lib/money";
 import { paymentReminder, telHref, whatsappHref } from "@/lib/crm/contact-links";
 import { AGE_BUCKETS, groupByParty, summariseAgeing } from "@/lib/erp/ageing";
-import { EmptyState } from "@/components/admin/ui";
+import { DownloadLink, EmptyState } from "@/components/admin/ui";
 
 export const metadata = { title: "Outstanding" };
 export const dynamic = "force-dynamic";
@@ -78,9 +78,11 @@ export default async function OutstandingPage({
           the default — the four-month-old invoice is the one that needs the
           call, and sorting by amount would put it out of sight.
         */}
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           <SortLink current={sort} value="oldest" label="Oldest first" />
           <SortLink current={sort} value="largest" label="Biggest first" />
+          {/* Every unpaid invoice in this order, not just the 500 shown. */}
+          <DownloadLink href={`/api/admin/outstanding?sort=${sort}&format=csv`} />
         </div>
       </div>
 

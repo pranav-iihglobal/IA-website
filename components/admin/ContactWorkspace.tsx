@@ -6,6 +6,7 @@ import {
   BetaStar,
   EmptyState,
   ErrorBanner,
+  DownloadLink,
   FilterTabs,
   SortMenu,
   TableSkeleton,
@@ -339,6 +340,8 @@ export function ContactWorkspace({
         />
         <FilterTabs value={filter} onChange={setFilter} options={filters} />
         <SortMenu value={sort} onChange={setSort} options={CONTACT_SORTS} />
+        {/* The rows this query matches, every page of them. */}
+        <DownloadLink href={`/api/admin/contacts?${query}&format=csv`} />
       </div>
 
       <ErrorBanner message={error} onRetry={() => void load()} />

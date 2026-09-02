@@ -90,3 +90,18 @@ export async function listContacts(params: URLSearchParams): Promise<ContactList
     pageSize: PAGE_SIZE,
   };
 }
+
+/**
+ * Every row the same query matches, in the same order, for a CSV.
+ *
+ * The SAME filter and sort as the page, so "export what I am looking at" is
+ * literally true — and no page, because the file is the whole list. Reads one
+ * past the cap so the response can say it was cut.
+ */
+export async function exportContacts(params: URLSearchParams, limit: number): Promise<ContactRow[]> {
+  await connectToDatabase();
+  const filter = buildFilter(params);
+  const sort = CONTACT_SORT_SPECS[sortKey(CONTACT_SORTS, params.get("sort"))];
+  const docs = await Contact.find(filter).select(LIST_FIELDS).sort(sort).limit(limit).lean();
+  return (docs as LeanDoc[]).map(toContactRow);
+}

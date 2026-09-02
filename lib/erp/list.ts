@@ -111,9 +111,7 @@ export async function listInvoices(params: URLSearchParams): Promise<InvoiceList
 
   const [items, total] = await Promise.all([
     Invoice.find(filter)
-      .select(
-        "number documentType againstNumber financialYear status issuedAt party grandTotalPaise payment isHistorical",
-      )
+      .select(LIST_FIELDS)
       .sort(sort)
       .skip((page - 1) * PAGE_SIZE)
       .limit(PAGE_SIZE)
@@ -122,23 +120,39 @@ export async function listInvoices(params: URLSearchParams): Promise<InvoiceList
   ]);
 
   return {
-    items: (items as LeanDoc[]).map((i) => ({
-      id: String(i._id),
-      number: i.number ?? "",
-      documentType: i.documentType ?? "invoice",
-      againstNumber: i.againstNumber ?? "",
-      financialYear: i.financialYear ?? "",
-      status: i.status ?? "draft",
-      issuedAt: i.issuedAt ? new Date(i.issuedAt).toISOString() : null,
-      partyName: i.party?.businessName || i.party?.name || "",
-      gstin: i.party?.gstin ?? "",
-      grandTotalPaise: i.grandTotalPaise ?? 0,
-      paymentStatus: i.payment?.status ?? "unpaid",
-      isHistorical: Boolean(i.isHistorical),
-    })),
+    items: (items as LeanDoc[]).map(toInvoiceRow),
     total,
     page,
     pages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
     pageSize: PAGE_SIZE,
   };
+}
+
+const LIST_FIELDS =
+  "number documentType againstNumber financialYear status issuedAt party grandTotalPaise payment isHistorical";
+
+function toInvoiceRow(i: LeanDoc): InvoiceRow {
+  return {
+    id: String(i._id),
+    number: i.number ?? "",
+    documentType: i.documentType ?? "invoice",
+    againstNumber: i.againstNumber ?? "",
+    financialYear: i.financialYear ?? "",
+    status: i.status ?? "draft",
+    issuedAt: i.issuedAt ? new Date(i.issuedAt).toISOString() : null,
+    partyName: i.party?.businessName || i.party?.name || "",
+    gstin: i.party?.gstin ?? "",
+    grandTotalPaise: i.grandTotalPaise ?? 0,
+    paymentStatus: i.payment?.status ?? "unpaid",
+    isHistorical: Boolean(i.isHistorical),
+  };
+}
+
+/** Every matching row, same filter and order as the page, for a CSV. */
+export async function exportInvoices(params: URLSearchParams, limit: number): Promise<InvoiceRow[]> {
+  await connectToDatabase();
+  const filter = buildInvoiceFilter(params);
+  const sort = INVOICE_SORT_SPECS[sortKey(INVOICE_SORTS, params.get("sort"))];
+  const docs = await Invoice.find(filter).select(LIST_FIELDS).sort(sort).limit(limit).lean();
+  return (docs as LeanDoc[]).map(toInvoiceRow);
 }
