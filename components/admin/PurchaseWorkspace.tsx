@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Button,
   EmptyState,
@@ -104,10 +104,14 @@ export function PurchaseWorkspace({
   const [values, setValues] = useState<FormValues>(EMPTY);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [deleting, setDeleting] = useState<PurchaseRow | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    // Cleared here, like every other list. Without it one failed search left
+    // the red banner on screen until a full page reload.
+    setError(null);
     try {
       const q = new URLSearchParams();
       if (search.trim()) q.set("search", search.trim());
@@ -122,8 +126,22 @@ export function PurchaseWorkspace({
     }
   }, [search]);
 
+  /*
+    Skip only the FIRST run — the initial rows came down with the HTML.
+
+    This used to bail on an empty search instead, which meant clearing the box
+    never reloaded: `rows` kept the last search's subset, and every headline
+    figure on this screen is computed from `rows`. The count in the header, the
+    stock value, the low-stock count, the input-credit total and the money owed
+    to directors were all recomputed from a handful of matches and presented as
+    company-wide totals.
+  */
+  const servedInitial = useRef(true);
   useEffect(() => {
-    if (!search.trim()) return;
+    if (servedInitial.current) {
+      servedInitial.current = false;
+      return;
+    }
     const t = setTimeout(() => void load(), 250);
     return () => clearTimeout(t);
   }, [search, load]);
@@ -159,6 +177,7 @@ export function PurchaseWorkspace({
 
   function open(row: PurchaseRow | null) {
     setFieldErrors({});
+    setDirty(false);
     if (row) {
       setEditing(row);
       setValues({
@@ -183,7 +202,11 @@ export function PurchaseWorkspace({
     }
   }
 
-  const close = () => { setEditing(null); setCreating(false); };
+  const close = () => {
+    setEditing(null);
+    setCreating(false);
+    setDirty(false);
+  };
 
   async function reload() {
     const res = await fetch("/api/admin/purchases", { cache: "no-store" });
@@ -237,7 +260,20 @@ export function PurchaseWorkspace({
     }
   }
 
-  const set = (patch: Partial<FormValues>) => setValues({ ...values, ...patch });
+  function set(patch: Partial<FormValues>) {
+    setValues({ ...values, ...patch });
+    setDirty(true);
+    /*
+      Clear the errors for the fields being changed. They were only ever
+      cleared at the top of save(), so a corrected field stayed red until you
+      submitted again and found out.
+    */
+    setFieldErrors((current) => {
+      const next = { ...current };
+      for (const key of Object.keys(patch)) delete next[key];
+      return next;
+    });
+  }
 
   /*
     The parts, added up. NOT written into the total — the total is what the
@@ -360,7 +396,11 @@ export function PurchaseWorkspace({
         title={editing ? `Edit ${editing.supplier}` : "Add purchase"}
         description="Copy the figures from the supplier's bill exactly. Nothing here is recalculated."
         busy={saving}
+        /* Was missing entirely: Escape or a stray backdrop tap
+           silently destroyed a filled-in form. */
+        dirty={dirty}
         onClose={close}
+        onSubmit={save}
         wide
         footer={
           <div className="flex justify-end gap-2">

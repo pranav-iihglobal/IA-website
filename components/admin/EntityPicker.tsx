@@ -123,12 +123,27 @@ export function EntityPicker({
 
       {!full && (
         <div className="mt-2">
+          {/*
+            Enter here means "pick the first match", never "submit the form
+            this picker happens to sit in". Without both guards, Enter in this
+            box saves an eight-step product and navigates away from it.
+          */}
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              e.preventDefault();
+              const first = matches[0];
+              if (first) {
+                add(first.id);
+                setQuery("");
+              }
+            }}
             placeholder={placeholder}
             aria-label={placeholder}
             aria-invalid={error ? true : undefined}
+            data-no-implicit-submit
             className="admin-input"
           />
           {matches.length > 0 && (

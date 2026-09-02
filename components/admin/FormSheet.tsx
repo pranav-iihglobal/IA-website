@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { Spinner } from "./ui";
 
 /**
@@ -31,6 +38,7 @@ export function FormSheet({
   busy = false,
   dirty = false,
   onClose,
+  onSubmit,
   wide = false,
 }: {
   open: boolean;
@@ -42,11 +50,40 @@ export function FormSheet({
   /** When true, closing asks first. A stray backdrop tap must not lose work. */
   dirty?: boolean;
   onClose: () => void;
+  /**
+   * Makes the sheet a real form, so Enter submits it.
+   *
+   * Without this a sheet is a div of controls with a footer button, and
+   * `Button` defaults to type="button" — so Enter did nothing at all, in half
+   * the admin, including a one-field sheet whose entire content is "why are
+   * you cancelling this invoice".
+   */
+  onSubmit?: () => void;
   /** For forms with two columns of fields on a wide screen. */
   wide?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  /*
+    Was a hardcoded "form-sheet-title". InvoiceWorkspace renders FOUR sheets
+    and this component never returns null, so four elements carried the same
+    id — aria-labelledby resolved to the first for all of them and three
+    dialogs announced the wrong title.
+  */
+  const titleId = useId();
+  const shellClass = `flex max-h-[inherit] flex-col ${wide ? "sm:w-[46rem]" : "sm:w-[34rem]"}`;
+
+  function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    /*
+      A search box inside the sheet must not submit it. Enter in the invoice's
+      party picker means "choose this one", not "issue the invoice" — the same
+      trap that already exists in ProductForm, where Enter in a picker saves
+      and navigates away from an eight-step form.
+    */
+    if (document.activeElement?.closest("[data-no-implicit-submit]")) return;
+    if (!busy) onSubmit?.();
+  }
 
   // Drive the element's real modal state from the prop.
   useEffect(() => {
@@ -80,26 +117,8 @@ export function FormSheet({
     onClose();
   }
 
-  return (
-    <dialog
-      ref={ref}
-      aria-labelledby="form-sheet-title"
-      // The native Escape key and the backdrop both route through the same
-      // guard, so neither can discard a half-filled form silently.
-      onCancel={(e) => {
-        e.preventDefault();
-        requestClose();
-      }}
-      onClick={(e) => {
-        // A click on the dialog element itself is a click on the backdrop:
-        // the content is a child, so it stops the event reaching here.
-        if (e.target === ref.current) requestClose();
-      }}
-      className="form-sheet"
-    >
-      <div
-        className={`flex max-h-[inherit] flex-col ${wide ? "sm:w-[46rem]" : "sm:w-[34rem]"}`}
-      >
+  const body = (
+    <>
         {/* Drag handle — mobile only. Signals "this pulls down" without
             needing a hit target of its own. */}
         <div className="flex justify-center pt-2 sm:hidden" aria-hidden="true">
@@ -109,7 +128,7 @@ export function FormSheet({
         <div className="flex items-start gap-3 border-b border-line-soft px-4 py-3 sm:px-6 sm:py-4">
           <div className="min-w-0 flex-1">
             <h2
-              id="form-sheet-title"
+              id={titleId}
               className="font-display text-lg font-bold text-ink-strong"
             >
               {title}
@@ -146,7 +165,66 @@ export function FormSheet({
             <Spinner />
           </div>
         )}
-      </div>
+    </>
+  );
+
+  /*
+    A <form> when a submit handler was given, a <div> otherwise — with the
+    SAME classes either way. Every layout class is on this element, and a form
+    is a block box exactly as the div was, so the header, the scrolling body
+    and the footer all end up inside one form and the footer's button finally
+    has an owner. The footer sits outside the scroll container, so wrapping
+    only the body would have orphaned it.
+
+    Two branches rather than a dynamic tag name, which cannot be typed for a
+    submit handler without a cast — and NOT a component declared in here,
+    which React would remount on every render, losing focus and caret on every
+    keystroke.
+
+    noValidate: the panel validates in its own language. Native bubbles show
+    one field at a time in the browser's locale.
+  */
+  const shell = onSubmit ? (
+    <form className={shellClass} onSubmit={submit} noValidate>
+      {body}
+    </form>
+  ) : (
+    <div className={shellClass}>{body}</div>
+  );
+
+  return (
+    <dialog
+      ref={ref}
+      aria-labelledby={titleId}
+      // The native Escape key and the backdrop both route through the same
+      // guard, so neither can discard a half-filled form silently.
+      onCancel={(e) => {
+        e.preventDefault();
+        requestClose();
+      }}
+      onClick={(e) => {
+        // A click on the dialog element itself is a click on the backdrop:
+        // the content is a child, so it stops the event reaching here.
+        if (e.target === ref.current) requestClose();
+      }}
+      className="form-sheet"
+    >
+      {/*
+        A <form> when a submit handler was given, a <div> otherwise — with the
+        SAME classes either way. Every layout class is on this element, and a
+        form is a block box exactly as the div was, so header, scrolling body
+        and footer all end up inside one form and the footer's button finally
+        has an owner. The footer sits outside the scroll container, so wrapping
+        only the body would have orphaned it.
+
+        Written as two branches rather than a dynamic tag name, which cannot be
+        typed for a submit handler without casting.
+
+        noValidate: the panel does its own validation, in its own language.
+        Native bubbles show one field at a time in the browser's locale.
+      */}
+      {shell}
+
 
       {confirmingDiscard && (
         <div className="absolute inset-0 grid place-items-end bg-russet-dark/40 sm:place-items-center">

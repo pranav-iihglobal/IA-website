@@ -508,6 +508,7 @@ export function InvoiceWorkspace({
         busy={saving}
         dirty={dirty}
         onClose={closeSheet}
+        onSubmit={issue}
         wide
         footer={
           <div className="flex justify-end gap-2">
@@ -536,7 +537,9 @@ export function InvoiceWorkspace({
         open={Boolean(paying)}
         title={`Payment for ${paying?.number ?? ""}`}
         busy={saving}
+        dirty={payment.paid !== "" || payment.referenceNo !== ""}
         onClose={() => setPaying(null)}
+        onSubmit={savePayment}
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setPaying(null)}>
@@ -586,7 +589,12 @@ export function InvoiceWorkspace({
         title={`Cancel ${cancelling?.number ?? ""}?`}
         description="It keeps its number and stays visible, marked cancelled. A gap in a GST series is something the department asks about."
         busy={saving}
+        dirty={cancelReason.trim().length > 0}
         onClose={() => setCancelling(null)}
+        onSubmit={() => {
+          // Enter must respect the same rule the button does.
+          if (cancelReason.trim().length >= 3) void confirmCancel();
+        }}
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setCancelling(null)}>
@@ -620,9 +628,13 @@ export function InvoiceWorkspace({
         title={`Credit note against ${crediting?.number ?? ""}`}
         description="The invoice stays as it is. This raises a separate document that reverses part of it, with its own CN number."
         busy={saving}
+        dirty={creditReason.trim().length > 0}
         onClose={() => {
           setCrediting(null);
           setCreditLines(null);
+        }}
+        onSubmit={() => {
+          if (creditReason.trim().length >= 3 && creditLines) void confirmCredit();
         }}
         wide
         footer={

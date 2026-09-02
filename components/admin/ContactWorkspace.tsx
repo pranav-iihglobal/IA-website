@@ -16,6 +16,7 @@ import {
 import { ConfirmDialog } from "./ConfirmDialog";
 import { FormSheet } from "./FormSheet";
 import { useToast } from "./Toast";
+import { clearChanged } from "@/lib/admin/field-errors";
 import { ContactForm, type ContactFormValues, emptyContact } from "./ContactForm";
 import { STATUS_LABELS, type ContactRow } from "@/lib/crm/shape";
 import type { ContactList } from "@/lib/crm/list";
@@ -423,6 +424,7 @@ export function ContactWorkspace({
         busy={saving || (sheetOpen && !formValues)}
         dirty={dirty}
         onClose={closeSheet}
+        onSubmit={() => formValues && save(formValues)}
         wide
         title={creating ? `Add ${config.noun}` : `Edit ${config.noun}`}
         description={
@@ -450,6 +452,10 @@ export function ContactWorkspace({
             values={formValues}
             errors={fieldErrors}
             onChange={(next) => {
+              // Errors for the fields just edited go now, not at the next save.
+              setFieldErrors((current) =>
+                clearChanged(current, formValues ?? {}, next),
+              );
               setFormValues(next);
               setDirty(true);
             }}

@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button, ErrorBanner, StatusPill } from "./ui";
 import { FormSheet } from "./FormSheet";
 import { useToast } from "./Toast";
+import { clearChanged } from "@/lib/admin/field-errors";
 import { ContactForm, emptyContact, type ContactFormValues } from "./ContactForm";
 import { ContactNotes, type ContactNote } from "./ContactNotes";
 import { STATUS_LABELS } from "@/lib/crm/shape";
@@ -478,6 +479,7 @@ export function ContactProfile({
         busy={saving}
         dirty={dirty}
         onClose={closeSheet}
+        onSubmit={() => values && save(values)}
         wide
         footer={
           <div className="flex justify-end gap-2">
@@ -496,6 +498,10 @@ export function ContactProfile({
             contactId={contact.id}
             values={values}
             onChange={(next) => {
+              // Errors for the fields just edited go now, not at the next save.
+              setFieldErrors((current) =>
+                clearChanged(current, values ?? {}, next),
+              );
               setValues(next);
               setDirty(true);
             }}

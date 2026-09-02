@@ -968,6 +968,16 @@ export function SearchInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
+        /*
+          NOT type="search". WebKit draws its own clear × for it, duplicating
+          the one below, and Escape inside one clears the box rather than
+          reaching the sheet — so closing a dialog from the search field would
+          take two presses. enterKeyHint is the part that was actually wanted.
+        */
+        enterKeyHint="search"
+        autoComplete="off"
+        /* Filtering a list is not submitting the form around it. */
+        data-no-implicit-submit
         className="admin-input pl-9 pr-12"
       />
       {value && (
