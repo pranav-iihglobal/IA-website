@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
       */
       items: (items as LeanDoc[]).map((d) => ({
         id: String(d._id),
+        version: typeof d.__v === "number" ? d.__v : 0,
         supplier: d.supplier ?? "",
         supplierGstin: d.supplierGstin ?? "",
         billNo: d.billNo ?? "",

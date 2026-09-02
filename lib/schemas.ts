@@ -544,7 +544,17 @@ export const gstinSchema = z
     "That is not a valid GSTIN",
   );
 
+/**
+ * The document version a form loaded with, sent back on save.
+ *
+ * Optional because scripts and the import have no version to send and no
+ * concurrent writer to fear. When it IS sent, the update only matches a
+ * document still on that version — see lib/admin/concurrency.ts.
+ */
+export const versionField = z.number().int().nonnegative().optional();
+
 export const contactSchema = z.object({
+  version: versionField,
   contactId: z.string().trim().default(""),
   kind: z.enum(["lead", "customer"]).default("lead"),
   channel: z.enum(["b2c", "b2b", ""]).default(""),
@@ -749,6 +759,7 @@ export const creditNoteSchema = z.object({
 
 export const stockItemSchema = z
   .object({
+    version: versionField,
     name: z.string().trim().min(1, "Name is required"),
     sku: z.string().trim().default(""),
     kind: z.enum(["finished", "packaging", "raw"]).default("finished"),
@@ -770,6 +781,7 @@ export const stockItemSchema = z
 
 export const purchaseSchema = z
   .object({
+    version: versionField,
     supplier: z.string().trim().min(1, "Supplier is required"),
     supplierGstin: z.string().trim().default(""),
     billNo: z.string().trim().default(""),

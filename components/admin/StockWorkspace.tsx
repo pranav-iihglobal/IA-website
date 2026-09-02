@@ -30,6 +30,8 @@ import { formatRupees, paiseToRupeeString, rupeesToPaise } from "@/lib/money";
 
 export interface StockRow {
   id: string;
+  /** Mongoose __v — sent back on save, so a stale write is refused. */
+  version: number;
   name: string;
   sku: string;
   kind: string;
@@ -202,7 +204,7 @@ export function StockWorkspace({
         {
           method: editing ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(values),
+          body: JSON.stringify({ ...values, version: editing?.version }),
         },
       );
       const data = await res.json();

@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
       // Mapped, not spread — same reason as the purchases list.
       items: (items as LeanDoc[]).map((d) => ({
         id: String(d._id),
+        version: typeof d.__v === "number" ? d.__v : 0,
         name: d.name ?? "",
         sku: d.sku ?? "",
         kind: d.kind ?? "finished",

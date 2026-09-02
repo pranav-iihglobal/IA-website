@@ -9,7 +9,7 @@ import {
   TextareaField,
   TextField,
 } from "./ui";
-import { formatINR, rupeesToPaise } from "@/lib/money";
+import { formatINR, paiseToRupeeString, rupeesToPaise } from "@/lib/money";
 import {
   computeInvoice,
   formatRate,
@@ -299,7 +299,9 @@ function suggestPrice(
     party?.channel === "b2b"
       ? pack.dealerPricePaise ?? pack.farmerPricePaise ?? pack.mrpPaise
       : pack.farmerPricePaise ?? pack.mrpPaise;
-  return paise === null || paise === undefined ? "" : String(paise / 100);
+  // paiseToRupeeString, not String(paise / 100): the latter prefills 105050
+  // paise as "1050.5" rather than "1050.50", on a money field.
+  return paise === null || paise === undefined ? "" : paiseToRupeeString(paise);
 }
 
 /** The figures, exactly as they will be written down. */

@@ -10,6 +10,11 @@ import {
   requirePermission,
   auditChange,
 } from "@/lib/admin/api";
+import {
+  isStaleWrite,
+  staleWriteResponse,
+  versionedFilter,
+} from "@/lib/admin/concurrency";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,12 +61,20 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     // Read first, so the audit entry can say what actually changed rather
     // than restating the whole document.
     const before = await StockItem.findById(id).lean();
-    const updated = await StockItem.findByIdAndUpdate(
-      id,
+    /*
+      Version-matched: a save must not silently overwrite one made
+      while this form was open. See lib/admin/concurrency.ts.
+    */
+    const updated = await StockItem.findOneAndUpdate(
+      versionedFilter(id, (parsed.data as { version?: unknown }).version),
       { ...parsed.data, updatedBy: await currentEditor() },
       { returnDocument: "after", runValidators: true },
     );
-    if (!updated) return badId();
+    if (!updated) {
+      // Missing, or someone saved first? The two need different answers.
+      const exists = await StockItem.exists({ _id: id });
+      return isStaleWrite(updated, exists) ? staleWriteResponse() : badId();
+    }
 
     await auditChange({
       action: "update",

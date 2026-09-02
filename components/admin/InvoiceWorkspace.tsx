@@ -24,7 +24,7 @@ import {
   emptyInvoice,
   type InvoiceFormValues,
 } from "./InvoiceForm";
-import { formatINR } from "@/lib/money";
+import { formatINR, paiseToRupeeString } from "@/lib/money";
 import { listQueryKey } from "@/lib/crm/scopes";
 import type { BillableParty, BillableProduct } from "@/lib/admin/invoice-options";
 import type { InvoiceList, InvoiceRow } from "@/lib/erp/list";
@@ -465,7 +465,8 @@ export function InvoiceWorkspace({
                           setPaying(row);
                           setPayment({
                             status: "paid",
-                            paid: String(row.grandTotalPaise / 100),
+                            // Not String(paise / 100), which prefills "1050.5" for 1050.50.
+                            paid: paiseToRupeeString(row.grandTotalPaise),
                             referenceNo: "",
                           });
                         }}

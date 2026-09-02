@@ -36,6 +36,9 @@ export default async function ContactProfilePage({
 
   const contact: ProfileContact = {
     id,
+    // Sent back on save, so an edit here cannot silently overwrite one made
+    // from the list at the same moment.
+    version: typeof c.__v === "number" ? c.__v : 0,
     contactId: c.contactId ?? "",
     kind: c.kind ?? "lead",
     channel: c.channel ?? "",

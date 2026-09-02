@@ -32,6 +32,8 @@ import { formatINR, formatRupees, paiseToRupeeString, rupeesToPaise } from "@/li
 
 export interface PurchaseRow {
   id: string;
+  /** Mongoose __v — sent back on save, so a stale write is refused. */
+  version: number;
   supplier: string;
   supplierGstin: string;
   billNo: string;
@@ -238,7 +240,12 @@ export function PurchaseWorkspace({
         {
           method: editing ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...values, billDate: values.billDate || null }),
+          body: JSON.stringify({
+            ...values,
+            billDate: values.billDate || null,
+            // Only when editing: a create has no version to conflict with.
+            version: editing?.version,
+          }),
         },
       );
       const data = await res.json();

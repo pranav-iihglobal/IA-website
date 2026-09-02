@@ -12,6 +12,11 @@ import {
   requirePermission,
   auditChange,
 } from "@/lib/admin/api";
+import {
+  isStaleWrite,
+  staleWriteResponse,
+  versionedFilter,
+} from "@/lib/admin/concurrency";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -103,8 +108,12 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     await connectToDatabase();
     // Read first, so the audit entry holds the change rather than the record.
     const before = await Contact.findById(id).lean();
-    const updated = await Contact.findByIdAndUpdate(
-      id,
+    /*
+      Matched on the version the form loaded with, so a save cannot silently
+      overwrite somebody else's. See lib/admin/concurrency.ts.
+    */
+    const updated = await Contact.findOneAndUpdate(
+      versionedFilter(id, (parsed.data as { version?: unknown }).version),
       {
         ...parsed.data,
         /*
@@ -117,7 +126,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       },
       { returnDocument: "after", runValidators: true },
     );
-    if (!updated) return badId();
+    if (!updated) {
+      return isStaleWrite(updated, before) ? staleWriteResponse() : badId();
+    }
 
     await auditChange({
       action: "update",

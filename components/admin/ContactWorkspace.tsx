@@ -17,6 +17,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { FormSheet } from "./FormSheet";
 import { useToast } from "./Toast";
 import { clearChanged } from "@/lib/admin/field-errors";
+import { formatRupees } from "@/lib/money";
 import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
 import { contactSchema } from "@/lib/schemas";
 import { ContactForm, type ContactFormValues, emptyContact } from "./ContactForm";
@@ -89,9 +90,13 @@ function initialOf(row: ContactRow) {
   return (row.businessName || row.name || "?").trim().charAt(0).toUpperCase();
 }
 
-function rupees(paise: number) {
-  return `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
-}
+/*
+  formatRupees, not toLocaleString. lib/money.ts writes Indian digit grouping
+  out by hand precisely because toLocaleString falls back to WESTERN grouping
+  on a small-ICU build — so this line rendered lifetime revenue as ₹194,844 on
+  some devices and ₹1,94,844 on others. It also dropped the paise silently.
+*/
+const rupees = formatRupees;
 
 export function ContactWorkspace({
   scope,
@@ -131,6 +136,11 @@ export function ContactWorkspace({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const editId = params.get("edit");
+  // The row as it was loaded, for the version it carried.
+  const editingRow = useMemo(
+    () => (editId ? rows.find((r) => r.id === editId) : undefined),
+    [editId, rows],
+  );
   const creating = params.get("new") === "1";
   const sheetOpen = Boolean(editId) || creating;
 
@@ -254,7 +264,8 @@ export function ContactWorkspace({
         {
           method: editId ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(values),
+          // Only on an edit; a create has no version to conflict with.
+          body: JSON.stringify(editId ? { ...values, version: editingRow?.version } : values),
         },
       );
       const data = await res.json();

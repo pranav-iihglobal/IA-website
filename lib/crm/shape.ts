@@ -49,6 +49,8 @@ export function daysSince(value: Date | string | null | undefined): number | nul
 export interface ContactRow {
   id: string;
   contactId: string;
+  /** Mongoose __v, so a save can refuse to overwrite a newer one. */
+  version: number;
   kind: "lead" | "customer";
   channel: "b2c" | "b2b" | "";
   name: string;
@@ -83,6 +85,9 @@ export function toContactRow(doc: LeanDoc): ContactRow {
   const followUpAt: Date | null = doc.followUpAt ?? null;
   return {
     id: String(doc._id),
+    // The version the form loaded with — sent back on save so a second
+    // save cannot silently overwrite a first. See lib/admin/concurrency.ts.
+    version: typeof doc.__v === "number" ? doc.__v : 0,
     contactId: doc.contactId ?? "",
     kind: doc.kind ?? "lead",
     channel: doc.channel ?? "",

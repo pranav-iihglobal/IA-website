@@ -31,6 +31,8 @@ import type { ProfileInvoice, Trading } from "@/lib/crm/profile";
 
 export interface ProfileContact {
   id: string;
+  /** Mongoose __v — sent back on save, so a stale write is refused. */
+  version: number;
   contactId: string;
   kind: string;
   channel: string;
@@ -195,7 +197,7 @@ export function ContactProfile({
       const res = await fetch(`/api/admin/contacts/${contact.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(next),
+        body: JSON.stringify({ ...next, version: contact.version }),
       });
       const data = await res.json();
       if (!res.ok) {

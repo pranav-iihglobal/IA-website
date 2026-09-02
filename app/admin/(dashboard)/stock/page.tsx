@@ -15,6 +15,7 @@ export default async function StockPage() {
 
   const items: StockRow[] = (docs as LeanDoc[]).map((d) => ({
     id: String(d._id),
+    version: typeof d.__v === "number" ? d.__v : 0,
     name: d.name ?? "",
     sku: d.sku ?? "",
     kind: d.kind ?? "finished",
