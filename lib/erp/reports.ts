@@ -289,9 +289,14 @@ export interface DashboardFigures {
  * sales, and a credit note is not one; counting it would make a month with
  * two corrections look busier than one without.
  */
-async function revenueBetween(from: Date, to: Date): Promise<{ total: number; count: number }> {
+export async function revenueBetween(
+  from: Date,
+  to: Date,
+  /** Extra conditions — the overviews pass `isSample: { $ne: true }`. */
+  match: Record<string, unknown> = {},
+): Promise<{ total: number; count: number }> {
   const [row] = await Invoice.aggregate<{ total: number; count: number }>([
-    { $match: { status: "issued", issuedAt: { $gte: from, $lt: to } } },
+    { $match: { ...match, status: "issued", issuedAt: { $gte: from, $lt: to } } },
     {
       $group: {
         _id: null,

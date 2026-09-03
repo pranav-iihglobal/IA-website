@@ -15,7 +15,7 @@ import {
 } from "./ui";
 import { ConfirmDialog } from "./ConfirmDialog";
 // One list of categories, shared with the form that writes them.
-import { purchaseCategoryLabel } from "@/lib/erp/purchase-categories";
+import { PURCHASE_CATEGORIES, purchaseCategoryLabel } from "@/lib/erp/purchase-categories";
 import { useToast } from "./Toast";
 import { formatINR, formatRupees } from "@/lib/money";
 import { formatIstDate } from "@/lib/time";
@@ -52,6 +52,8 @@ const FILTERS = [
   { value: "unpaid", label: "Unpaid" },
   { value: "credit", label: "Input credit" },
   { value: "director", label: "Paid by a director" },
+  // Then by category, so the Sales overview's lines land on a lit pill.
+  ...PURCHASE_CATEGORIES.map((c) => ({ value: c.value, label: c.label })),
 ];
 
 

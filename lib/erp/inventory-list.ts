@@ -1,5 +1,6 @@
 import { connectToDatabase } from "@/lib/db/connect";
 import { StockItem } from "@/lib/db/models/StockItem";
+import { PURCHASE_CATEGORIES as PURCHASE_CATEGORY_VALUES } from "@/lib/db/models/Purchase";
 import { Purchase } from "@/lib/db/models/Purchase";
 import { searchRegex } from "@/lib/search";
 import { PURCHASE_SORTS, STOCK_SORTS, sortKey } from "@/lib/admin/sorts";
@@ -288,6 +289,8 @@ export function buildPurchaseFilter(params: URLSearchParams): LeanDoc {
   if (which === "unpaid") filter.paymentStatus = { $ne: "paid" };
   else if (which === "credit") filter.inputCreditEligible = true;
   else if (which === "director") filter.paidBy = "director";
+  // A category, from the Sales overview's "purchases by category" lines.
+  else if ((PURCHASE_CATEGORY_VALUES as readonly string[]).includes(which)) filter.category = which;
   return filter;
 }
 

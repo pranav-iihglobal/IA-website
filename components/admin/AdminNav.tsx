@@ -97,6 +97,7 @@ const NAV: (NavItem | NavGroup)[] = [
   {
     id: "sales",
     label: "Sales",
+    href: "/admin/sales",
     items: [
       {
         href: "/admin/invoices",
