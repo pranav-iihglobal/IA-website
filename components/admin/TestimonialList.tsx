@@ -105,7 +105,12 @@ function MediaBadge({ platform }: { platform: string }) {
   );
 }
 
-export function TestimonialList() {
+export function TestimonialList({
+  initialStatus = "",
+}: {
+  /** From the URL, so a dashboard link can land on the drafts. */
+  initialStatus?: string;
+} = {}) {
   const { toast } = useToast();
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
@@ -113,7 +118,7 @@ export function TestimonialList() {
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(initialStatus);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<Row | null>(null);

@@ -6,6 +6,7 @@ import {
   istDateTimeInputValue,
   istDay,
   istFinancialYear,
+  istHour,
   istMonth,
   istMonthStart,
   istParts,
@@ -180,5 +181,14 @@ describe("formatting a date for a document", () => {
   it("pads a single-digit day and month", () => {
     expect(formatIstDate(new Date("2026-01-05T06:00:00.000Z"))).toBe("05-01-2026");
     expect(formatIstDateLong(new Date("2026-01-05T06:00:00.000Z"))).toBe("05 Jan 2026");
+  });
+});
+
+describe("istHour", () => {
+  it("reads the wall clock in India, not the server's", () => {
+    // 23:30 UTC is 05:00 the next morning in Gujarat.
+    expect(istHour(new Date("2026-09-30T23:30:00.000Z"))).toBe(5);
+    expect(istHour(new Date("2026-10-01T06:30:00.000Z"))).toBe(12);
+    expect(istHour(new Date("2026-10-01T18:29:00.000Z"))).toBe(23);
   });
 });

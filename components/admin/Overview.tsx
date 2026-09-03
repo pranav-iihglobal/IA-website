@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { BetaStar } from "./ui";
 
 /**
  * The pieces an overview page is made of.
@@ -15,12 +16,15 @@ export function OverviewCard({
   title,
   href,
   hint,
+  beta,
   children,
 }: {
   title: string;
   /** Where the heading goes — the module's own list. */
   href?: string;
   hint?: string;
+  /** The module's beta note, if it has one — the same star the lists show. */
+  beta?: string | null;
   children: ReactNode;
 }) {
   return (
@@ -34,6 +38,7 @@ export function OverviewCard({
           ) : (
             title
           )}
+          {beta && <BetaStar note={beta} className="ml-1.5 align-middle text-sm text-alloy" />}
         </h2>
         {hint && <p className="text-xs text-ink-faint">{hint}</p>}
       </div>

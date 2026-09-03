@@ -65,6 +65,11 @@ export function istDay(date: Date): number {
 }
 
 /** Year, month and day together, when a caller needs more than one. */
+/** Hour of the day in India, 0–23 — for "good morning" and nothing that is stored. */
+export function istHour(date: Date): number {
+  return asIstClock(date).getUTCHours();
+}
+
 export function istParts(date: Date): { year: number; month: number; day: number } {
   const clock = asIstClock(date);
   return {

@@ -1,11 +1,8 @@
 import { connectToDatabase } from "@/lib/db/connect";
 import { Invoice } from "@/lib/db/models/Invoice";
-import { Purchase } from "@/lib/db/models/Purchase";
-import { StockItem, needsReorder } from "@/lib/db/models/StockItem";
-import { Contact } from "@/lib/db/models/Contact";
 import { Types, type PipelineStage } from "mongoose";
 import type { LeanDoc } from "@/lib/db/lean";
-import { istMonthStart, istParts } from "@/lib/time";
+import { istMonthStart } from "@/lib/time";
 import type { ExportableInvoice } from "./gst";
 import { owedOnInvoice } from "./owed";
 
@@ -265,21 +262,6 @@ export async function outstandingInvoices(
   }));
 }
 
-export interface DashboardFigures {
-  monthRevenuePaise: number;
-  monthInvoices: number;
-  lastMonthRevenuePaise: number;
-  yearRevenuePaise: number;
-  outstandingPaise: number;
-  outstandingCount: number;
-  oldestOwedDays: number | null;
-  customers: number;
-  dealers: number;
-  followUpsDue: number;
-  reorderCount: number;
-  monthPurchasesPaise: number;
-}
-
 /**
  * Sum of grand totals for issued documents in a window.
  *
@@ -308,58 +290,4 @@ export async function revenueBetween(
     },
   ]);
   return { total: row?.total ?? 0, count: row?.count ?? 0 };
-}
-
-export async function dashboardFigures(now = new Date()): Promise<DashboardFigures> {
-  await connectToDatabase();
-
-  // "Today" as India reckons it. For five and a half hours after midnight IST
-  // the server's own calendar is still on yesterday's month.
-  const { year: y, month: m } = istParts(now);
-  const thisMonth = monthRange(y, m);
-  const lastMonth = monthRange(m === 1 ? y - 1 : y, m === 1 ? 12 : m - 1);
-  // The Indian financial year, April to March — what the CA reports on.
-  const fyStart = istMonthStart(m >= 4 ? y : y - 1, 4);
-
-  const [month, previous, year, owed, oldest, stock, customers, dealers, followUps, purchases] =
-    await Promise.all([
-      revenueBetween(thisMonth.from, thisMonth.to),
-      revenueBetween(lastMonth.from, lastMonth.to),
-      revenueBetween(fyStart, thisMonth.to),
-      outstandingTotal(),
-      // Just the oldest, for the "oldest N days" line — not the whole list.
-      // Through the same pipeline, so a fully credited invoice that is still
-      // marked unpaid does not count as the oldest debt on the books.
-      Invoice.aggregate<{ issuedAt?: Date }>([
-        ...outstandingPipeline(),
-        { $sort: { issuedAt: 1, _id: 1 } },
-        { $limit: 1 },
-        { $project: { issuedAt: 1 } },
-      ]),
-      StockItem.find().select("onHand reorderLevel").lean(),
-      Contact.countDocuments({ kind: "customer", channel: "b2c" }),
-      Contact.countDocuments({ kind: "customer", channel: "b2b" }),
-      Contact.countDocuments({ followUpAt: { $ne: null, $lte: now } }),
-      Purchase.aggregate<{ total: number }>([
-        { $match: { billDate: { $gte: thisMonth.from, $lt: thisMonth.to } } },
-        { $group: { _id: null, total: { $sum: "$totalPaise" } } },
-      ]),
-    ]);
-
-  return {
-    monthRevenuePaise: month.total,
-    monthInvoices: month.count,
-    lastMonthRevenuePaise: previous.total,
-    yearRevenuePaise: year.total,
-    outstandingPaise: owed.owedPaise,
-    outstandingCount: owed.count,
-    oldestOwedDays: oldest[0]?.issuedAt
-      ? Math.floor((now.getTime() - new Date(oldest[0].issuedAt).getTime()) / 86_400_000)
-      : null,
-    customers,
-    dealers,
-    followUpsDue: followUps,
-    reorderCount: (stock as LeanDoc[]).filter(needsReorder).length,
-    monthPurchasesPaise: purchases[0]?.total ?? 0,
-  };
 }

@@ -6,7 +6,16 @@ import { can } from "@/lib/auth/permissions";
 export const metadata = { title: "Testimonials" };
 export const dynamic = "force-dynamic";
 
-export default async function AdminTestimonialsPage() {
+/** The only filter the list has, accepted from the URL so the dashboard's drafts line can link here. */
+const STATUS_PARAM = new Set(["draft", "published", "scheduled"]);
+
+export default async function AdminTestimonialsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const url = await searchParams;
+  const status = typeof url.status === "string" && STATUS_PARAM.has(url.status) ? url.status : "";
   const me = await requirePageAccess("testimonials:read");
 
   return (
@@ -40,7 +49,7 @@ export default async function AdminTestimonialsPage() {
         )}
       </header>
       <div className="mt-8">
-        <TestimonialList />
+        <TestimonialList initialStatus={status} />
       </div>
     </>
   );
