@@ -21,6 +21,7 @@ import {
 } from "@/lib/auth/permissions";
 import { BetaStar } from "./ui";
 import { itemActive, type NavTarget } from "@/lib/admin/nav";
+import { GlobalSearch } from "./GlobalSearch";
 
 function Icon({ path }: { path: string }) {
   return (
@@ -605,6 +606,8 @@ export function AdminNav({ user }: { user: AdminUser }) {
             IKSARVA Admin
           </span>
         </div>
+        <div className="-mr-2 flex items-center">
+        <GlobalSearch variant="topbar" />
         <button
           ref={hamburgerRef}
           type="button"
@@ -612,7 +615,7 @@ export function AdminNav({ user }: { user: AdminUser }) {
           aria-expanded={open}
           aria-controls="admin-drawer"
           aria-label={open ? "Close menu" : "Open menu"}
-          className="-mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-cornsilk-light hover:bg-olive-dark"
+          className="flex h-11 w-11 items-center justify-center rounded-lg text-cornsilk-light hover:bg-olive-dark"
         >
           <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
             {open ? (
@@ -622,6 +625,7 @@ export function AdminNav({ user }: { user: AdminUser }) {
             )}
           </svg>
         </button>
+        </div>
       </div>
       {open && (
         <div
@@ -732,6 +736,11 @@ export function AdminNav({ user }: { user: AdminUser }) {
               Admin
             </p>
           </div>
+        </div>
+
+        {/* Desktop only: the phone has the icon in its top bar. */}
+        <div className="hidden lg:block">
+          <GlobalSearch variant="sidebar" hotkey />
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">{nav}</nav>

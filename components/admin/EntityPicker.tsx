@@ -1,5 +1,6 @@
 "use client";
 
+import { Command } from "cmdk";
 import { useMemo, useState } from "react";
 
 /**
@@ -192,9 +193,11 @@ export function EntityPicker({
  * renders only `label`, throwing `hint` away — so two farmers with the same
  * name were indistinguishable at the moment of choosing who to invoice.
  *
- * Plain buttons rather than the ARIA combobox pattern, matching EntityPicker
- * above: a half-built combobox lies to a screen reader more than a labelled
- * list of buttons does.
+ * On cmdk since the one search box was built on it — the one headless
+ * primitive this panel takes. Before that it was plain buttons, handling
+ * Enter and nothing else: no arrow keys, no listbox role, no
+ * aria-activedescendant. See the plan's "Not doing" for why it is one
+ * primitive and not a component library.
  */
 const MATCH_LIMIT = 50;
 
@@ -275,46 +278,40 @@ export function EntityCombo({
           </button>
         </div>
       ) : (
-        <div className="mt-1.5">
-          <input
+        /*
+          cmdk gives this the combobox pattern the hand-rolled version never
+          had — role="combobox", a listbox of options, arrow keys, Enter on
+          the highlighted one, aria-activedescendant. Filtering stays ours:
+          substring on label and hint, capped, so the list reads the same as
+          before and the cap message stays true.
+        */
+        <Command shouldFilter={false} label={label} className="mt-1.5">
+          <Command.Input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key !== "Enter") return;
-              // Choosing from a list is not submitting the form around it.
-              e.preventDefault();
-              if (matches[0]) pick(matches[0].id);
-            }}
+            onValueChange={setQuery}
             placeholder={placeholder}
-            aria-label={label}
             aria-invalid={error ? true : undefined}
             aria-required={required || undefined}
             autoComplete="off"
             enterKeyHint="search"
+            /* Choosing from a list is not submitting the form around it. */
             data-no-implicit-submit
             className="admin-input"
           />
 
-          {matches.length > 0 && (
-            <ul className="mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-line-soft/70 bg-raised">
-              {matches.map((option) => (
-                <li key={option.id}>
-                  <button
-                    type="button"
-                    onClick={() => pick(option.id)}
-                    className="admin-tap flex w-full flex-col items-start px-3 py-2 text-left transition-colors hover:bg-surface-muted"
-                  >
-                    <span className="text-sm font-semibold text-ink-strong">
-                      {option.label}
-                    </span>
-                    {option.hint && (
-                      <span className="text-xs text-ink-soft">{option.hint}</span>
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <Command.List className={matches.length > 0 ? "mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-line-soft/70 bg-raised p-1" : ""}>
+            {matches.map((option) => (
+              <Command.Item
+                key={option.id}
+                value={option.id}
+                onSelect={() => pick(option.id)}
+                className="admin-tap flex w-full cursor-pointer flex-col items-start rounded-lg px-3 py-2 text-left data-[selected=true]:bg-surface-muted"
+              >
+                <span className="text-sm font-semibold text-ink-strong">{option.label}</span>
+                {option.hint && <span className="text-xs text-ink-soft">{option.hint}</span>}
+              </Command.Item>
+            ))}
+          </Command.List>
 
           {/* Says so rather than silently showing the first fifty of hundreds. */}
           {matches.length === MATCH_LIMIT && (
@@ -343,7 +340,7 @@ export function EntityCombo({
               {options.length} to choose from — type a name, a village or an id.
             </p>
           )}
-        </div>
+        </Command>
       )}
 
       {error && <p className="mt-1.5 text-xs font-semibold text-cta">{error}</p>}
