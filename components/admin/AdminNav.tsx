@@ -257,30 +257,6 @@ const NAV: (NavItem | NavGroup)[] = [
 const isGroup = (entry: NavItem | NavGroup): entry is NavGroup =>
   "items" in entry;
 
-/**
- * The four places the directors go every day, as a bottom bar on the phone.
- *
- * Every screen used to start with the hamburger: open the drawer, find the
- * link, tap it. Today (the dashboard), Leads, Customers and Invoices are
- * where almost every visit goes, and they are one tap now. "More" opens the
- * same drawer for everything else. Hrefs, not a second table: the label,
- * icon, permission and active-matching all come from NAV, so the bar can
- * never disagree with the sidebar about what a person may see.
- */
-const TAB_HREFS = ["/admin", "/admin/leads", "/admin/customers", "/admin/invoices"];
-
-function navItemByHref(href: string): NavItem | undefined {
-  for (const entry of NAV) {
-    if (isGroup(entry)) {
-      const hit = entry.items.find((item) => item.href === href);
-      if (hit) return hit;
-    } else if (entry.href === href) {
-      return entry;
-    }
-  }
-  return undefined;
-}
-
 /* -------------------------------------------------------------------------- */
 /* Which groups are folded away — remembered per browser                      */
 /* -------------------------------------------------------------------------- */
@@ -349,6 +325,41 @@ function subscribeCollapsed(listener: () => void) {
 
 const collapsedOnServer = () => NOTHING_FOLDED;
 
+/**
+ * Is a text field focused — i.e. is the on-screen keyboard most likely up?
+ *
+ * Selects are left out: Android opens a picker for those, not a keyboard.
+ * The clear is delayed a frame so tabbing from one field to the next does
+ * not flash the strip in between.
+ */
+function useKeyboardOpen(): boolean {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const isField = (t: EventTarget | null) =>
+      t instanceof HTMLElement &&
+      t.matches(
+        'input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="file"]), textarea, [contenteditable="true"]',
+      );
+    const onIn = (e: FocusEvent) => {
+      if (!isField(e.target)) return;
+      if (timer) clearTimeout(timer);
+      setOpen(true);
+    };
+    const onOut = () => {
+      timer = setTimeout(() => setOpen(false), 80);
+    };
+    document.addEventListener("focusin", onIn);
+    document.addEventListener("focusout", onOut);
+    return () => {
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("focusin", onIn);
+      document.removeEventListener("focusout", onOut);
+    };
+  }, []);
+  return open;
+}
+
 export interface AdminUser {
   name?: string;
   email?: string;
@@ -361,12 +372,10 @@ export interface AdminUser {
 export function AdminNav({ user }: { user: AdminUser }) {
   const pathname = usePathname();
   const [signingOut, setSigningOut] = useState(false);
-  const [open, setOpen] = useState(false);
-  const drawerRef = useRef<HTMLElement>(null);
-  const hamburgerRef = useRef<HTMLButtonElement>(null);
-  /** The button that opened the drawer this time, for focus to return to. */
-  const openerRef = useRef<HTMLButtonElement | null>(null);
   const [avatarFailed, setAvatarFailed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const stripRef = useRef<HTMLUListElement>(null);
+  const keyboardOpen = useKeyboardOpen();
   const collapsed = useSyncExternalStore(
     subscribeCollapsed,
     readCollapsed,
@@ -376,6 +385,25 @@ export function AdminNav({ user }: { user: AdminUser }) {
   const label = user.name || user.email || "Signed in";
   const initial = (user.name || user.email || "A").trim().charAt(0);
 
+  // One element, rendered in the top bar, the account menu and the sidebar footer.
+  const avatar =
+    user.image && !avatarFailed ? (
+      <Image
+        src={user.image}
+        alt=""
+        width={32}
+        height={32}
+        unoptimized
+        referrerPolicy="no-referrer"
+        onError={() => setAvatarFailed(true)}
+        className="h-8 w-8 shrink-0 rounded-full object-cover"
+      />
+    ) : (
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-mid text-sm font-bold uppercase text-ink-muted">
+        {initial}
+      </span>
+    );
+
   function toggleGroup(id: string) {
     writeCollapsed(
       collapsed.includes(id)
@@ -383,89 +411,6 @@ export function AdminNav({ user }: { user: AdminUser }) {
         : [...collapsed, id],
     );
   }
-
-  // The drawer covers the screen; letting the page scroll behind it means a
-  // tap on the backdrop lands somewhere unexpected.
-  useEffect(() => {
-    if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [open]);
-
-  /*
-    Escape closes it, and Tab stays inside it.
-
-    Escape, the scroll lock and removing the links from the tab order when
-    closed were all already right. What was missing is what a native <dialog>
-    would have given for free and this cannot use — the sidebar is the SAME
-    element on desktop, where it is not a dialog at all: focus never moved
-    into the drawer when it opened, so the first Tab went to whatever followed
-    the hamburger in the page, and focus never came back to the hamburger when
-    it closed.
-  */
-  useEffect(() => {
-    if (!open) return;
-
-    const drawer = drawerRef.current;
-    // Whichever button opened it — the hamburger or the tab bar's More — is
-    // where focus goes back to on close.
-    const opener = openerRef.current ?? hamburgerRef.current;
-    /*
-      The first link, so the drawer announces itself and Tab continues from
-      there rather than from wherever focus happened to be.
-
-      On the next frame, after a forced style flush, and it ALSO needed the
-      visibility change below to be a step rather than a transition: focus()
-      on an element the browser computes as hidden does nothing, silently,
-      and with `visibility` in the transition list the drawer still read as
-      hidden at the instant it opened. Measured — focus stayed on the button
-      that opened it, from the hamburger as well as from the tab bar, until
-      both of these were in place.
-    */
-    const frame = requestAnimationFrame(() => {
-      if (!drawer) return;
-      void drawer.offsetHeight;
-      drawer.querySelector<HTMLElement>("a, button")?.focus();
-    });
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setOpen(false);
-        return;
-      }
-      if (e.key !== "Tab" || !drawer) return;
-
-      const focusable = [...drawer.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      )].filter((el) => el.offsetParent !== null);
-      if (focusable.length === 0) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-      // Wrap at both ends, and pull focus back in if it has escaped — the
-      // page behind is still there, just covered.
-      if (e.shiftKey && (active === first || !drawer.contains(active))) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && (active === last || !drawer.contains(active))) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", onKey);
-    return () => {
-      cancelAnimationFrame(frame);
-      document.removeEventListener("keydown", onKey);
-      // Back where it came from, so closing does not drop focus onto <body>.
-      opener?.focus();
-      openerRef.current = null;
-    };
-  }, [open]);
 
   /*
     Close on any navigation, not just on tapping a link. The browser Back
@@ -479,8 +424,18 @@ export function AdminNav({ user }: { user: AdminUser }) {
   const [lastPath, setLastPath] = useState(pathname);
   if (lastPath !== pathname) {
     setLastPath(pathname);
-    if (open) setOpen(false);
+    if (menuOpen) setMenuOpen(false);
   }
+
+  // Escape closes the account menu, like every other overlay here.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
 
   function handleSignOut() {
     setSigningOut(true);
@@ -504,15 +459,23 @@ export function AdminNav({ user }: { user: AdminUser }) {
     });
   }, [user.access]);
 
-  // The bar's tabs, in the same permission terms as the sidebar.
-  const tabs = useMemo(() => {
-    const out: NavItem[] = [];
-    for (const href of TAB_HREFS) {
-      const item = navItemByHref(href);
-      if (item && (!item.needs || can(user.access, item.needs))) out.push(item);
-    }
-    return out;
-  }, [user.access]);
+  /*
+    The phone's tab strip: EVERY section the viewer may open, in sidebar
+    order, flattened. The bar used to hold four and a "More" that opened the
+    desktop sidebar as a drawer from the left — reached from a button on the
+    right, which read as odd, and it hid two thirds of the panel behind an
+    extra tap. The strip scrolls sideways instead; the active tab is scrolled
+    into view on every navigation.
+  */
+  const strip = useMemo(
+    () => visible.flatMap((entry) => (isGroup(entry) ? entry.items : [entry])),
+    [visible],
+  );
+
+  useEffect(() => {
+    const active = stripRef.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    active?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [pathname, strip]);
 
   const NavLink = ({ item, note }: { item: NavItem; note?: string | null }) => {
     const active = itemActive(item, pathname);
@@ -642,9 +605,14 @@ export function AdminNav({ user }: { user: AdminUser }) {
 
   return (
     <>
-      {/* Mobile bar — the sidebar collapses below lg. */}
-      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-olive-dark bg-olive px-4 py-3 lg:hidden">
-        <div className="flex items-center gap-2">
+      {/*
+        The phone's top bar — an ordinary flex child at the top of the shell,
+        not position:fixed. Title, search, and the account menu where the
+        hamburger was: there is no drawer on the phone any more, every section
+        is in the strip below.
+      */}
+      <header className="relative z-30 order-first flex shrink-0 items-center justify-between border-b border-olive-dark bg-olive px-4 py-2.5 lg:hidden">
+        <Link href="/admin" className="admin-tap -ml-1 flex items-center gap-2 rounded-lg pl-1 pr-2">
           <Image
             src="/logo.svg"
             alt=""
@@ -656,119 +624,132 @@ export function AdminNav({ user }: { user: AdminUser }) {
           <span className="font-display text-sm font-bold text-cornsilk-light">
             IKSARVA Admin
           </span>
-        </div>
-        <div className="-mr-2 flex items-center">
-        <GlobalSearch variant="topbar" />
-        <button
-          ref={hamburgerRef}
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-controls="admin-drawer"
-          aria-label={open ? "Close menu" : "Open menu"}
-          className="flex h-11 w-11 items-center justify-center rounded-lg text-cornsilk-light hover:bg-olive-dark"
-        >
-          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
-            {open ? (
-              <path d="m6 6 12 12M18 6 6 18" />
-            ) : (
-              <path d="M4 7h16M4 12h16M4 17h16" />
-            )}
-          </svg>
-        </button>
-        </div>
-      </div>
-      {open && (
-        <div
-          className="admin-backdrop fixed inset-0 z-30 bg-russet-dark/40 lg:hidden"
-          onClick={() => setOpen(false)}
-        />
-      )}
-
-      {/*
-        Bottom tab bar — phone only. Under the drawer and its backdrop (z-30)
-        so opening the menu covers it. Height is --admin-tabbar, which the
-        page padding, the form save bar and the toasts all offset by.
-        The dashboard tab reads "Today": it is where the day starts.
-      */}
-      <nav
-        aria-label="Quick navigation"
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-olive-dark bg-olive pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
-      >
-        <ul className="flex h-14 items-stretch">
-          {tabs.map((item) => {
-            const active = itemActive(item, pathname);
-            return (
-              <li key={item.href} className="min-w-0 flex-1">
-                <Link
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={`admin-tap flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-semibold ${
-                    active
-                      ? "text-cornsilk-light"
-                      : "text-cornsilk hover:text-cornsilk-light"
-                  }`}
-                >
-                  <span
-                    className={`flex h-7 w-12 items-center justify-center rounded-full ${
-                      active ? "bg-olive-dark/70" : ""
-                    }`}
-                  >
-                    {item.icon}
-                  </span>
-                  <span className="truncate">{item.href === "/admin" ? "Today" : item.label}</span>
-                </Link>
-              </li>
-            );
-          })}
-          <li className="min-w-0 flex-1">
+        </Link>
+        <div className="-mr-2 flex items-center gap-0.5">
+          <GlobalSearch variant="topbar" />
+          <div className="relative">
             <button
               type="button"
-              onClick={(e) => {
-                openerRef.current = e.currentTarget;
-                setOpen(true);
-              }}
-              aria-expanded={open}
-              aria-controls="admin-drawer"
-              className="admin-tap flex h-full w-full flex-col items-center justify-center gap-0.5 text-[11px] font-semibold text-cornsilk hover:text-cornsilk-light"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+              aria-label={menuOpen ? "Close account menu" : `Account: ${label}`}
+              className="flex h-11 w-11 items-center justify-center rounded-lg text-cornsilk-light hover:bg-olive-dark"
             >
-              <span className="flex h-7 w-12 items-center justify-center rounded-full">
-                <Icon path="M5 12h.01M12 12h.01M19 12h.01" />
-              </span>
-              <span>More</span>
+              {avatar}
             </button>
-          </li>
-        </ul>
+            {menuOpen && (
+              <>
+                {/* A transparent sheet behind the menu: tap anywhere else to close. */}
+                <button
+                  type="button"
+                  aria-label="Close account menu"
+                  onClick={() => setMenuOpen(false)}
+                  className="fixed inset-0 z-30 cursor-default bg-transparent"
+                />
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full z-40 mt-1.5 w-64 rounded-2xl border border-line bg-surface p-2 text-ink shadow-[var(--admin-shadow-lg)]"
+                >
+                  <div className="flex items-center gap-2.5 rounded-xl bg-surface-muted px-2.5 py-2">
+                    {avatar}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-ink-strong" title={user.email}>
+                        {label}
+                      </p>
+                      {user.name && user.email && (
+                        <p className="truncate text-xs text-ink-muted" title={user.email}>
+                          {user.email}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Link
+                    href="/"
+                    target="_blank"
+                    role="menuitem"
+                    className="admin-tap mt-1 flex items-center gap-2 rounded-xl px-3 text-sm font-semibold text-ink hover:bg-surface-muted"
+                  >
+                    <svg viewBox="0 0 20 20" className="h-4 w-4 text-ink-muted" fill="currentColor" aria-hidden="true">
+                      <path d="M11 3a1 1 0 1 0 0 2h1.6l-5.3 5.3a1 1 0 1 0 1.4 1.4L14 6.4V8a1 1 0 1 0 2 0V4a1 1 0 0 0-1-1h-4Z" />
+                      <path d="M5 5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-3a1 1 0 1 0-2 0v3H5V7h3a1 1 0 0 0 0-2H5Z" />
+                    </svg>
+                    View site
+                  </Link>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleSignOut}
+                    disabled={signingOut}
+                    className="admin-tap flex w-full items-center gap-2 rounded-xl px-3 text-left text-sm font-semibold text-ink hover:bg-surface-muted disabled:opacity-60"
+                  >
+                    <svg viewBox="0 0 20 20" className="h-4 w-4 text-ink-muted" fill="currentColor" aria-hidden="true">
+                      <path d="M7 3a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h4a1 1 0 1 0 0-2H8V5h3a1 1 0 1 0 0-2H7Zm6.3 4.3a1 1 0 0 1 1.4 0l2 2a1 1 0 0 1 0 1.4l-2 2a1 1 0 0 1-1.4-1.4l.3-.3H10a1 1 0 1 1 0-2h3.6l-.3-.3a1 1 0 0 1 0-1.4Z" />
+                    </svg>
+                    {signingOut ? "Signing out…" : "Sign out"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/*
+        The tab strip — the phone's whole navigation, at the bottom of the
+        shell. In flow, so it is on screen exactly when the header is. Hidden
+        while a text field has focus: the keyboard shrinks the shell (viewport
+        interactiveWidget), and the field needs that room more than the tabs.
+        Height is --admin-tabbar, which the toast stack offsets by.
+      */}
+      <nav
+        aria-label="Sections"
+        hidden={keyboardOpen}
+        className="order-last shrink-0 border-t border-olive-dark bg-olive pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
+      >
+        <div className="admin-tabstrip-fade">
+          <ul ref={stripRef} className="admin-tabstrip flex h-14 items-stretch overflow-x-auto px-1">
+            {strip.map((item) => {
+              const active = itemActive(item, pathname);
+              return (
+                <li key={item.href} className="min-w-[4.5rem] shrink-0 snap-start">
+                  <Link
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className={`admin-tap flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-semibold ${
+                      active
+                        ? "text-cornsilk-light"
+                        : "text-cornsilk hover:text-cornsilk-light"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-7 w-12 items-center justify-center rounded-full ${
+                        active ? "bg-olive-dark/70" : ""
+                      }`}
+                    >
+                      {item.icon}
+                    </span>
+                    <span className="whitespace-nowrap px-2.5">
+                      {item.href === "/admin" ? "Today" : item.label}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </nav>
 
       {/*
-        `invisible` when closed, not just translated off-screen. A transform
-        alone leaves every link in the tab order, so tabbing off the mobile
-        top bar used to walk invisibly through the whole menu. Visibility is
-        transitioned rather than switched so the slide-out still plays.
+        The sidebar, lg and up only. It used to double as the phone's drawer —
+        fixed, translated off-screen, focus-trapped, with a backdrop — and the
+        phone has the strip above instead now. A flex child of the shell, the
+        full height of it, with its own scrolling nav.
       */}
       <aside
-        ref={drawerRef}
-        id="admin-drawer"
-        /*
-          A dialog only while it IS one. On lg the same element is the
-          permanent sidebar, and announcing that as a modal dialog would be a
-          lie about a piece of furniture that is always there.
-        */
-        role={open ? "dialog" : undefined}
-        aria-modal={open ? true : undefined}
-        aria-label={open ? "Menu" : undefined}
-        /*
-          Visibility as a STEP, not a transition: instant on open, so focus
-          can move in on the next frame; delayed until the slide-out has
-          finished on close, so the drawer does not vanish mid-slide. The
-          transform is the only thing that animates.
-        */
-        className={`admin-drawer fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col bg-olive text-cornsilk lg:visible lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
-          open
-            ? "visible translate-x-0 [transition:transform_300ms,visibility_0s]"
-            : "invisible -translate-x-full [transition:transform_300ms,visibility_0s_300ms]"
-        }`}
+        id="admin-sidebar"
+        aria-label="Sidebar"
+        className="admin-drawer hidden w-64 shrink-0 flex-col bg-olive text-cornsilk lg:order-first lg:flex lg:h-full"
       >
         <div className="flex items-center gap-2.5 border-b border-olive-dark/70 px-5 py-5">
           <Image
@@ -789,10 +770,7 @@ export function AdminNav({ user }: { user: AdminUser }) {
           </div>
         </div>
 
-        {/* Desktop only: the phone has the icon in its top bar. */}
-        <div className="hidden lg:block">
-          <GlobalSearch variant="sidebar" hotkey />
-        </div>
+        <GlobalSearch variant="sidebar" hotkey />
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">{nav}</nav>
 
@@ -811,22 +789,7 @@ export function AdminNav({ user }: { user: AdminUser }) {
 
           <div className="mt-3 rounded-xl bg-olive-dark/45 p-2.5">
             <div className="flex items-center gap-2.5">
-            {user.image && !avatarFailed ? (
-              <Image
-                src={user.image}
-                alt=""
-                width={32}
-                height={32}
-                unoptimized
-                referrerPolicy="no-referrer"
-                onError={() => setAvatarFailed(true)}
-                className="h-8 w-8 shrink-0 rounded-full object-cover"
-              />
-            ) : (
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-mid text-sm font-bold uppercase text-ink-muted">
-                {initial}
-              </span>
-            )}
+            {avatar}
             <div className="min-w-0 flex-1">
               <p
                 className="truncate text-xs font-semibold text-cornsilk-light"

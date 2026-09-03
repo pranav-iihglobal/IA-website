@@ -1006,6 +1006,63 @@ select.admin-input {
     --admin-tabbar: 0px;
   }
 }
+
+/*
+  The app shell.
+
+  The document is exactly one screen tall and does not scroll; <main> does.
+  `:has()` scopes this to the authenticated admin without touching the root
+  layout the public site shares. 100dvh follows the browser toolbar as it
+  shows and hides, so the bottom of the shell is always the bottom of what is
+  visible — which is the whole point; see the (dashboard) layout.
+*/
+html:has(.admin-shell) {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  scroll-behavior: auto;
+}
+body:has(.admin-shell) {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+/* Pull-to-refresh and rubber-banding stay inside the content, never the shell. */
+.admin-ui .admin-scroller {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/*
+  The phone's tab strip: every section the viewer may open, scrolling
+  sideways, no scrollbar, a fade where it runs off. Same construction as
+  .admin-filter-tabs.
+*/
+.admin-ui .admin-tabstrip {
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+.admin-ui .admin-tabstrip::-webkit-scrollbar {
+  display: none;
+}
+.admin-ui .admin-tabstrip-fade {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 1rem, #000 calc(100% - 1.5rem), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 1rem, #000 calc(100% - 1.5rem), transparent);
+}
+
+/*
+  Touch: no 300ms tap delay, no double-tap zoom on controls, no grey flash.
+  Zooming the PAGE still works (maximumScale is 5); only tapping a control
+  twice stops being a zoom.
+*/
+.admin-ui a,
+.admin-ui button,
+.admin-ui [role="button"],
+.admin-ui summary {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
 /* Icon-only controls need the width too, not just the height. */
 .admin-ui .admin-tap-square {
   min-width: 2.75rem;

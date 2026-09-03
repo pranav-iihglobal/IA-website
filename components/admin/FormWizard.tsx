@@ -473,7 +473,7 @@ export function FormWizard({
                 already leaves, and a destructive-ish action does not deserve
                 a third of a phone's toolbar.
               */}
-              <div className="sticky bottom-[var(--admin-tabbar)] z-10 mt-6 flex items-center gap-2 rounded-t-2xl border-t border-line-soft/50 bg-[var(--admin-surface)]/92 px-3 py-3 backdrop-blur sm:flex-wrap sm:gap-3 sm:px-4 sm:py-3.5">
+              <div className="sticky bottom-0 z-10 mt-6 flex items-center gap-2 rounded-t-2xl border-t border-line-soft/50 bg-[var(--admin-surface)]/92 px-3 py-3 backdrop-blur sm:flex-wrap sm:gap-3 sm:px-4 sm:py-3.5">
                 <Button
                   variant="secondary"
                   disabled={safeCurrent === 0}

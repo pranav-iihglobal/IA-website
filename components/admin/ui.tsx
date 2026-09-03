@@ -1407,9 +1407,11 @@ export function RecordCard({
         which is enough for the whole line — so the button no longer costs a
         row of its own, and the card is ~52px shorter.
       */}
-      <div className="mt-3 flex items-center justify-between gap-3 border-t border-line-soft/40 pt-3">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-line-soft/40 pt-3">
         {meta ? (
-          <p className="min-w-0 truncate text-[11px] text-ink-soft">
+          /* basis-40: when the actions need the width, the line takes its own
+             row rather than truncating to "Call before …". */
+          <p className="min-w-0 flex-1 basis-40 truncate text-[11px] text-ink-soft">
             {meta}
           </p>
         ) : (
@@ -1420,7 +1422,13 @@ export function RecordCard({
           Delete is the only button here — Edit is the card itself. It sits
           above the stretched link, and it is the one red thing on the card.
         */}
-        <div className="relative z-10 flex shrink-0 items-center gap-2">
+        {/*
+          Wraps. The leads row carries Done, +1 week, call, WhatsApp AND
+          Delete — wider than a 390px phone — and shrink-0 on this container
+          pushed Delete off the right edge and made the whole page scroll
+          sideways. Now the last of them drops to a second row instead.
+        */}
+        <div className="relative z-10 flex min-w-0 flex-wrap items-center justify-end gap-2">
           {actions}
         {removable && (
         <button

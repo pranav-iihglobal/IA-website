@@ -23,5 +23,11 @@ export default function AdminLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   // .admin-ui scopes the entire admin design system (globals.css) so nothing
   // here can leak into the public site.
-  return <div className="admin-ui flex min-h-screen flex-1">{children}</div>;
+  /*
+    min-h-0, not min-h-screen. The authenticated area is an app shell that
+    fills the body exactly (see the (dashboard) layout and globals.css); a
+    100vh minimum here would be taller than the body on a phone whose browser
+    toolbar is showing, and the bottom of the shell would sit under it.
+  */
+  return <div className="admin-ui flex min-h-0 flex-1">{children}</div>;
 }

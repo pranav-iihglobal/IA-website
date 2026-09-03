@@ -158,6 +158,13 @@ export const viewport: Viewport = {
   // Not 1 — capping zoom stops anyone who needs to magnify the text, and the
   // layout is already responsive down to 320px.
   maximumScale: 5,
+  /*
+    The on-screen keyboard resizes the layout rather than overlaying it. The
+    admin is a 100dvh shell (see app/admin/(dashboard)/layout.tsx); with the
+    default `resizes-visual` the keyboard would cover its bottom third and a
+    focused field could sit under it.
+  */
+  interactiveWidget: "resizes-content",
 };
 
 /**

@@ -12,8 +12,12 @@ import type { TodayPanelData } from "@/lib/admin/today";
  */
 export function TodayPanel({ data }: { data: TodayPanelData }) {
   const sections: ReactNode[] = [];
+  /** Sections with nothing in them, folded into one card at the end. */
+  const quiet: { title: string; note: string; href: string }[] = [];
 
-  if (data.followUps) {
+  if (data.followUps && data.followUps.total === 0) {
+    quiet.push({ title: "Follow-ups", note: "nothing due", href: "/admin/leads?filter=due" });
+  } else if (data.followUps) {
     const f = data.followUps;
     sections.push(
       <Section
@@ -56,7 +60,9 @@ export function TodayPanel({ data }: { data: TodayPanelData }) {
     );
   }
 
-  if (data.overdueInvoices) {
+  if (data.overdueInvoices && data.overdueInvoices.total === 0) {
+    quiet.push({ title: "Unpaid past 60 days", note: "none", href: "/admin/outstanding?sort=largest" });
+  } else if (data.overdueInvoices) {
     const o = data.overdueInvoices;
     sections.push(
       <Section
@@ -85,7 +91,9 @@ export function TodayPanel({ data }: { data: TodayPanelData }) {
     );
   }
 
-  if (data.lowStock) {
+  if (data.lowStock && data.lowStock.total === 0) {
+    quiet.push({ title: "Stock", note: "nothing below its reorder level", href: "/admin/stock?filter=low" });
+  } else if (data.lowStock) {
     const s = data.lowStock;
     sections.push(
       <Section key="stock" title="Needs ordering" count={s.total} href="/admin/stock?filter=low" empty="Nothing below its reorder level.">
@@ -103,7 +111,9 @@ export function TodayPanel({ data }: { data: TodayPanelData }) {
     );
   }
 
-  if (data.unpaidBills) {
+  if (data.unpaidBills && data.unpaidBills.total === 0) {
+    quiet.push({ title: "Supplier bills", note: "all settled", href: "/admin/purchases?filter=unpaid" });
+  } else if (data.unpaidBills) {
     const b = data.unpaidBills;
     sections.push(
       <Section key="bills" title="Supplier bills unpaid" count={b.total} extra={b.total > 0 ? formatRupees(b.owedPaise) : undefined} href="/admin/purchases?filter=unpaid" empty="All bills settled.">
@@ -117,16 +127,21 @@ export function TodayPanel({ data }: { data: TodayPanelData }) {
       <Section key="changes" title="Recent changes" href="/admin/activity" empty="Nothing recorded yet.">
         {data.changes.map((c) => (
           <li key={c.id} className="py-1.5">
+            {/*
+              The record's name gets the room; who and when share what is
+              left and truncate first. It was the other way round, and on a
+              phone the invoice number read "IA.09.…" beside a whole email.
+            */}
             <div className="flex items-baseline gap-2 text-xs">
               <StatusPill status={c.action} />
               {c.href ? (
-                <Link href={c.href} className="min-w-0 truncate font-semibold text-ink-strong hover:text-cta">
+                <Link href={c.href} className="min-w-0 flex-1 truncate font-semibold text-ink-strong hover:text-cta">
                   {c.summary || c.entity}
                 </Link>
               ) : (
-                <span className="min-w-0 truncate font-semibold text-ink-strong">{c.summary || c.entity}</span>
+                <span className="min-w-0 flex-1 truncate font-semibold text-ink-strong">{c.summary || c.entity}</span>
               )}
-              <span className="ml-auto shrink-0 text-ink-faint">
+              <span className="max-w-[45%] shrink-0 truncate text-ink-faint">
                 {c.actor.split("@")[0] || "unknown"}
                 {c.at && ` · ${formatIstDateLong(new Date(c.at)).slice(0, 6)}`}
               </span>
@@ -137,12 +152,35 @@ export function TodayPanel({ data }: { data: TodayPanelData }) {
     );
   }
 
-  if (sections.length === 0) return null;
+  if (sections.length === 0 && quiet.length === 0) return null;
 
   return (
     <aside aria-label="Today" className="space-y-3">
       <h2 className="text-[11px] font-bold uppercase tracking-wider text-ink-faint">Today</h2>
       {sections}
+      {/*
+        Everything that is fine, as one card. Four separate cards each saying
+        "0 — nothing to do" filled a whole phone screen before a single figure
+        was visible; that is wallpaper, and the panel's own rule is that
+        nothing on it is wallpaper. Each line still links to its list.
+      */}
+      {quiet.length > 0 && (
+        <section className="admin-card p-3">
+          <ul className="space-y-1">
+            {quiet.map((q) => (
+              <li key={q.href}>
+                <Link href={q.href} className="flex items-center gap-2 text-xs text-ink-muted hover:text-cta">
+                  <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 shrink-0 text-olive" fill="currentColor" aria-hidden="true">
+                    <path d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.6l7.3-7.3a1 1 0 0 1 1.4 0Z" />
+                  </svg>
+                  <span className="font-semibold text-ink">{q.title}</span>
+                  <span className="truncate">{q.note}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </aside>
   );
 }

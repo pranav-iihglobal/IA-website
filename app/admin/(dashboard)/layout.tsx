@@ -2,6 +2,7 @@ import { AdminNav } from "@/components/admin/AdminNav";
 import { ToastProvider } from "@/components/admin/Toast";
 import { NavProgress } from "@/components/NavProgress";
 import { RouteTransition } from "@/components/RouteTransition";
+import { ScrollReset } from "@/components/admin/ScrollReset";
 import { redirect } from "next/navigation";
 import {
   currentActiveUser,
@@ -65,18 +66,32 @@ export default async function DashboardLayout({
       >
         Skip to content
       </a>
-      <div className="flex min-w-0 flex-1">
+      {/*
+        THE APP SHELL. The document never scrolls; <main> is the only scroll
+        container, and the phone's top bar and bottom tab bar are ordinary
+        flex children above and below it.
+
+        Both bars used to be position:fixed, and on the directors' phones
+        they drifted: the browser hid its toolbar as the page scrolled and
+        moved the fixed elements with the layout viewport, so the header was
+        off-screen whenever the tab bar was on it and the other way round.
+        Nothing in our CSS caused it, and nothing in our CSS could stop it —
+        a fixed element is positioned by the browser's idea of the viewport,
+        and some browsers' idea is wrong. A shell that is exactly 100dvh tall
+        (globals.css, `.admin-shell`) with its own scroller has no such idea
+        to be wrong about.
+      */}
+      <div className="admin-shell flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
         <AdminNav user={user} />
-        {/* pt clears the fixed mobile top bar rendered by AdminNav. */}
         {/* px-4 matches --admin-gutter, which .admin-bleed cancels. */}
         <main
           id="admin-content"
           /* -1 so the skip link can move focus here without adding it to the
              tab order for everybody else. */
           tabIndex={-1}
-          /* pb clears the bottom tab bar (0 from lg, where it is not rendered). */
-          className="min-w-0 flex-1 px-4 pb-[calc(var(--admin-tabbar)+2.5rem)] pt-[74px] sm:px-8 lg:py-9"
+          className="admin-scroller min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-10 pt-5 sm:px-8 lg:py-9"
         >
+          <ScrollReset target="admin-content" />
           {/* Same 1600px ceiling as the public site — see .container-page. */}
           <div className="mx-auto w-full max-w-[100rem]">
             <RouteTransition>{children}</RouteTransition>
