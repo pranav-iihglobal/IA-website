@@ -1078,6 +1078,43 @@ export function DownloadLink({ href, label = "Export CSV" }: { href: string; lab
  * The visible label is part of the control, so the value reads as a sentence
  * rather than a bare "Oldest first" floating in the toolbar.
  */
+/**
+ * Cards or table, from `lg` up. Hidden below it: a phone gets cards
+ * whatever was chosen on a monitor — see useViewMode.
+ */
+export function ViewToggle({
+  value,
+  onChange,
+}: {
+  value: "cards" | "table";
+  onChange: (value: "cards" | "table") => void;
+}) {
+  const option = (mode: "cards" | "table", label: string) => (
+    <button
+      type="button"
+      aria-pressed={value === mode}
+      onClick={() => onChange(mode)}
+      className={`admin-tap px-3.5 text-xs font-semibold transition-colors ${
+        value === mode
+          ? "bg-accent-soft text-ink-strong"
+          : "text-ink-muted hover:text-ink-strong"
+      }`}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div
+      role="group"
+      aria-label="View as"
+      className="hidden overflow-hidden rounded-full border border-line lg:inline-flex"
+    >
+      {option("cards", "Cards")}
+      {option("table", "Table")}
+    </div>
+  );
+}
+
 export function SortMenu({
   value,
   onChange,

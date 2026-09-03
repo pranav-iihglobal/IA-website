@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { outstandingInvoices, outstandingTotal } from "@/lib/erp/reports";
-import type { OutstandingRow, OutstandingSort } from "@/lib/erp/reports";
+import type { OutstandingSort } from "@/lib/erp/reports";
 import { formatINR, formatRupees } from "@/lib/money";
-import { paymentReminder, telHref, whatsappHref } from "@/lib/crm/contact-links";
 import { AGE_BUCKETS, groupByParty, summariseAgeing } from "@/lib/erp/ageing";
 import { DownloadLink, EmptyState } from "@/components/admin/ui";
+import { OutstandingList } from "@/components/admin/OutstandingList";
 
 export const metadata = { title: "Outstanding" };
 export const dynamic = "force-dynamic";
@@ -171,100 +171,8 @@ export default async function OutstandingPage({
       {rows.length === 0 ? (
         <EmptyState title="Nothing owed" message="Every issued invoice is paid in full." />
       ) : (
-        <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-          {rows.map((row) => (
-            <li
-              key={row.invoiceId}
-              className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-display text-base font-bold text-ink-strong">
-                    {row.contactId ? (
-                      <Link href={`/admin/contacts/${row.contactId}`} className="hover:underline">
-                        {row.partyName}
-                      </Link>
-                    ) : (
-                      row.partyName
-                    )}
-                  </p>
-                  <p className="mt-0.5 text-sm text-ink-muted">
-                    {/* The record, not the printable document — what is owed
-                        on an invoice is a question about its history, and the
-                        document cannot answer it. */}
-                    <Link href={`/admin/invoices/${row.invoiceId}`} className="hover:underline">
-                      {row.number}
-                    </Link>
-                    {" · "}
-                    <span className={row.daysOld > 30 ? "font-semibold text-danger" : ""}>
-                      {row.daysOld} days old
-                    </span>
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-display text-lg font-bold tabular-nums text-danger">
-                    {formatINR(row.owedPaise)}
-                  </p>
-                  {(row.paidPaise > 0 || row.creditedPaise > 0) && (
-                    <p className="text-xs text-ink-faint">
-                      {formatINR(row.grandTotalPaise)} invoiced
-                      {row.paidPaise > 0 && `, ${formatINR(row.paidPaise)} paid`}
-                      {row.creditedPaise > 0 && `, ${formatINR(row.creditedPaise)} credited`}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <Chase row={row} />
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-/**
- * The two taps this screen exists for.
- *
- * A list of who owes money, with no way to reach any of them, is a report
- * rather than a tool. The WhatsApp message names the invoice and the amount
- * because "you owe us money" prompts a call back asking which one — see
- * lib/crm/contact-links.ts.
- *
- * Both are hidden rather than disabled when the stored number is not one this
- * can be confident about: a dead "Call" button is worse than none.
- */
-function Chase({ row }: { row: OutstandingRow }) {
-  const tel = telHref(row.partyPhone);
-  const chat = whatsappHref(
-    row.partyPhone,
-    paymentReminder({
-      name: row.partyName,
-      number: row.number,
-      amount: formatRupees(row.owedPaise),
-    }),
-  );
-  if (!tel && !chat) return null;
-
-  return (
-    <div className="mt-3 flex flex-wrap gap-2 border-t border-line-soft pt-3">
-      {tel && (
-        <a
-          href={tel}
-          className="admin-tap inline-flex items-center rounded-full border border-line px-4 text-xs font-semibold text-ink hover:border-olive"
-        >
-          Call {row.partyPhone}
-        </a>
-      )}
-      {chat && (
-        <a
-          href={chat}
-          target="_blank"
-          rel="noreferrer"
-          className="admin-tap inline-flex items-center rounded-full border border-line px-4 text-xs font-semibold text-ink-muted hover:border-olive"
-        >
-          WhatsApp a reminder
-        </a>
+        /* Cards, or a table from lg — remembered on this device. */
+        <OutstandingList rows={rows} />
       )}
     </div>
   );

@@ -9,6 +9,7 @@ import {
   DownloadLink,
   FilterTabs,
   SortMenu,
+  ViewToggle,
   TableSkeleton,
   Pagination,
   SearchInput,
@@ -21,6 +22,7 @@ import { invoiceListQuery } from "@/lib/erp/list-query";
 import { INVOICE_SORTS } from "@/lib/admin/sorts";
 import type { InvoiceList, InvoiceRow } from "@/lib/erp/list";
 import { useListState } from "./useListState";
+import { useViewMode } from "./useViewMode";
 
 /**
  * The invoices screen.
@@ -77,6 +79,8 @@ export function InvoiceWorkspace({
     useListState();
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
+  // Cards or a table, remembered on this device. Cards on a phone regardless.
+  const [view, setView] = useViewMode("invoices");
 
   const query = useMemo(
     () => invoiceListQuery({ search: debounced, filter, sort, page }),
@@ -141,6 +145,7 @@ export function InvoiceWorkspace({
         <FilterTabs value={filter} onChange={setFilter} options={FILTERS} />
         <SortMenu value={sort} onChange={setSort} options={INVOICE_SORTS} />
         <DownloadLink href={`/api/admin/invoices?${query}&format=csv`} />
+        <ViewToggle value={view} onChange={setView} />
       </div>
 
       <ErrorBanner message={error} onRetry={() => void load()} />
@@ -162,7 +167,12 @@ export function InvoiceWorkspace({
           }
         />
       ) : (
-        <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+        <>
+        <ul
+          className={`admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3 ${
+            view === "table" ? "lg:hidden" : ""
+          }`}
+        >
           {rows.map((row) => (
             <li
               key={row.id}
@@ -216,42 +226,17 @@ export function InvoiceWorkspace({
                     {formatINR(row.grandTotalPaise)}
                   </p>
                   <div className="mt-1.5 flex flex-wrap justify-end gap-1.5">
-                    <Link
-                      href={`/admin/invoices/${row.id}/print`}
-                      className="admin-tap inline-flex items-center rounded-full border border-line px-3 py-1 text-xs font-semibold text-ink-muted hover:border-olive"
-                    >
-                      Print
-                    </Link>
-                    {canWrite && !row.isHistorical && !isCredit(row) && row.status === "issued" && (
-                      <Link
-                        href={`/admin/invoices/${row.id}/payment`}
-                        className="admin-tap inline-flex items-center rounded-full border border-line px-3 py-1 text-xs font-semibold text-ink-muted hover:border-olive"
-                      >
-                        Payment
-                      </Link>
-                    )}
-                    {canWrite && !row.isHistorical && !isCredit(row) && row.status === "issued" && (
-                      <Link
-                        href={`/admin/invoices/${row.id}/credit-note`}
-                        className="admin-tap inline-flex items-center rounded-full border border-line px-3 py-1 text-xs font-semibold text-ink-muted hover:border-olive"
-                      >
-                        Credit
-                      </Link>
-                    )}
-                    {canCancel && !row.isHistorical && !isCredit(row) && row.status === "issued" && (
-                      <Link
-                        href={`/admin/invoices/${row.id}/cancel`}
-                        className="admin-tap inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-ink-soft hover:bg-danger/12 hover:text-danger"
-                      >
-                        Cancel
-                      </Link>
-                    )}
+                    <InvoiceActions row={row} canWrite={canWrite} canCancel={canCancel} />
                   </div>
                 </div>
               </div>
             </li>
           ))}
         </ul>
+        {view === "table" && (
+          <InvoiceTable rows={rows} canWrite={canWrite} canCancel={canCancel} />
+        )}
+        </>
       )}
 
       <Pagination
@@ -262,6 +247,135 @@ export function InvoiceWorkspace({
             onChange={setPage}
           />
 
+    </div>
+  );
+}
+
+/**
+ * The row's actions, once, for the card and the table.
+ *
+ * Print is always there. Payment, Credit and Cancel need an issued, real,
+ * non-credit document and the right permission — the same four conditions
+ * in one place, so the table cannot offer a Cancel the card would not.
+ */
+function InvoiceActions({
+  row,
+  canWrite,
+  canCancel,
+}: {
+  row: InvoiceRow;
+  canWrite: boolean;
+  canCancel: boolean;
+}) {
+  const live = !row.isHistorical && !isCredit(row) && row.status === "issued";
+  const pill =
+    "admin-tap inline-flex items-center rounded-full border border-line px-3 py-1 text-xs font-semibold text-ink-muted hover:border-olive";
+  return (
+    <>
+      <Link href={`/admin/invoices/${row.id}/print`} className={pill}>
+        Print
+      </Link>
+      {canWrite && live && (
+        <Link href={`/admin/invoices/${row.id}/payment`} className={pill}>
+          Payment
+        </Link>
+      )}
+      {canWrite && live && (
+        <Link href={`/admin/invoices/${row.id}/credit-note`} className={pill}>
+          Credit
+        </Link>
+      )}
+      {canCancel && live && (
+        <Link
+          href={`/admin/invoices/${row.id}/cancel`}
+          className="admin-tap inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-ink-soft hover:bg-danger/12 hover:text-danger"
+        >
+          Cancel
+        </Link>
+      )}
+    </>
+  );
+}
+
+/**
+ * The same rows as a table, from `lg` up.
+ *
+ * Forty rows on a monitor where the cards show a dozen, and money in one
+ * column so it can be scanned. Scrolls inside its own container like the
+ * People table — the page must never scroll sideways.
+ */
+function InvoiceTable({
+  rows,
+  canWrite,
+  canCancel,
+}: {
+  rows: InvoiceRow[];
+  canWrite: boolean;
+  canCancel: boolean;
+}) {
+  const th = "px-4 py-3 font-semibold";
+  const td = "px-4 py-2.5 align-top";
+  return (
+    <div className="admin-card hidden overflow-hidden lg:block">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[880px] text-left text-sm">
+          <thead className="admin-section-head text-[11px] uppercase tracking-[0.12em] text-accent">
+            <tr>
+              <th className={th}>Number</th>
+              <th className={th}>Customer</th>
+              <th className={th}>Date</th>
+              <th className={th}>Status</th>
+              <th className={`${th} text-right`}>Amount</th>
+              <th className={`${th} text-right`}>
+                <span className="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id} className="admin-row border-t border-line-soft/25">
+                <td className={`${td} whitespace-nowrap font-semibold text-ink-strong`}>
+                  <Link href={`/admin/invoices/${row.id}`} className="hover:text-cta hover:underline">
+                    {row.number || "(no number)"}
+                  </Link>
+                  {isCredit(row) && row.againstNumber && (
+                    <p className="text-xs font-normal text-ink-faint">credits {row.againstNumber}</p>
+                  )}
+                </td>
+                <td className={`${td} max-w-[18rem]`}>
+                  <p className="truncate text-ink">{row.partyName}</p>
+                  {row.gstin && <p className="text-xs text-ink-faint">{row.gstin}</p>}
+                </td>
+                <td className={`${td} whitespace-nowrap text-ink-muted`}>
+                  {row.issuedAt ? formatIstDate(new Date(row.issuedAt)) : "not issued"}
+                </td>
+                <td className={td}>
+                  <span className="flex flex-wrap gap-1.5 text-xs">
+                    {isCredit(row) ? (
+                      <StatusPill status="credit note" />
+                    ) : (
+                      <>
+                        <StatusPill status={row.status} />
+                        <StatusPill status={row.paymentStatus} />
+                      </>
+                    )}
+                    {isCredit(row) && row.status === "cancelled" && <StatusPill status="cancelled" />}
+                    {row.isHistorical && <StatusPill status="filed" />}
+                  </span>
+                </td>
+                <td className={`${td} whitespace-nowrap text-right font-semibold tabular-nums text-ink-strong`}>
+                  {formatINR(row.grandTotalPaise)}
+                </td>
+                <td className={`${td} whitespace-nowrap text-right`}>
+                  <span className="inline-flex flex-wrap justify-end gap-1.5">
+                    <InvoiceActions row={row} canWrite={canWrite} canCancel={canCancel} />
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
