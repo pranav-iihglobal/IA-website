@@ -5,11 +5,12 @@ import Link from "next/link";
 import { StatusPill } from "./ui";
 import type { SampledProduct } from "@/lib/crm/profile";
 import { ContactNotes, type ContactNote } from "./ContactNotes";
-import { RecordHistory } from "./RecordHistory";
+import { ContactTimeline } from "./ContactTimeline";
+import { mergeTimeline } from "@/lib/crm/timeline";
 import type { HistoryEntry } from "@/lib/admin/history";
 import { telHref, whatsappHref } from "@/lib/crm/contact-links";
 import { FOLLOW_UP_LABELS, STATUS_LABELS } from "@/lib/crm/shape";
-import { formatINR, formatRupees } from "@/lib/money";
+import { formatRupees } from "@/lib/money";
 import { formatIstDateLong } from "@/lib/time";
 import type { ProfileInvoice, Trading } from "@/lib/crm/profile";
 
@@ -470,103 +471,46 @@ export function ContactProfile({
         </section>
 
         <div className="space-y-5">
-          {canSeeMoney && !isLead && (
-            <section className="admin-card p-4">
-              <h2 className="font-display text-base font-bold text-ink-strong">
-                Orders
-              </h2>
-              {invoices.length === 0 ? (
-                <p className="mt-2 text-sm text-ink-muted">
-                  No invoices in this system yet.
-                </p>
-              ) : (
-                <ul className="mt-3 divide-y divide-line-soft">
-                  {invoices.map((inv) => (
-                    <li key={inv.id} className="flex items-baseline gap-3 py-2">
-                      <Link
-                        /* The record, not the printable document. What is
-                           still owed on an order is a question about its
-                           history, and the paperwork cannot answer it. */
-                        href={`/admin/invoices/${inv.id}`}
-                        className="min-w-0 flex-1 truncate text-sm font-semibold text-ink hover:underline"
-                      >
-                        {inv.number || "(no number)"}
-                        {inv.documentType === "credit_note" && inv.againstNumber && (
-                          <span className="ml-1 font-normal text-xs text-ink-faint">
-                            credits {inv.againstNumber}
-                          </span>
-                        )}
-                      </Link>
-                      <span className="shrink-0 text-xs text-ink-faint">
-                        {date(inv.issuedAt) ?? "—"}
-                      </span>
-                      {/*
-                        Shown NEGATIVE here, unlike on the printed note. This is
-                        the internal ledger view: the minus is what makes the
-                        rows add up to the total above them.
-                      */}
-                      <span
-                        className={`shrink-0 text-sm tabular-nums ${
-                          inv.status === "cancelled"
-                            ? "text-ink-faint line-through"
-                            : "text-ink-strong"
-                        }`}
-                      >
-                        {formatINR(inv.grandTotalPaise)}
-                      </span>
-                      <StatusPill
-                        status={
-                          inv.status === "cancelled"
-                            ? "cancelled"
-                            : inv.documentType === "credit_note"
-                              ? "credit note"
-                              : inv.paymentStatus
-                        }
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {trading.creditNoteCount > 0 && (
-                <p className="mt-2 text-xs text-ink-faint">
-                  {trading.creditNoteCount} credit note
-                  {trading.creditNoteCount === 1 ? " is" : "s are"} netted off the
-                  totals above, and not counted as orders.
-                </p>
-              )}
-              {trading.cancelledCount > 0 && (
-                <p className="mt-2 text-xs text-ink-faint">
-                  {trading.cancelledCount} cancelled invoice
-                  {trading.cancelledCount === 1 ? " is" : "s are"} shown but not
-                  counted in the totals above.
-                </p>
-              )}
-            </section>
-          )}
-
-          <section className="admin-card p-4">
-            <h2 className="font-display text-base font-bold text-ink-strong">
-              Calls and visits
-            </h2>
-            <div className="mt-3">
-              <ContactNotes
-                contactId={contact.id}
-                notes={notes}
-                onAdded={setNotes}
-              />
-            </div>
-          </section>
-
           {/*
-            The call log says what was DISCUSSED. This says what was CHANGED —
-            who moved the follow-up date, who corrected the phone number. Both
-            are appended and neither can be edited; they answer different
-            questions and the profile had only the first.
+            ONE stream, not three sections. Calls, changes and invoices were
+            three lists side by side, and working out what happened in July
+            meant reading all of them. Merged and dated they read as the
+            relationship — see lib/crm/timeline.ts. Logging a call stays at
+            the top, where it was; invoices appear only for a viewer who may
+            see money, the same gate the Orders section had.
           */}
-          <RecordHistory
-            entries={history}
-            emptyMessage="Nothing has been changed since this record was created."
-          />
+          <section className="admin-card p-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="font-display text-base font-bold text-ink-strong">Timeline</h2>
+              <p className="text-xs text-ink-faint">
+                Calls, changes{canSeeMoney && !isLead ? ", invoices" : ""} — newest first. Append-only.
+              </p>
+            </div>
+            <div className="mt-3">
+              <ContactNotes contactId={contact.id} notes={notes} onAdded={setNotes} composeOnly />
+            </div>
+            <ContactTimeline
+              entries={mergeTimeline({
+                notes,
+                history,
+                invoices: canSeeMoney && !isLead ? invoices : [],
+              })}
+            />
+            {canSeeMoney && !isLead && trading.creditNoteCount > 0 && (
+              <p className="mt-2 text-xs text-ink-faint">
+                {trading.creditNoteCount} credit note
+                {trading.creditNoteCount === 1 ? " is" : "s are"} netted off the totals
+                above, and not counted as orders.
+              </p>
+            )}
+            {canSeeMoney && !isLead && trading.cancelledCount > 0 && (
+              <p className="mt-2 text-xs text-ink-faint">
+                {trading.cancelledCount} cancelled invoice
+                {trading.cancelledCount === 1 ? " is" : "s are"} shown but not counted in
+                the totals above.
+              </p>
+            )}
+          </section>
         </div>
       </div>
 

@@ -28,10 +28,13 @@ export function ContactNotes({
   contactId,
   notes,
   onAdded,
+  composeOnly = false,
 }: {
   contactId: string;
   notes: ContactNote[];
   onAdded: (notes: ContactNote[]) => void;
+  /** Just the box to write in — the profile's timeline lists the notes itself. */
+  composeOnly?: boolean;
 }) {
   const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
@@ -67,7 +70,7 @@ export function ContactNotes({
     <div className="border-t border-line-soft pt-4">
       <p className="text-sm font-semibold text-ink-strong">
         Calls and visits
-        {notes.length > 0 && (
+        {!composeOnly && notes.length > 0 && (
           <span className="ml-1.5 font-normal text-ink-soft">{notes.length}</span>
         )}
       </p>
@@ -97,7 +100,7 @@ export function ContactNotes({
       </div>
       {error && <p className="mt-1.5 text-sm text-danger">{error}</p>}
 
-      {sorted.length > 0 && (
+      {!composeOnly && sorted.length > 0 && (
         <ul className="mt-3 space-y-2">
           {sorted.map((note, i) => (
             <li
