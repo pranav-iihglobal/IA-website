@@ -25,7 +25,6 @@ import {
   Button,
   EmptyState,
   ErrorBanner,
-  RecordCard,
   Section,
   SelectField,
   Spinner,
@@ -121,7 +120,12 @@ function ModuleAccess({
               onChange={(e) =>
                 onChange(module, e.target.value === "" ? null : (e.target.value as Level))
               }
-              className={`admin-input mt-0.5 h-9 w-32 appearance-none py-0 text-xs disabled:opacity-50 ${
+              /*
+                No text-xs: a utility beats .admin-input's 16px inside
+                @layer components, and a 12px select is the one control iOS
+                Safari zooms the page for. h-11 is the 44px tap invariant.
+              */
+              className={`admin-input mt-0.5 h-11 w-36 appearance-none py-0 disabled:opacity-50 ${
                 effective === "none" ? "text-ink-soft" : ""
               }`}
             >
@@ -138,6 +142,34 @@ function ModuleAccess({
         );
       })}
     </div>
+  );
+}
+
+function RoleSelect({
+  person,
+  disabled,
+  currentRole,
+  onChange,
+}: {
+  person: Person;
+  disabled: boolean;
+  currentRole: Role;
+  onChange: (role: Role) => void;
+}) {
+  return (
+    <select
+      value={person.role}
+      disabled={disabled}
+      aria-label={`Role for ${person.email}`}
+      onChange={(e) => onChange(e.target.value as Role)}
+      className="admin-input h-11 w-full appearance-none py-0 disabled:opacity-50 sm:w-40"
+    >
+      {ROLE_OPTIONS.filter((o) => canAssignRole(currentRole, o.value)).map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -166,7 +198,7 @@ function PresetPicker({
         if (preset) onPick(preset);
         e.target.value = "";
       }}
-      className="admin-input h-9 w-full appearance-none py-0 text-xs disabled:opacity-50"
+      className="admin-input h-11 w-full appearance-none py-0 disabled:opacity-50"
     >
       <option value="">Apply a preset…</option>
       {ACCESS_PRESETS.map((p) => (
@@ -397,48 +429,157 @@ export function UserList({
 
         {rows.length > 0 && (
           <>
-            {/* Cards below lg, table from lg up — same shape as the other lists. */}
+            {/*
+              Cards below lg, table from lg up — same shape as the other
+              lists. The cards used to be read-only: role, module access,
+              suspend and remove lived in the table alone, which is hidden
+              on a phone, so an owner away from a desk could not take
+              somebody's access away. Everything the table can do is here
+              now, folded under "Manage" so the list still scans as a list.
+            */}
             <ul className="mt-6 admin-rows grid gap-3 sm:grid-cols-2 lg:hidden">
               {rows.map((person) => {
                 const locked = lockedReason(person);
+                const isBusy = busy.includes(person.id);
+                const summary =
+                  MODULES.filter((m) => levelIn(person, m) !== "none")
+                    .map(
+                      (m) =>
+                        `${MODULE_LABELS[m]} ${LEVEL_LABELS[levelIn(person, m)].label.toLowerCase()}`,
+                    )
+                    .join(", ") || "No modules";
                 return (
-                  <RecordCard
+                  <li
                     key={person.id}
-                    thumb={<Avatar person={person} />}
-                    title={person.name || person.email}
-                    subtitle={person.name ? person.email : undefined}
-                    badges={
-                      <>
-                        <RoleBadge role={person.role} />
-                        {person.status === "suspended" && (
-                          <span className="rounded-full bg-danger-light/15 px-2.5 py-1 text-xs font-semibold text-danger-dark">
-                            Suspended
-                          </span>
+                    className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
+                  >
+                    <div className="flex items-start gap-3">
+                      <Avatar person={person} />
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold leading-snug text-ink-strong">
+                          {person.name || person.email}
+                        </h3>
+                        {person.name && (
+                          <p className="truncate text-sm text-ink-muted">{person.email}</p>
                         )}
-                        {person.email === currentEmail && (
-                          <span className="rounded-full bg-surface-subtle px-2.5 py-1 text-xs font-semibold text-ink-muted">
-                            You
-                          </span>
-                        )}
-                      </>
-                    }
-                    meta={[
-                      MODULES.filter((m) => levelIn(person, m) !== "none")
-                        .map(
-                          (m) =>
-                            `${MODULE_LABELS[m]} ${LEVEL_LABELS[levelIn(person, m)].label.toLowerCase()}`,
-                        )
-                        .join(", ") || "No modules",
-                      person.lastSignInAt
-                        ? `Last signed in ${formatShortDate(person.lastSignInAt)}`
-                        : "Never signed in",
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                    onDelete={() => setPending(person)}
-                    label={person.email}
-                    removable={!locked}
-                  />
+                        <p className="mt-2 flex flex-wrap items-center gap-1.5">
+                          <RoleBadge role={person.role} />
+                          {person.status === "suspended" && (
+                            <span className="rounded-full bg-danger-light/15 px-2.5 py-1 text-xs font-semibold text-danger-dark">
+                              Suspended
+                            </span>
+                          )}
+                          {person.email === currentEmail && (
+                            <span className="rounded-full bg-surface-subtle px-2.5 py-1 text-xs font-semibold text-ink-muted">
+                              You
+                            </span>
+                          )}
+                        </p>
+                        <p className="mt-2 text-xs text-ink-muted">
+                          {summary}
+                          {" · "}
+                          {person.lastSignInAt
+                            ? `Last signed in ${formatShortDate(person.lastSignInAt)}`
+                            : "Never signed in"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {locked ? (
+                      <p className="mt-3 border-t border-line-soft pt-3 text-xs text-ink-soft">
+                        {locked === "This is you"
+                          ? "This is you. Changing your own access would lock you out of this page."
+                          : locked === "Only owner"
+                            ? "The only owner. Removing them would leave nobody able to manage access."
+                            : locked}
+                      </p>
+                    ) : (
+                      <details className="group mt-3 border-t border-line-soft pt-1">
+                        <summary className="admin-tap flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-ink-muted marker:hidden [&::-webkit-details-marker]:hidden">
+                          Manage access
+                          <svg
+                            viewBox="0 0 20 20"
+                            className="h-4 w-4 transition-transform group-open:rotate-180"
+                            fill="currentColor"
+                            aria-hidden="true"
+                          >
+                            <path d="M5.5 7.5 10 12l4.5-4.5H5.5Z" />
+                          </svg>
+                        </summary>
+                        <div className="space-y-3 pb-1">
+                          <label className="block">
+                            <span className="block text-[10px] font-semibold uppercase tracking-wide text-accent">
+                              Role
+                            </span>
+                            <div className="mt-0.5">
+                              <RoleSelect
+                                person={person}
+                                disabled={isBusy}
+                                currentRole={currentRole}
+                                onChange={(next) =>
+                                  patch(
+                                    person,
+                                    { role: next },
+                                    `${person.email} is now ${ROLE_LABELS[next].label}`,
+                                  )
+                                }
+                              />
+                            </div>
+                          </label>
+                          <PresetPicker
+                            disabled={isBusy}
+                            onPick={(preset) =>
+                              patch(
+                                person,
+                                { role: preset.role, modules: preset.modules },
+                                `${person.email}: ${preset.label}`,
+                              )
+                            }
+                          />
+                          <ModuleAccess
+                            person={person}
+                            disabled={isBusy}
+                            onChange={(module, level) =>
+                              patch(
+                                person,
+                                { modules: { [module]: level } },
+                                level === null
+                                  ? `${MODULE_LABELS[module]} follows ${person.email}'s role again`
+                                  : `${person.email}: ${MODULE_LABELS[module]} set to ${LEVEL_LABELS[level].label}`,
+                              )
+                            }
+                          />
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            <Button
+                              variant="secondary"
+                              disabled={isBusy}
+                              onClick={() =>
+                                patch(
+                                  person,
+                                  {
+                                    status:
+                                      person.status === "suspended" ? "active" : "suspended",
+                                  },
+                                  person.status === "suspended"
+                                    ? `${person.email} can sign in again`
+                                    : `${person.email} is suspended`,
+                                )
+                              }
+                            >
+                              {person.status === "suspended" ? "Restore" : "Suspend"}
+                            </Button>
+                            <Button
+                              variant="danger"
+                              disabled={isBusy}
+                              onClick={() => setPending(person)}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </div>
+                      </details>
+                    )}
+                  </li>
                 );
               })}
             </ul>
@@ -495,27 +636,18 @@ export function UserList({
                             {locked ? (
                               <RoleBadge role={person.role} />
                             ) : (
-                              <select
-                                value={person.role}
+                              <RoleSelect
+                                person={person}
                                 disabled={isBusy}
-                                aria-label={`Role for ${person.email}`}
-                                onChange={(e) =>
+                                currentRole={currentRole}
+                                onChange={(next) =>
                                   patch(
                                     person,
-                                    { role: e.target.value },
-                                    `${person.email} is now ${ROLE_LABELS[e.target.value as Role].label}`,
+                                    { role: next },
+                                    `${person.email} is now ${ROLE_LABELS[next].label}`,
                                   )
                                 }
-                                className="admin-input h-10 w-36 appearance-none py-0 text-sm disabled:opacity-50"
-                              >
-                                {ROLE_OPTIONS.filter((o) =>
-                                  canAssignRole(currentRole, o.value),
-                                ).map((o) => (
-                                  <option key={o.value} value={o.value}>
-                                    {o.label}
-                                  </option>
-                                ))}
-                              </select>
+                              />
                             )}
                           </td>
                           <td className="px-5 py-3.5">
