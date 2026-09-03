@@ -1,3 +1,4 @@
+import { formatINR } from "@/lib/money";
 import { connectToDatabase } from "@/lib/db/connect";
 import { AuditLog } from "@/lib/db/models/AuditLog";
 import type { LeanDoc } from "@/lib/db/lean";
@@ -29,7 +30,9 @@ export interface HistoryEntry {
   at: string;
   note: string;
   /** Field-by-field, only what actually changed. */
-  changes: { field: string; from: string; to: string }[];
+  changes: { field: string;
+    /** The field, as a person calls it — see fieldLabel(). */
+    label: string; from: string; to: string }[];
 }
 
 /**
@@ -91,11 +94,65 @@ export function summarise(entry: {
  */
 const MAX_ENTRIES = 50;
 
+/**
+ * What a stored field is called, to a person.
+ *
+ * The log showed "grandTotalPaise — → 720000" on a phone: the storage name
+ * and the storage unit. The names the directors know, and camelCase pulled
+ * apart for the rest.
+ */
+const FIELD_LABELS: Record<string, string> = {
+  grandTotalPaise: "Total",
+  totalPaise: "Total",
+  paidPaise: "Paid",
+  subtotalPaise: "Subtotal",
+  number: "Number",
+  party: "Customer",
+  contactId: "Id",
+  reason: "Reason",
+  status: "Status",
+  paymentStatus: "Payment",
+  payment: "Payment",
+  supplier: "Supplier",
+  supplierGstin: "Supplier GSTIN",
+  gstin: "GSTIN",
+  onHand: "On hand",
+  reorderLevel: "Reorder level",
+  followUpAt: "Follow-up",
+  followUpStatus: "Follow-up status",
+  businessName: "Business",
+  nameGu: "Name (Gujarati)",
+  isSample: "Sample",
+  modules: "Module access",
+  lastOrderAt: "Last order",
+  billDate: "Bill date",
+  billNo: "Bill number",
+  cancelledReason: "Reason",
+  against: "Against",
+  bankAccountNo: "Account number",
+  bankIfsc: "IFSC",
+  bankUpi: "UPI",
+  bankName: "Bank",
+  bankAccountName: "Account name",
+  stateCode: "State code",
+  pan: "PAN",
+};
+
+export function fieldLabel(field: string): string {
+  if (FIELD_LABELS[field]) return FIELD_LABELS[field];
+  const words = field
+    .replace(/Paise$/, "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 /** Render a stored value for a person. Never a raw id, never [object Object]. */
-function readable(value: unknown): string {
+export function readable(value: unknown, field = ""): string {
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? "yes" : "no";
-  if (typeof value === "number") return String(value);
+  // Money is stored in paise and must never be shown in it.
+  if (typeof value === "number") return field.endsWith("Paise") ? formatINR(value) : String(value);
   if (typeof value === "string") return value;
   if (Array.isArray(value)) {
     return value.length === 0 ? "—" : `${value.length} item${value.length === 1 ? "" : "s"}`;
@@ -136,8 +193,9 @@ function toEntry(doc: LeanDoc): HistoryEntry {
     note: doc.note ?? "",
     changes: fields.map((field) => ({
       field,
-      from: readable(before[field]),
-      to: readable(after[field]),
+      label: fieldLabel(field),
+      from: readable(before[field], field),
+      to: readable(after[field], field),
     })),
   };
 }

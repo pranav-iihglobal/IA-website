@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { EmptyState, ErrorBanner, Pagination, SearchInput, StatusPill, TableSkeleton } from "./ui";
+import {
+  EmptyState,
+  ErrorBanner,
+  ListCard,
+  Pagination,
+  SearchInput,
+  StatusPill,
+  TableSkeleton,
+} from "./ui";
 import { useListState } from "./useListState";
 import { listQueryKey } from "@/lib/crm/scopes";
 import { formatRupees } from "@/lib/money";
@@ -111,38 +119,27 @@ export function SupplierWorkspace({
         <>
           <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
             {rows.map((row) => (
-              <li
+              <ListCard
                 key={row.id}
-                className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-display text-base font-bold text-ink-strong">
-                      <Link href={`/admin/suppliers/${row.id}`} className="hover:text-cta hover:underline">
-                        {row.name}
-                      </Link>
-                    </p>
-                    <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-ink-muted">
-                      {row.gstin ? (
-                        <span>{row.gstin}</span>
-                      ) : (
-                        <span className="text-cta">no GSTIN</span>
-                      )}
-                      {row.city && <span>{row.city}</span>}
+                title={
+                  <Link href={`/admin/suppliers/${row.id}`} className="hover:text-cta hover:underline">
+                    {row.name}
+                  </Link>
+                }
+                subtitle={[row.gstin, row.city].filter(Boolean).join(" · ") || undefined}
+                figure={formatRupees(row.totalPaise)}
+                figureNote={`${row.purchases} bill${row.purchases === 1 ? "" : "s"}${
+                  row.lastBillAt ? `, last ${formatIstDate(new Date(row.lastBillAt))}` : ""
+                }`}
+                pills={
+                  !row.gstin || row.isSample ? (
+                    <>
+                      {!row.gstin && <span className="text-cta">no GSTIN — no input credit</span>}
                       {row.isSample && <StatusPill status="sample" />}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-display text-lg font-bold tabular-nums text-ink-strong">
-                      {formatRupees(row.totalPaise)}
-                    </p>
-                    <p className="text-xs text-ink-faint">
-                      {row.purchases} bill{row.purchases === 1 ? "" : "s"}
-                      {row.lastBillAt ? `, last ${formatIstDate(new Date(row.lastBillAt))}` : ""}
-                    </p>
-                  </div>
-                </div>
-              </li>
+                    </>
+                  ) : undefined
+                }
+              />
             ))}
           </ul>
           <Pagination page={page} pages={pages} total={total} pageSize={pageSize} onChange={setPage} />

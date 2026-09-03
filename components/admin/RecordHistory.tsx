@@ -50,7 +50,16 @@ export function RecordHistory({
  * fields that changed — "changed total" is not an answer to what it used to
  * say. With `href`, the entry names and links the record it is about.
  */
-export function HistoryItem({ entry, href }: { entry: HistoryEntry; href?: string | null }) {
+export function HistoryItem({
+  entry,
+  href,
+  actorName,
+}: {
+  entry: HistoryEntry;
+  href?: string | null;
+  /** The person's name for their email, where the page knows it. */
+  actorName?: string;
+}) {
   return (
     <li className="py-3">
       <div className="flex flex-wrap items-baseline gap-2">
@@ -70,7 +79,7 @@ export function HistoryItem({ entry, href }: { entry: HistoryEntry; href?: strin
           </span>
         )}
         <span className={`text-sm ${href === undefined ? "font-semibold text-ink-strong" : "text-ink-muted"}`}>
-          {entry.actor || "unknown"}
+          {actorName || entry.actor || "unknown"}
         </span>
         {entry.at && (
           <time
@@ -88,13 +97,16 @@ export function HistoryItem({ entry, href }: { entry: HistoryEntry; href?: strin
         )}
       </div>
 
-      {entry.note && <p className="mt-1 text-sm text-ink">{entry.note}</p>}
+      {/* Not when the note IS the title — a cancel's note used to print twice. */}
+      {entry.note && entry.note !== entry.summary && (
+        <p className="mt-1 text-sm text-ink">{entry.note}</p>
+      )}
 
       {entry.changes.length > 0 && (
         <dl className="mt-1.5 space-y-0.5">
           {entry.changes.map((change) => (
             <div key={change.field} className="flex flex-wrap items-baseline gap-x-2 text-xs">
-              <dt className="font-semibold text-ink-muted">{change.field}</dt>
+              <dt className="font-semibold text-ink-muted">{change.label}</dt>
               <dd className="min-w-0 text-ink-soft">
                 {/* Before and after, because "changed the total" is
                     not an answer to what it used to say. */}

@@ -12,6 +12,7 @@ import {
   TableSkeleton,
   SearchInput,
   StatusPill,
+  ListCard,
 } from "./ui";
 import { ConfirmDialog } from "./ConfirmDialog";
 // One list of categories, shared with the form that writes them.
@@ -225,75 +226,56 @@ export function PurchaseWorkspace({
         <>
         <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
           {rows.map((row) => (
-            <li
+            <ListCard
               key={row.id}
-              className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-display text-base font-bold text-ink-strong">
-                    <Link
-                      href={`/admin/purchases/${row.id}`}
-                      className="hover:text-cta hover:underline"
-                    >
-                      {row.supplier}
-                    </Link>
-                  </p>
-                  <p className="mt-0.5 truncate text-sm text-ink-muted">
-                    {row.description || row.billNo}
-                  </p>
-                  <p className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                    <StatusPill status={row.paymentStatus} />
-                    <span className="text-ink-faint">
-                      {purchaseCategoryLabel(row.category)}
-                    </span>
-                    {row.billDate && (
-                      <span className="text-ink-faint">
-                        {formatIstDate(new Date(row.billDate))}
-                      </span>
-                    )}
-                    {row.paidBy === "director" && (
-                      <span className="text-cta">
-                        paid by {row.paidByName || "a director"}
-                      </span>
-                    )}
-                    {!row.supplierGstin && (
-                      <span className="text-cta">no GSTIN — no input credit</span>
-                    )}
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="font-display text-lg font-bold tabular-nums text-ink-strong">
-                      {formatINR(row.totalPaise)}
-                    </p>
-                    <p className="text-xs text-ink-faint">
-                      GST {formatRupees(row.cgstPaise + row.sgstPaise + row.igstPaise)}
-                    </p>
-                  </div>
-                  {canWrite && (
-                    <Link
-                      href={`/admin/purchases/${row.id}/edit`}
-                      className="admin-tap inline-flex items-center rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-ink-muted hover:border-olive"
-                    >
-                      Edit
-                    </Link>
+              title={
+                <Link href={`/admin/purchases/${row.id}`} className="hover:text-cta hover:underline">
+                  {row.supplier}
+                </Link>
+              }
+              subtitle={row.description || row.billNo || undefined}
+              figure={formatINR(row.totalPaise)}
+              figureNote={`GST ${formatRupees(row.cgstPaise + row.sgstPaise + row.igstPaise)}`}
+              pills={
+                <>
+                  <StatusPill status={row.paymentStatus} />
+                  <span className="text-ink-faint">{purchaseCategoryLabel(row.category)}</span>
+                  {row.billDate && (
+                    <span className="text-ink-faint">{formatIstDate(new Date(row.billDate))}</span>
                   )}
-                  {canDelete && (
-                    <button
-                      type="button"
-                      onClick={() => setDeleting(row)}
-                      aria-label={`Delete ${row.supplier}`}
-                      className="admin-tap-square rounded-full p-2 text-ink-soft hover:bg-danger/12 hover:text-danger"
-                    >
-                      <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-                        <path d="M8 2h4a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-.4l-.7 9.1A2 2 0 0 1 12.9 17H7.1a2 2 0 0 1-2-1.9L4.4 6H4a1 1 0 0 1 0-2h3V3a1 1 0 0 1 1-1Zm1 2h2V4H9Zm-2.6 2 .7 8.9a.5.5 0 0 0 .5.4h5.8a.5.5 0 0 0 .5-.4l.7-8.9H6.4Z" />
-                      </svg>
-                    </button>
+                  {row.paidBy === "director" && (
+                    <span className="text-cta">paid by {row.paidByName || "a director"}</span>
                   )}
-                </div>
-              </div>
-            </li>
+                  {!row.supplierGstin && <span className="text-cta">no GSTIN — no input credit</span>}
+                </>
+              }
+              actions={
+                canWrite || canDelete ? (
+                  <>
+                    {canWrite && (
+                      <Link
+                        href={`/admin/purchases/${row.id}/edit`}
+                        className="admin-tap inline-flex items-center rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-ink-muted hover:border-olive"
+                      >
+                        Edit
+                      </Link>
+                    )}
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleting(row)}
+                        aria-label={`Delete ${row.supplier}`}
+                        className="admin-tap-square rounded-full p-2 text-ink-soft hover:bg-danger/12 hover:text-danger"
+                      >
+                        <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+                          <path d="M8 2h4a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-.4l-.7 9.1A2 2 0 0 1 12.9 17H7.1a2 2 0 0 1-2-1.9L4.4 6H4a1 1 0 0 1 0-2h3V3a1 1 0 0 1 1-1Zm1 2h2V4H9Zm-2.6 2 .7 8.9a.5.5 0 0 0 .5.4h5.8a.5.5 0 0 0 .5-.4l.7-8.9H6.4Z" />
+                        </svg>
+                      </button>
+                    )}
+                  </>
+                ) : undefined
+              }
+            />
           ))}
         </ul>
         <Pagination page={page} pages={pages} total={total} pageSize={pageSize} onChange={setPage} />

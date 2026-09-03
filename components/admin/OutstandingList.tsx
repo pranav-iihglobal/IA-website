@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ViewToggle } from "./ui";
+import { ListCard, ViewToggle } from "./ui";
 import { useViewMode } from "./useViewMode";
 import { formatINR, formatRupees } from "@/lib/money";
 import { paymentReminder, telHref, whatsappHref } from "@/lib/crm/contact-links";
@@ -31,41 +31,33 @@ export function OutstandingList({ rows }: { rows: OutstandingRow[] }) {
         }`}
       >
         {rows.map((row) => (
-          <li
+          <ListCard
             key={row.invoiceId}
-            className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-display text-base font-bold text-ink-strong">
-                  <PartyLink row={row} />
-                </p>
-                <p className="mt-0.5 text-sm text-ink-muted">
-                  {/* The record, not the printable document — what is owed
-                      on an invoice is a question about its history, and the
-                      document cannot answer it. */}
-                  <Link href={`/admin/invoices/${row.invoiceId}`} className="hover:underline">
-                    {row.number}
-                  </Link>
-                  {" · "}
-                  <Age row={row} />
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="font-display text-lg font-bold tabular-nums text-danger">
-                  {formatINR(row.owedPaise)}
-                </p>
-                {(row.paidPaise > 0 || row.creditedPaise > 0) && (
-                  <p className="text-xs text-ink-faint">
-                    {formatINR(row.grandTotalPaise)} invoiced
-                    {row.paidPaise > 0 && `, ${formatINR(row.paidPaise)} paid`}
-                    {row.creditedPaise > 0 && `, ${formatINR(row.creditedPaise)} credited`}
-                  </p>
-                )}
-              </div>
-            </div>
-            <Chase row={row} />
-          </li>
+            title={<PartyLink row={row} />}
+            subtitle={
+              <>
+                {/* The record, not the printable document — what is owed
+                    on an invoice is a question about its history, and the
+                    document cannot answer it. */}
+                <Link href={`/admin/invoices/${row.invoiceId}`} className="hover:underline">
+                  {row.number}
+                </Link>
+                {" · "}
+                <Age row={row} />
+              </>
+            }
+            figure={formatINR(row.owedPaise)}
+            figureTone="danger"
+            figureNote={
+              row.paidPaise > 0 || row.creditedPaise > 0
+                ? `of ${formatINR(row.grandTotalPaise)}${row.paidPaise > 0 ? `, ${formatINR(row.paidPaise)} paid` : ""}${
+                    row.creditedPaise > 0 ? `, ${formatINR(row.creditedPaise)} credited` : ""
+                  }`
+                : undefined
+            }
+            meta={row.partyPhone}
+            actions={<Chase row={row} />}
+          />
         ))}
       </ul>
 
@@ -103,7 +95,7 @@ function Age({ row }: { row: OutstandingRow }) {
  * Both are hidden rather than disabled when the stored number is not one this
  * can be confident about: a dead "Call" button is worse than none.
  */
-function Chase({ row, compact = false }: { row: OutstandingRow; compact?: boolean }) {
+function Chase({ row }: { row: OutstandingRow }) {
   const tel = telHref(row.partyPhone);
   const chat = whatsappHref(
     row.partyPhone,
@@ -115,29 +107,21 @@ function Chase({ row, compact = false }: { row: OutstandingRow; compact?: boolea
   );
   if (!tel && !chat) return null;
 
-  const pill = compact
-    ? "admin-tap inline-flex items-center rounded-full border border-line px-3 text-xs font-semibold text-ink-muted hover:border-olive"
-    : "admin-tap inline-flex items-center rounded-full border border-line px-4 text-xs font-semibold text-ink hover:border-olive";
-
+  const pill =
+    "admin-tap inline-flex items-center rounded-full border border-line px-3.5 text-xs font-semibold text-ink hover:border-olive";
   return (
-    <div
-      className={
-        compact
-          ? "inline-flex flex-wrap justify-end gap-1.5"
-          : "mt-3 flex flex-wrap gap-2 border-t border-line-soft pt-3"
-      }
-    >
+    <>
       {tel && (
-        <a href={tel} className={pill}>
-          {compact ? "Call" : `Call ${row.partyPhone}`}
+        <a href={tel} aria-label={`Call ${row.partyName} on ${row.partyPhone}`} className={pill}>
+          Call
         </a>
       )}
       {chat && (
-        <a href={chat} target="_blank" rel="noreferrer" className={pill}>
-          {compact ? "WhatsApp" : "WhatsApp a reminder"}
+        <a href={chat} target="_blank" rel="noreferrer" aria-label={`WhatsApp ${row.partyName} a reminder`} className={pill}>
+          WhatsApp reminder
         </a>
       )}
-    </div>
+    </>
   );
 }
 
@@ -187,7 +171,9 @@ function OutstandingTable({ rows }: { rows: OutstandingRow[] }) {
                 </td>
                 <td className={`${num} font-semibold text-danger`}>{formatINR(row.owedPaise)}</td>
                 <td className={`${td} whitespace-nowrap text-right`}>
-                  <Chase row={row} compact />
+                  <span className="inline-flex flex-wrap justify-end gap-1.5">
+                    <Chase row={row} />
+                  </span>
                 </td>
               </tr>
             ))}

@@ -62,6 +62,8 @@ export default async function ActivityPage({
     // Everyone, including suspended people: their past changes are still here.
     listUsers(),
   ]);
+  // Names for the log's emails — the log stores who as an address.
+  const names = new Map(people.filter((p) => p.name).map((p) => [p.email, p.name]));
   const more = entries.length > PAGE_SIZE;
   const shown = more ? entries.slice(0, PAGE_SIZE) : entries;
   const filtered = Boolean(filter.actor || filter.entity || filter.action || filter.from || filter.to);
@@ -161,7 +163,12 @@ export default async function ActivityPage({
         <section className="admin-card p-4">
           <ol className="divide-y divide-line-soft">
             {shown.map((entry) => (
-              <HistoryItem key={entry.id} entry={entry} href={recordHref(entry.entity, entry.entityId)} />
+              <HistoryItem
+                key={entry.id}
+                entry={entry}
+                href={recordHref(entry.entity, entry.entityId)}
+                actorName={names.get(entry.actor)}
+              />
             ))}
           </ol>
         </section>

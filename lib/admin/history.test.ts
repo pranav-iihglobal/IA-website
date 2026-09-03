@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { recordHref, summarise } from "./history";
+import { fieldLabel, readable, recordHref, summarise } from "./history";
 
 describe("recordHref", () => {
   it("opens each entity the write paths record", () => {
@@ -34,5 +34,30 @@ describe("summarise", () => {
   it("uses the note when nothing names it, and is blank otherwise", () => {
     expect(summarise({ after: { phone: "1" }, note: "Called back" })).toBe("Called back");
     expect(summarise({ after: { phone: "1" } })).toBe("");
+  });
+});
+
+describe("fieldLabel", () => {
+  it("uses the name the directors know where there is one", () => {
+    expect(fieldLabel("grandTotalPaise")).toBe("Total");
+    expect(fieldLabel("party")).toBe("Customer");
+    expect(fieldLabel("gstin")).toBe("GSTIN");
+  });
+
+  it("pulls camelCase apart for the rest, dropping the storage unit", () => {
+    expect(fieldLabel("placeOfSupplyStateCode")).toBe("Place of supply state code");
+    expect(fieldLabel("discountPaise")).toBe("Discount");
+  });
+});
+
+describe("readable", () => {
+  it("never shows money in paise", () => {
+    expect(readable(720000, "grandTotalPaise")).toBe("₹7,200.00");
+    expect(readable(640, "onHand")).toBe("640");
+  });
+
+  it("marks an empty value rather than printing nothing", () => {
+    expect(readable("", "reason")).toBe("—");
+    expect(readable(null)).toBe("—");
   });
 });

@@ -1323,6 +1323,75 @@ export function FormPageHeader({
   );
 }
 
+/**
+ * One row of a list, as a card — the shape every list on a phone shares.
+ *
+ * Title and figure on ONE line, never wrapping under each other: the five
+ * list workspaces each laid this out as a wrapping flex row, so a long name
+ * pushed the amount onto its own line where it sat centred, and two rows of
+ * the same list read differently. Pills below, then an optional footer with
+ * a short meta line on the left and the actions on the right; the actions
+ * wrap among themselves rather than run off the screen.
+ */
+export function ListCard({
+  title,
+  subtitle,
+  figure,
+  figureNote,
+  figureTone,
+  pills,
+  meta,
+  actions,
+  children,
+}: {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  /** The one number the row is about, top right. */
+  figure?: ReactNode;
+  figureNote?: ReactNode;
+  figureTone?: "danger";
+  /** StatusPills and short faint facts, one wrapping row. */
+  pills?: ReactNode;
+  /** A short line in the footer, beside the actions. */
+  meta?: ReactNode;
+  actions?: ReactNode;
+  /** Anything else, between the pills and the footer. */
+  children?: ReactNode;
+}) {
+  return (
+    <li className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-base font-bold leading-snug text-ink-strong [overflow-wrap:anywhere]">
+            {title}
+          </p>
+          {subtitle && <p className="mt-0.5 truncate text-sm text-ink-muted">{subtitle}</p>}
+        </div>
+        {figure !== undefined && (
+          <div className="shrink-0 text-right">
+            <p
+              className={`font-display text-lg font-bold tabular-nums ${
+                figureTone === "danger" ? "text-danger" : "text-ink-strong"
+              }`}
+            >
+              {figure}
+            </p>
+            {figureNote && <p className="text-xs text-ink-faint">{figureNote}</p>}
+          </div>
+        )}
+      </div>
+      {pills && <p className="mt-2 flex flex-wrap items-center gap-2 text-xs">{pills}</p>}
+      {children}
+      {(meta || actions) && (
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-line-soft/50 pt-3">
+          <div className="min-w-0 flex-1 truncate text-xs text-ink-soft">{meta}</div>
+          {actions && <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">{actions}</div>}
+        </div>
+      )}
+    </li>
+  );
+}
+
 export function RecordCard({
   thumb,
   title,

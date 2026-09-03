@@ -10,6 +10,7 @@ import {
   FilterTabs,
   SortMenu,
   ViewToggle,
+  ListCard,
   TableSkeleton,
   Pagination,
   SearchInput,
@@ -174,63 +175,41 @@ export function InvoiceWorkspace({
           }`}
         >
           {rows.map((row) => (
-            <li
+            <ListCard
               key={row.id}
-              className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-display text-base font-bold text-ink-strong">
-                    {/* The number opens the record, not the printable
-                        document. Print is still one tap away below, and the
-                        two are different things: one is the paperwork, the
-                        other is what has happened to it since. */}
-                    <Link
-                      href={`/admin/invoices/${row.id}`}
-                      className="hover:text-cta hover:underline"
-                    >
-                      {row.number || "(no number)"}
-                    </Link>
-                  </p>
-                  <p className="mt-0.5 truncate text-sm text-ink-muted">
-                    {row.partyName}
-                    {row.gstin ? ` · ${row.gstin}` : ""}
-                  </p>
-                  {isCredit(row) && row.againstNumber && (
-                    <p className="mt-0.5 text-xs text-ink-faint">
-                      credits {row.againstNumber}
-                    </p>
+              title={
+                /* The number opens the record, not the printable document.
+                   Print is one tap away below, and the two are different
+                   things: one is the paperwork, the other is what has
+                   happened to it since. */
+                <Link href={`/admin/invoices/${row.id}`} className="hover:text-cta hover:underline">
+                  {row.number || "(no number)"}
+                </Link>
+              }
+              subtitle={`${row.partyName}${row.gstin ? ` · ${row.gstin}` : ""}`}
+              figure={formatINR(row.grandTotalPaise)}
+              pills={
+                <>
+                  {isCredit(row) ? (
+                    <StatusPill status="credit note" />
+                  ) : (
+                    <>
+                      <StatusPill status={row.status} />
+                      <StatusPill status={row.paymentStatus} />
+                    </>
                   )}
-                  <p className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                    {isCredit(row) ? (
-                      <StatusPill status="credit note" />
-                    ) : (
-                      <>
-                        <StatusPill status={row.status} />
-                        <StatusPill status={row.paymentStatus} />
-                      </>
-                    )}
-                    {isCredit(row) && row.status === "cancelled" && (
-                      <StatusPill status="cancelled" />
-                    )}
-                    {row.isHistorical && <StatusPill status="filed" />}
-                    <span className="text-ink-faint">
-                      {row.issuedAt
-                        ? formatIstDate(new Date(row.issuedAt))
-                        : "not issued"}
-                    </span>
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-display text-lg font-bold tabular-nums text-ink-strong">
-                    {formatINR(row.grandTotalPaise)}
-                  </p>
-                  <div className="mt-1.5 flex flex-wrap justify-end gap-1.5">
-                    <InvoiceActions row={row} canWrite={canWrite} canCancel={canCancel} />
-                  </div>
-                </div>
-              </div>
-            </li>
+                  {isCredit(row) && row.status === "cancelled" && <StatusPill status="cancelled" />}
+                  {row.isHistorical && <StatusPill status="filed" />}
+                  <span className="text-ink-faint">
+                    {row.issuedAt ? formatIstDate(new Date(row.issuedAt)) : "not issued"}
+                  </span>
+                  {isCredit(row) && row.againstNumber && (
+                    <span className="text-ink-faint">credits {row.againstNumber}</span>
+                  )}
+                </>
+              }
+              actions={<InvoiceActions row={row} canWrite={canWrite} canCancel={canCancel} />}
+            />
           ))}
         </ul>
         {view === "table" && (

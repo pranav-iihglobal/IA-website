@@ -12,6 +12,7 @@ import {
   TableSkeleton,
   SearchInput,
   StatusPill,
+  ListCard,
 } from "./ui";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { useToast } from "./Toast";
@@ -220,68 +221,57 @@ export function StockWorkspace({
         <>
         <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
           {rows.map((row) => (
-            <li
+            <ListCard
               key={row.id}
-              className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-display text-base font-bold text-ink-strong">
-                    {/* Opens the record. "Count" beside it goes straight to
-                        the form, because that is the frequent act — but the
-                        count HISTORY is only on the record. */}
-                    <Link
-                      href={`/admin/stock/${row.id}`}
-                      className="hover:text-cta hover:underline"
-                    >
-                      {row.name}
-                    </Link>
-                  </p>
-                  <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-ink-muted">
-                    {row.sku && <span>{row.sku}</span>}
-                    <StatusPill status={row.kind} />
-                    {low(row) && <StatusPill status="unpaid" />}
-                    {row.supplier && <span>{row.supplier}</span>}
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p
-                      className={`font-display text-lg font-bold tabular-nums ${
-                        low(row) ? "text-danger" : "text-ink-strong"
-                      }`}
-                    >
-                      {row.onHand} <span className="text-sm font-semibold">{row.unit}</span>
-                    </p>
-                    <p className="text-xs text-ink-faint">
-                      {row.reorderLevel > 0
-                        ? `reorder at ${row.reorderLevel}`
-                        : "no reorder level"}
-                    </p>
-                  </div>
-                  {canWrite && (
-                    <Link
-                      href={`/admin/stock/${row.id}/edit`}
-                      className="admin-tap inline-flex items-center rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-ink-muted hover:border-olive"
-                    >
-                      Count
-                    </Link>
-                  )}
-                  {canDelete && (
-                    <button
-                      type="button"
-                      onClick={() => setDeleting(row)}
-                      aria-label={`Delete ${row.name}`}
-                      className="admin-tap-square rounded-full p-2 text-ink-soft hover:bg-danger/12 hover:text-danger"
-                    >
-                      <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-                        <path d="M8 2h4a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-.4l-.7 9.1A2 2 0 0 1 12.9 17H7.1a2 2 0 0 1-2-1.9L4.4 6H4a1 1 0 0 1 0-2h3V3a1 1 0 0 1 1-1Zm1 2h2V4H9Zm-2.6 2 .7 8.9a.5.5 0 0 0 .5.4h5.8a.5.5 0 0 0 .5-.4l.7-8.9H6.4Z" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </li>
+              title={
+                /* Opens the record. "Count" below goes straight to the form,
+                   because that is the frequent act — but the count HISTORY
+                   is only on the record. */
+                <Link href={`/admin/stock/${row.id}`} className="hover:text-cta hover:underline">
+                  {row.name}
+                </Link>
+              }
+              subtitle={[row.sku, row.supplier].filter(Boolean).join(" · ") || undefined}
+              figure={
+                <>
+                  {row.onHand} <span className="text-sm font-semibold">{row.unit}</span>
+                </>
+              }
+              figureTone={low(row) ? "danger" : undefined}
+              figureNote={row.reorderLevel > 0 ? `reorder at ${row.reorderLevel}` : "no reorder level"}
+              pills={
+                <>
+                  <StatusPill status={row.kind} />
+                  {low(row) && <StatusPill status="unpaid" />}
+                </>
+              }
+              actions={
+                canWrite || canDelete ? (
+                  <>
+                    {canWrite && (
+                      <Link
+                        href={`/admin/stock/${row.id}/edit`}
+                        className="admin-tap inline-flex items-center rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-ink-muted hover:border-olive"
+                      >
+                        Count
+                      </Link>
+                    )}
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleting(row)}
+                        aria-label={`Delete ${row.name}`}
+                        className="admin-tap-square rounded-full p-2 text-ink-soft hover:bg-danger/12 hover:text-danger"
+                      >
+                        <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+                          <path d="M8 2h4a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-.4l-.7 9.1A2 2 0 0 1 12.9 17H7.1a2 2 0 0 1-2-1.9L4.4 6H4a1 1 0 0 1 0-2h3V3a1 1 0 0 1 1-1Zm1 2h2V4H9Zm-2.6 2 .7 8.9a.5.5 0 0 0 .5.4h5.8a.5.5 0 0 0 .5-.4l.7-8.9H6.4Z" />
+                        </svg>
+                      </button>
+                    )}
+                  </>
+                ) : undefined
+              }
+            />
           ))}
         </ul>
         <Pagination page={page} pages={pages} total={total} pageSize={pageSize} onChange={setPage} />
