@@ -20,7 +20,6 @@ import {
   Toggle,
 } from "./ui";
 
-const EMPTY_BI: Bi = { en: "", gu: "" };
 
 export interface TestimonialFormValues {
   farmerName: Bi;
@@ -41,24 +40,6 @@ export interface TestimonialFormValues {
   displayOrder: number | string;
 }
 
-export const EMPTY_TESTIMONIAL: TestimonialFormValues = {
-  farmerName: { ...EMPTY_BI },
-  village: "",
-  taluka: "",
-  district: "",
-  crop: { ...EMPTY_BI },
-  quote: { ...EMPTY_BI },
-  photo: { url: "", publicId: "" },
-  video: { platform: "", url: "", embedId: "" },
-  productUsed: null,
-  rating: "",
-  source: "admin_entered",
-  verified: false,
-  verifiedVia: "",
-  status: "draft",
-  featured: false,
-  displayOrder: 0,
-};
 
 export function TestimonialForm({
   initial,

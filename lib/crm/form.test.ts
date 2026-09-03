@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contactSchema } from "@/lib/schemas";
-import { emptyContact } from "@/components/admin/ContactForm";
+import { emptyContact } from "@/lib/admin/form-defaults";
 import { toContactFormValues } from "./form";
 
 /**

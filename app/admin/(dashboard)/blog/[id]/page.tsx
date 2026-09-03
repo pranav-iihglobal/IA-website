@@ -3,11 +3,8 @@ import { isValidObjectId } from "mongoose";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Post } from "@/lib/db/models/Post";
 import type { LeanDoc } from "@/lib/db/lean";
-import {
-  EMPTY_POST,
-  PostForm,
-  type PostFormValues,
-} from "@/components/admin/PostForm";
+import { PostForm, type PostFormValues } from "@/components/admin/PostForm";
+import { EMPTY_POST } from "@/lib/admin/form-defaults";
 import { getTestimonialOptions } from "@/lib/admin/products-options";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";

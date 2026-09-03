@@ -1,7 +1,7 @@
 import {
-  EMPTY_TESTIMONIAL,
   TestimonialForm,
 } from "@/components/admin/TestimonialForm";
+import { EMPTY_TESTIMONIAL } from "@/lib/admin/form-defaults";
 import { getProductOptions } from "@/lib/admin/products-options";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";

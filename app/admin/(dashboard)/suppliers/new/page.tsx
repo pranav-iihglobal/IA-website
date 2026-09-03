@@ -1,4 +1,5 @@
-import { EMPTY_SUPPLIER, SupplierForm } from "@/components/admin/SupplierForm";
+import { SupplierForm } from "@/components/admin/SupplierForm";
+import { EMPTY_SUPPLIER } from "@/lib/admin/form-defaults";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 

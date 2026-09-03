@@ -32,16 +32,6 @@ export interface SupplierFormValues {
   notes: string;
 }
 
-export const EMPTY_SUPPLIER: SupplierFormValues = {
-  name: "",
-  gstin: "",
-  phone: "",
-  email: "",
-  address: "",
-  city: "",
-  state: "Gujarat",
-  notes: "",
-};
 
 const BACK = "/admin/suppliers";
 

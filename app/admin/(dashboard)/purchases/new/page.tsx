@@ -1,4 +1,5 @@
-import { EMPTY_PURCHASE, PurchaseForm } from "@/components/admin/PurchaseForm";
+import { PurchaseForm } from "@/components/admin/PurchaseForm";
+import { EMPTY_PURCHASE } from "@/lib/admin/form-defaults";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { getSupplierOptions } from "@/lib/admin/supplier-options";

@@ -1,4 +1,5 @@
-import { EMPTY_STOCK, StockForm } from "@/components/admin/StockForm";
+import { StockForm } from "@/components/admin/StockForm";
+import { EMPTY_STOCK } from "@/lib/admin/form-defaults";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { getSupplierOptions } from "@/lib/admin/supplier-options";

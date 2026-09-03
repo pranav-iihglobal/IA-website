@@ -7,7 +7,7 @@ import { recordHistory } from "@/lib/admin/history";
 import { getSupplierDetail } from "@/lib/erp/suppliers";
 import { RecordHistory } from "@/components/admin/RecordHistory";
 import { EmptyState, StatusPill } from "@/components/admin/ui";
-import { PURCHASE_CATEGORIES } from "@/components/admin/PurchaseForm";
+import { purchaseCategoryLabel } from "@/lib/erp/purchase-categories";
 import { telHref } from "@/lib/crm/contact-links";
 import { formatINR, formatRupees } from "@/lib/money";
 import { formatIstDateLong } from "@/lib/time";
@@ -126,7 +126,7 @@ export default async function SupplierDetailPage({
                     <StatusPill status={bill.paymentStatus} />
                     {bill.billDate && <span>{formatIstDateLong(new Date(bill.billDate))}</span>}
                     <span>
-                      {PURCHASE_CATEGORIES.find((c) => c.value === bill.category)?.label ?? bill.category}
+                      {purchaseCategoryLabel(bill.category)}
                     </span>
                     {bill.description && bill.billNo && <span>{bill.description}</span>}
                   </p>

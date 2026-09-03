@@ -5,7 +5,7 @@ import { requirePageAccess } from "@/lib/admin/page-guard";
 import { can } from "@/lib/auth/permissions";
 import { recordHistory } from "@/lib/admin/history";
 import { RecordHistory } from "@/components/admin/RecordHistory";
-import { PURCHASE_CATEGORIES } from "@/components/admin/PurchaseForm";
+import { purchaseCategoryLabel } from "@/lib/erp/purchase-categories";
 import { StatusPill } from "@/components/admin/ui";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Purchase } from "@/lib/db/models/Purchase";
@@ -57,10 +57,7 @@ export default async function PurchaseDetailPage({
   const mismatch = total > 0 && computed > 0 && total !== computed;
   const gstPaise = cgst + sgst + igst;
   const byDirector = doc.paidBy === "director";
-  const category =
-    PURCHASE_CATEGORIES.find((c) => c.value === doc.category)?.label ??
-    doc.category ??
-    "other";
+  const category = purchaseCategoryLabel(doc.category ?? "other");
 
   return (
     <div className="space-y-5">

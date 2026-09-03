@@ -92,49 +92,6 @@ export interface ProductFormValues {
   displayOrder: number | string;
 }
 
-export const EMPTY_PRODUCT: ProductFormValues = {
-  name: { ...EMPTY_BI },
-  slug: "",
-  category: "other",
-  categoryLabel: { ...EMPTY_BI },
-  tagline: { ...EMPTY_BI },
-  description: { ...EMPTY_BI },
-  benefits: [],
-  format: { ...EMPTY_BI },
-  complianceNote: { ...EMPTY_BI },
-  whatsappMessage: "",
-  dosage: {
-    amountPerAcre: "",
-    unit: "g",
-    summary: { ...EMPTY_BI },
-    applicationMethod: { ...EMPTY_BI },
-    cropStage: { ...EMPTY_BI },
-  },
-  suitableCrops: [],
-  cropsNote: { ...EMPTY_BI },
-  sku: "",
-  hsnCode: "",
-  gstRatePercent: 0,
-  composition: [],
-  packSizes: [],
-  regulatory: { fcoCompliant: false, fcoSchedule: "", licenseNo: "" },
-
-  assets: [],
-  applicationSteps: [],
-  fieldResults: [],
-  faqs: [],
-  relatedProducts: [],
-  pairsWellWith: [],
-  pinnedTestimonials: [],
-  availability: "in_stock",
-  availabilityNote: { ...EMPTY_BI },
-
-  images: [],
-  artFallback: "sachet",
-  status: "draft",
-  featured: false,
-  displayOrder: 0,
-};
 
 /**
  * What each pack earns, live as the prices are typed.

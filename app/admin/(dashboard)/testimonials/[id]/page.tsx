@@ -3,11 +3,8 @@ import { isValidObjectId } from "mongoose";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Testimonial } from "@/lib/db/models/Testimonial";
 import type { LeanDoc } from "@/lib/db/lean";
-import {
-  EMPTY_TESTIMONIAL,
-  TestimonialForm,
-  type TestimonialFormValues,
-} from "@/components/admin/TestimonialForm";
+import { TestimonialForm, type TestimonialFormValues } from "@/components/admin/TestimonialForm";
+import { EMPTY_TESTIMONIAL } from "@/lib/admin/form-defaults";
 import { getProductOptions } from "@/lib/admin/products-options";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";

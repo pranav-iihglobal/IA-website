@@ -1,4 +1,5 @@
-import { ContactForm, emptyContact } from "@/components/admin/ContactForm";
+import { ContactForm } from "@/components/admin/ContactForm";
+import { emptyContact } from "@/lib/admin/form-defaults";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { getProductOptions } from "@/lib/admin/products-options";

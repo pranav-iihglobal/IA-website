@@ -8,13 +8,15 @@ import {
   supplierSchema,
   testimonialSchema,
 } from "@/lib/schemas";
-import { EMPTY_SUPPLIER } from "@/components/admin/SupplierForm";
-import { emptyContact } from "@/components/admin/ContactForm";
-import { EMPTY_STOCK } from "@/components/admin/StockForm";
-import { EMPTY_PURCHASE } from "@/components/admin/PurchaseForm";
-import { EMPTY_TESTIMONIAL } from "@/components/admin/TestimonialForm";
-import { EMPTY_PRODUCT } from "@/components/admin/ProductForm";
-import { EMPTY_POST } from "@/components/admin/PostForm";
+import {
+  EMPTY_POST,
+  EMPTY_PRODUCT,
+  EMPTY_PURCHASE,
+  EMPTY_STOCK,
+  EMPTY_SUPPLIER,
+  EMPTY_TESTIMONIAL,
+  emptyContact,
+} from "./form-defaults";
 
 /**
  * Every form must carry every field its schema accepts.

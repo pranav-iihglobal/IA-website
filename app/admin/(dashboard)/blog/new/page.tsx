@@ -1,4 +1,5 @@
-import { EMPTY_POST, PostForm } from "@/components/admin/PostForm";
+import { PostForm } from "@/components/admin/PostForm";
+import { EMPTY_POST } from "@/lib/admin/form-defaults";
 import { getTestimonialOptions } from "@/lib/admin/products-options";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";

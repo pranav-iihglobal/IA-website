@@ -15,7 +15,7 @@ import {
 } from "./ui";
 import { ConfirmDialog } from "./ConfirmDialog";
 // One list of categories, shared with the form that writes them.
-import { PURCHASE_CATEGORIES } from "./PurchaseForm";
+import { purchaseCategoryLabel } from "@/lib/erp/purchase-categories";
 import { useToast } from "./Toast";
 import { formatINR, formatRupees } from "@/lib/money";
 import { formatIstDate } from "@/lib/time";
@@ -243,7 +243,7 @@ export function PurchaseWorkspace({
                   <p className="mt-1 flex flex-wrap items-center gap-2 text-xs">
                     <StatusPill status={row.paymentStatus} />
                     <span className="text-ink-faint">
-                      {PURCHASE_CATEGORIES.find((c) => c.value === row.category)?.label ?? row.category}
+                      {purchaseCategoryLabel(row.category)}
                     </span>
                     {row.billDate && (
                       <span className="text-ink-faint">

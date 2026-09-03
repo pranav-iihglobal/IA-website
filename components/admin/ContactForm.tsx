@@ -73,37 +73,6 @@ export interface ContactFormValues {
   dealer?: Record<string, unknown>;
 }
 
-export function emptyContact(): ContactFormValues {
-  return {
-    contactId: "",
-    kind: "lead",
-    channel: "",
-    name: "",
-    nameGu: "",
-    businessName: "",
-    phone: "",
-    altPhone: "",
-    email: "",
-    village: "",
-    taluka: "",
-    district: "",
-    region: "",
-    pin: "",
-    state: "Gujarat",
-    crop: "",
-    acres: null,
-    source: "other",
-    gjZone: "",
-    tags: [],
-    owner: "",
-    followUpAt: null,
-    lastContactAt: null,
-    remarks: "",
-    lead: {},
-    customer: {},
-    dealer: {},
-  };
-}
 
 const REGIONS = [
   "North Gujarat",

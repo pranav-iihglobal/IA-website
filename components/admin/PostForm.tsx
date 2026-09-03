@@ -54,21 +54,6 @@ export interface PostFormValues {
   pinnedTestimonials: string[];
 }
 
-export const EMPTY_POST: PostFormValues = {
-  title: { ...EMPTY_BI },
-  slug: "",
-  excerpt: { ...EMPTY_BI },
-  content: { ...EMPTY_BI },
-  coverImage: { url: "", publicId: "", alt: { ...EMPTY_BI } },
-  tags: [],
-  category: "other",
-  status: "draft",
-  publishAt: null,
-  author: "IKSARVA Team",
-  metaTitle: { ...EMPTY_BI },
-  metaDescription: { ...EMPTY_BI },
-  pinnedTestimonials: [],
-};
 
 export function PostForm({
   initial,

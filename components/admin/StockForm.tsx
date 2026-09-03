@@ -47,19 +47,6 @@ export interface StockFormValues {
   notes: string;
 }
 
-export const EMPTY_STOCK: StockFormValues = {
-  name: "",
-  sku: "",
-  kind: "finished",
-  unit: "unit",
-  onHand: "0",
-  reorderLevel: "0",
-  unitCost: "",
-  supplierId: "",
-  supplier: "",
-  location: "",
-  notes: "",
-};
 
 const KINDS = [
   { value: "finished", label: "Finished goods" },

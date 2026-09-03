@@ -3,11 +3,8 @@ import { isValidObjectId } from "mongoose";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Product } from "@/lib/db/models/Product";
 import type { LeanDoc } from "@/lib/db/lean";
-import {
-  EMPTY_PRODUCT,
-  ProductForm,
-  type ProductFormValues,
-} from "@/components/admin/ProductForm";
+import { ProductForm, type ProductFormValues } from "@/components/admin/ProductForm";
+import { EMPTY_PRODUCT } from "@/lib/admin/form-defaults";
 import {
   getProductOptions,
   getTestimonialOptions,

@@ -1,4 +1,5 @@
-import { EMPTY_PRODUCT, ProductForm } from "@/components/admin/ProductForm";
+import { ProductForm } from "@/components/admin/ProductForm";
+import { EMPTY_PRODUCT } from "@/lib/admin/form-defaults";
 import {
   getProductOptions,
   getTestimonialOptions,

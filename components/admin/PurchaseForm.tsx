@@ -21,6 +21,7 @@ import { focusFirstInvalid, validateWith } from "@/lib/admin/validate";
 import { purchaseSchema } from "@/lib/schemas";
 import { formatINR, rupeesToPaise } from "@/lib/money";
 import { SupplierPicker } from "./SupplierPicker";
+import { PURCHASE_CATEGORIES } from "@/lib/erp/purchase-categories";
 import type { SupplierOption } from "@/lib/admin/supplier-options";
 
 /**
@@ -59,36 +60,7 @@ export interface PurchaseFormValues {
   notes: string;
 }
 
-export const EMPTY_PURCHASE: PurchaseFormValues = {
-  supplierId: "",
-  supplier: "",
-  supplierGstin: "",
-  billNo: "",
-  billDate: "",
-  category: "raw_material",
-  description: "",
-  taxableValue: "",
-  cgst: "",
-  sgst: "",
-  igst: "",
-  total: "",
-  inputCreditEligible: true,
-  paidBy: "company",
-  paidByName: "",
-  paymentStatus: "unpaid",
-  paid: "",
-  notes: "",
-};
 
-export const PURCHASE_CATEGORIES = [
-  { value: "raw_material", label: "Raw material" },
-  { value: "packaging", label: "Packaging" },
-  { value: "job_work", label: "Job work" },
-  { value: "freight", label: "Freight" },
-  { value: "marketing", label: "Marketing" },
-  { value: "services", label: "Services" },
-  { value: "other", label: "Other" },
-];
 
 const paise = (v: string) => rupeesToPaise(v) ?? 0;
 const BACK = "/admin/purchases";
@@ -249,7 +221,7 @@ export function PurchaseForm({
               value={values.category}
               onChange={(category) => set({ category })}
               error={errors.category}
-              options={PURCHASE_CATEGORIES}
+              options={[...PURCHASE_CATEGORIES]}
             />
             <TextField
               label="Description"
