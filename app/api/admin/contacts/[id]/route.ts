@@ -17,6 +17,7 @@ import {
   isStaleWrite,
   staleWriteResponse,
   versionedFilter,
+  bumpVersion,
 } from "@/lib/admin/concurrency";
 
 export const runtime = "nodejs";
@@ -208,6 +209,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         isSample: false,
         updatedBy: await currentEditor(),
         ...formerIds,
+        ...bumpVersion(),
       },
       { returnDocument: "after", runValidators: true },
     );

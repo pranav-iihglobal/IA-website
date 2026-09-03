@@ -43,6 +43,23 @@ export function versionedFilter(
     : { _id: id };
 }
 
+/**
+ * The other half of the check: the update must MOVE the version.
+ *
+ * Mongoose only touches `__v` on `save()`, and only when an array changed.
+ * A `findOneAndUpdate` — which is every edit route here — leaves it exactly
+ * where it was, so a record saved a hundred times was still on version 0,
+ * and a form that had loaded version 0 an hour earlier matched it every
+ * time. The guard passed its own review and never once refused a save.
+ *
+ * Spread into the update beside the fields. Mongoose wraps the plain fields
+ * in `$set` itself, so an operator can sit next to them (the contacts route
+ * already puts `$addToSet` there).
+ */
+export function bumpVersion(): { $inc: { __v: 1 } } {
+  return { $inc: { __v: 1 } };
+}
+
 /** True when a versioned update matched nothing but the document is still there. */
 export function isStaleWrite(matched: unknown, exists: unknown): boolean {
   return !matched && Boolean(exists);

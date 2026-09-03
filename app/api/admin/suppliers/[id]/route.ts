@@ -15,6 +15,7 @@ import {
   isStaleWrite,
   staleWriteResponse,
   versionedFilter,
+  bumpVersion,
 } from "@/lib/admin/concurrency";
 
 export const runtime = "nodejs";
@@ -67,7 +68,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     */
     const updated = await Supplier.findOneAndUpdate(
       versionedFilter(id, (parsed.data as { version?: unknown }).version),
-      { ...parsed.data, updatedBy: await currentEditor() },
+      { ...parsed.data, updatedBy: await currentEditor(), ...bumpVersion() },
       { returnDocument: "after", runValidators: true },
     );
     if (!updated) {
