@@ -74,6 +74,11 @@ const LEAD_FILTERS = [
 const CUSTOMER_FILTERS = [
   { value: "", label: "All" },
   { value: "due", label: "Due" },
+  // Derived from the last order, never stored — see deriveStatus().
+  { value: "active", label: "Active" },
+  { value: "at_risk", label: "At risk" },
+  { value: "dormant", label: "Dormant" },
+  { value: "prospect", label: "Prospect" },
 ];
 
 function initialOf(row: ContactRow) {

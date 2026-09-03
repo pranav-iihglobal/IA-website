@@ -57,6 +57,13 @@ interface NavItem extends NavTarget {
 interface NavGroup {
   id: string;
   label: string;
+  /**
+   * The group's overview page, when it has one. The heading becomes a link
+   * to it; the chevron beside it still folds the group. Module links keep
+   * going straight to their lists — an overview is a place to go, not a hop
+   * in front of the list.
+   */
+  href?: string;
   items: NavItem[];
 }
 
@@ -119,6 +126,7 @@ const NAV: (NavItem | NavGroup)[] = [
   {
     id: "customers",
     label: "Customers",
+    href: "/admin/crm",
     items: [
       {
         href: "/admin/customers",
@@ -540,35 +548,67 @@ export function AdminNav({ user }: { user: AdminUser }) {
 
         return (
           <li key={entry.id} className="pt-1.5 first:pt-0">
-            <button
-              type="button"
-              onClick={() => toggleGroup(entry.id)}
-              aria-expanded={isOpen}
-              aria-controls={`nav-group-${entry.id}`}
-              className="admin-nav-group flex w-full items-center gap-1.5 rounded-lg px-3 py-1 text-left text-[10px] font-bold uppercase tracking-[0.14em] text-cornsilk/95 transition-colors hover:text-cornsilk-light"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className={`h-3 w-3 shrink-0 transition-transform duration-200 ${
-                  isOpen ? "" : "-rotate-90"
-                }`}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={3}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+            <div className="flex items-center">
+              <button
+                type="button"
+                onClick={() => toggleGroup(entry.id)}
+                aria-expanded={isOpen}
+                aria-controls={`nav-group-${entry.id}`}
+                aria-label={`${isOpen ? "Fold" : "Unfold"} ${entry.label}`}
+                /* admin-tap-square: an icon-only fold measured 36×20px, the
+                   one control in the sidebar under the flat 44px rule. */
+                className="admin-nav-group admin-tap-square flex shrink-0 items-center justify-center rounded-lg text-cornsilk/95 transition-colors hover:text-cornsilk-light"
               >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-              <span className="truncate">{entry.label}</span>
-              {!isOpen && foldedBeta && (
-                <BetaStar note={foldedBeta} className="ml-1 text-[11px] text-cornsilk" />
+                <svg
+                  viewBox="0 0 24 24"
+                  className={`h-3 w-3 shrink-0 transition-transform duration-200 ${
+                    isOpen ? "" : "-rotate-90"
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+              {/* The heading itself: a link to the overview where there is one. */}
+              {entry.href ? (
+                <Link
+                  href={entry.href}
+                  aria-current={pathname === entry.href ? "page" : undefined}
+                  className={`admin-nav-group admin-tap -ml-2 flex min-w-0 flex-1 items-center gap-1.5 rounded-lg pr-3 text-left text-[10px] font-bold uppercase tracking-[0.14em] transition-colors hover:text-cornsilk-light ${
+                    pathname === entry.href ? "text-cornsilk-light underline" : "text-cornsilk/95"
+                  }`}
+                >
+                  <span className="truncate">{entry.label}</span>
+                  {!isOpen && foldedBeta && (
+                    <BetaStar note={foldedBeta} className="ml-1 text-[11px] text-cornsilk" />
+                  )}
+                  {hasActive && !isOpen && (
+                    <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-alloy-light" />
+                  )}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(entry.id)}
+                  aria-expanded={isOpen}
+                  aria-controls={`nav-group-${entry.id}`}
+                  className="admin-nav-group admin-tap -ml-2 flex min-w-0 flex-1 items-center gap-1.5 rounded-lg pr-3 text-left text-[10px] font-bold uppercase tracking-[0.14em] text-cornsilk/95 transition-colors hover:text-cornsilk-light"
+                >
+                  <span className="truncate">{entry.label}</span>
+                  {!isOpen && foldedBeta && (
+                    <BetaStar note={foldedBeta} className="ml-1 text-[11px] text-cornsilk" />
+                  )}
+                  {hasActive && !isOpen && (
+                    <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-alloy-light" />
+                  )}
+                </button>
               )}
-              {hasActive && !isOpen && (
-                <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-alloy-light" />
-              )}
-            </button>
+            </div>
 
             {isOpen && (
               <ul

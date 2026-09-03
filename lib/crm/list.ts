@@ -41,6 +41,7 @@ export interface ContactList {
  */
 export const CONTACT_SORT_SPECS: Record<string, Record<string, 1 | -1>> = {
   "": { updatedAt: -1, _id: 1 },
+  newest: { createdAt: -1, _id: 1 },
   name: { name: 1, _id: 1 },
   "last-order": { "customer.lastOrderAt": -1, updatedAt: -1, _id: 1 },
   district: { district: 1, name: 1, _id: 1 },

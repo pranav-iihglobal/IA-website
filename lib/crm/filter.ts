@@ -1,5 +1,6 @@
 import type { LeanDoc } from "@/lib/db/lean";
 import { searchRegex } from "@/lib/search";
+import { statusFilter } from "./shape";
 
 /**
  * The Mongo filter behind every CRM list, built from the query string.
@@ -57,6 +58,11 @@ export function buildFilter(params: URLSearchParams): LeanDoc {
   if (params.get("due") === "1") {
     filter.followUpAt = { $ne: null, $lte: new Date() };
   }
+
+  // Active · at-risk · dormant · prospect, the same cut-offs deriveStatus()
+  // uses to label a row, so the filter and the pill agree.
+  const status = params.get("status");
+  if (status) Object.assign(filter, statusFilter(status) ?? {});
 
   const search = (params.get("search") ?? "").trim();
   if (search) {

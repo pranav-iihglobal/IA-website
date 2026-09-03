@@ -55,6 +55,45 @@ export function deriveStatus(lastOrderAt: Date | string | null | undefined): Con
   return "active";
 }
 
+export const CONTACT_STATUSES: ContactStatus[] = ["active", "at_risk", "dormant", "prospect"];
+
+/**
+ * The instants that separate the four states, for a QUERY.
+ *
+ * deriveStatus() reads a stored date and answers for one contact; a list
+ * filter and the overview need the same rule as a Mongo match on
+ * `customer.lastOrderAt`. One set of cut-offs, derived from the same two
+ * constants, so "12 at-risk customers" on the overview and the twelve rows
+ * behind its link cannot disagree.
+ */
+export function statusCutoffs(now: Date = new Date()): { atRisk: Date; dormant: Date } {
+  return {
+    atRisk: new Date(now.getTime() - AT_RISK_AFTER_DAYS * 86_400_000),
+    dormant: new Date(now.getTime() - DORMANT_AFTER_DAYS * 86_400_000),
+  };
+}
+
+/** The `customer.lastOrderAt` condition that means this status, or null for an unknown one. */
+export function statusFilter(
+  status: string,
+  now: Date = new Date(),
+): Record<string, unknown> | null {
+  const { atRisk, dormant } = statusCutoffs(now);
+  switch (status) {
+    case "active":
+      return { "customer.lastOrderAt": { $gt: atRisk } };
+    case "at_risk":
+      return { "customer.lastOrderAt": { $gt: dormant, $lte: atRisk } };
+    case "dormant":
+      return { "customer.lastOrderAt": { $ne: null, $lte: dormant } };
+    case "prospect":
+      // Missing and null alike — a customer who has never ordered.
+      return { "customer.lastOrderAt": null };
+    default:
+      return null;
+  }
+}
+
 /** Whole days since a date, or null. For "last ordered 29 days ago". */
 export function daysSince(value: Date | string | null | undefined): number | null {
   if (!value) return null;

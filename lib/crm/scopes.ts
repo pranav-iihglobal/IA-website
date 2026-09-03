@@ -10,6 +10,8 @@
 
 export type Scope = "customers" | "dealers" | "leads";
 
+const CUSTOMER_STATUS_FILTERS = new Set(["active", "at_risk", "dormant", "prospect"]);
+
 export const SCOPE_QUERY: Record<Scope, Record<string, string>> = {
   customers: { kind: "customer", channel: "b2c" },
   dealers: { kind: "customer", channel: "b2b" },
@@ -45,6 +47,8 @@ export function contactListQuery(
   if (sort) query.set("sort", sort);
   // "due" is a date comparison, not a stored status — hence its own flag.
   if (filter === "due") query.set("due", "1");
+  // A customer's standing, derived from the last order date — see shape.ts.
+  else if (CUSTOMER_STATUS_FILTERS.has(filter)) query.set("status", filter);
   else if (filter) query.set("followUpStatus", filter);
   return query;
 }

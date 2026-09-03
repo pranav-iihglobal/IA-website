@@ -25,6 +25,7 @@ export interface SortOption {
 
 export const CONTACT_SORTS: SortOption[] = [
   { value: "", label: "Recently updated" },
+  { value: "newest", label: "Newest first" },
   { value: "name", label: "Name A–Z" },
   // Newest last order first; contacts who never ordered sort to the end.
   { value: "last-order", label: "Last order" },
