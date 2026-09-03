@@ -48,6 +48,32 @@ const partySchema = new Schema(
   { _id: false },
 );
 
+/**
+ * Who SOLD it, as it read on the day — the other half of the party rule.
+ *
+ * IKSARVA's GSTIN and bank details live in Settings and can be changed by an
+ * owner. A bank account changed in October must not appear on a September
+ * invoice reprinted in November, so the print page reads THIS copy and never
+ * the setting. Null on an invoice issued before the copy existed; those were
+ * printed from the constant in lib/content.ts, which is what they still say
+ * (see sellerFrom() in lib/erp/seller.ts).
+ */
+const sellerSchema = new Schema(
+  {
+    gstin: { type: String, default: "", trim: true, uppercase: true },
+    pan: { type: String, default: "", trim: true, uppercase: true },
+    stateCode: { type: String, default: "", trim: true },
+    bank: {
+      accountName: { type: String, default: "", trim: true },
+      name: { type: String, default: "", trim: true },
+      accountNo: { type: String, default: "", trim: true },
+      ifsc: { type: String, default: "", trim: true, uppercase: true },
+      upi: { type: String, default: "", trim: true, lowercase: true },
+    },
+  },
+  { _id: false },
+);
+
 const lineSchema = new Schema(
   {
     /** Reporting only. Never read for a price, a rate or an HSN code. */
@@ -145,6 +171,8 @@ const invoiceSchema = new Schema(
 
     contactId: { type: Schema.Types.ObjectId, ref: "Contact", default: null },
     party: { type: partySchema, required: true },
+    /** Frozen with the rest: a seller change after issue is a different document. */
+    seller: { type: sellerSchema, default: null },
 
     /**
      * A STATE CODE — 24 for Gujarat — not a PIN.

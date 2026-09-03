@@ -26,6 +26,7 @@ export const AUDIT_ENTITIES: { value: string; label: string }[] = [
   { value: "Post", label: "Blog posts" },
   { value: "Testimonial", label: "Testimonials" },
   { value: "User", label: "People" },
+  { value: "Settings", label: "Settings" },
 ];
 
 export const AUDIT_ACTIONS: { value: string; label: string }[] = [

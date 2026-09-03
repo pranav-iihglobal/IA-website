@@ -10,7 +10,7 @@ import {
 import { formatRate } from "@/lib/erp/tax";
 import { formatINR, formatRupees } from "@/lib/money";
 import { istParts } from "@/lib/time";
-import { SELLER } from "@/lib/content";
+import { getSeller } from "@/lib/admin/settings";
 import { MonthPicker } from "@/components/admin/MonthPicker";
 
 export const metadata = { title: "GST filing" };
@@ -42,9 +42,10 @@ export default async function GstPage({
   const year = Number(sp.year) || today.year;
   const month = Number(sp.month) || today.month;
 
-  const [invoices, sampleCount] = await Promise.all([
+  const [invoices, sampleCount, seller] = await Promise.all([
     invoicesForPeriod(year, month),
     sampleInvoicesInPeriod(year, month),
+    getSeller(),
   ]);
   const built = buildGstReturn(invoices);
   const hsn = buildHsnSummary(invoices);
@@ -66,7 +67,7 @@ export default async function GstPage({
         <div>
           <h1 className="font-display text-2xl font-bold text-ink-strong">GST return</h1>
           <p className="mt-0.5 text-sm text-ink-muted">
-            GSTR-1 sections for your CA. GSTIN {SELLER.gstin}.
+            GSTR-1 sections for your CA. GSTIN {seller.gstin}.
           </p>
         </div>
         <MonthPicker year={year} month={month} />

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { SELLER, SITE } from "./content";
 import { GUJARAT_STATE_CODE } from "./erp/tax";
+import { deriveSeller } from "./erp/seller";
+import { sellerSchema } from "./schemas";
 
 /**
  * IKSARVA's own tax identity, checked rather than trusted.
@@ -11,31 +13,20 @@ import { GUJARAT_STATE_CODE } from "./erp/tax";
  * legal document rather than a crash.
  */
 
-/**
- * State code (2 digits), PAN (5 letters, 4 digits, 1 letter), entity number,
- * "Z", checksum.
- */
-const GSTIN = /^\d{2}[A-Z]{5}\d{4}[A-Z]\d[Z][A-Z\d]$/;
-const PAN = /^[A-Z]{5}\d{4}[A-Z]$/;
-
 describe("SELLER", () => {
-  it("has a GSTIN of the right shape", () => {
-    // Without one, the print view refuses to call itself a tax invoice.
-    expect(SELLER.gstin).toMatch(GSTIN);
+  it("passes the rules the Settings page enforces, because it is the fallback", () => {
+    // Until the Settings page is saved once, this constant is what every
+    // invoice prints. It must satisfy exactly what a typed value would.
+    const parsed = sellerSchema.safeParse({ gstin: SELLER.gstin, bank: SELLER.bank });
+    expect(parsed.success).toBe(true);
   });
 
-  it("has a PAN of the right shape", () => {
-    expect(SELLER.pan).toMatch(PAN);
-  });
-
-  it("has a GSTIN that embeds the PAN, because it must", () => {
-    // Characters 3–12 of a GSTIN ARE the PAN. If these two were typed from
-    // different documents and disagree, one of them is wrong.
-    expect(SELLER.gstin.slice(2, 12)).toBe(SELLER.pan);
-  });
-
-  it("has a state code that matches the GSTIN", () => {
-    expect(SELLER.gstin.slice(0, 2)).toBe(SELLER.stateCode);
+  it("has a PAN and state code that agree with its GSTIN", () => {
+    // The Settings page derives both from the GSTIN and cannot disagree. The
+    // constant types all three, so the agreement is asserted here instead.
+    const derived = deriveSeller({ gstin: SELLER.gstin, bank: SELLER.bank });
+    expect(derived.pan).toBe(SELLER.pan);
+    expect(derived.stateCode).toBe(SELLER.stateCode);
   });
 
   /**

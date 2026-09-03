@@ -37,6 +37,11 @@ describe("an issued invoice", () => {
     expect(illegalChanges(["party.village"], issued)).toEqual(["party.village"]);
   });
 
+  it("refuses a change to the seller", () => {
+    // A bank account changed in October must not rewrite a September invoice.
+    expect(illegalChanges(["seller.bank.accountNo"], issued)).toEqual(["seller.bank.accountNo"]);
+  });
+
   it("refuses a change to its number", () => {
     expect(illegalChanges(["number"], issued)).toEqual(["number"]);
   });

@@ -5,6 +5,7 @@ import type { TestimonialFormValues } from "@/components/admin/TestimonialForm";
 import type { StockFormValues } from "@/components/admin/StockForm";
 import type { PurchaseFormValues } from "@/components/admin/PurchaseForm";
 import type { SupplierFormValues } from "@/components/admin/SupplierForm";
+import type { SellerFormValues } from "@/components/admin/SellerSettingsForm";
 import type { ContactFormValues } from "@/components/admin/ContactForm";
 
 /**
@@ -150,6 +151,12 @@ export const EMPTY_SUPPLIER: SupplierFormValues = {
   city: "",
   state: "Gujarat",
   notes: "",
+};
+
+/** Only for the coverage test: the Settings page always loads a stored or default seller. */
+export const EMPTY_SELLER: SellerFormValues = {
+  gstin: "",
+  bank: { accountName: "", name: "", accountNo: "", ifsc: "", upi: "" },
 };
 
 export function emptyContact(): ContactFormValues {

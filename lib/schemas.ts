@@ -2,6 +2,7 @@ import { z } from "zod";
 import { LEVELS, ROLES, type ModuleKey } from "@/lib/auth/permissions";
 import { rupeesToPaise } from "@/lib/money";
 import { parseIstDateTimeInput } from "@/lib/time";
+import { GUJARAT_STATE_CODE } from "@/lib/erp/tax";
 
 /**
  * Shared zod schemas — the single source of truth for validation on BOTH the
@@ -799,6 +800,68 @@ const supplierRef = z
   .trim()
   .refine((v) => v === "" || /^[a-f\d]{24}$/i.test(v), "Pick a supplier from the list")
   .default("");
+
+/**
+ * IKSARVA's own tax identity and bank details — the Settings page.
+ *
+ * The GSTIN is required: a tax invoice without the seller's GSTIN is not a
+ * tax invoice. It must also be registered in the state the tax engine treats
+ * as home, because supplyTypeFor() decides CGST+SGST versus IGST against
+ * GUJARAT_STATE_CODE; a GSTIN from another state would make every invoice
+ * charge the wrong KIND of tax, and both answers would look well-formed. A
+ * move of registration is a code change, deliberately, not a form field.
+ *
+ * PAN and state code are not here at all — they are read off the GSTIN by
+ * deriveSeller() in lib/erp/seller.ts. lib/content.test.ts used to assert
+ * the three agreed; a rule that cannot be broken beats one that is checked.
+ *
+ * The bank block is all or nothing. A half-filled block prints an account
+ * number with no IFSC, which is worse than printing nothing: it looks
+ * payable and is not.
+ */
+const BANK_REQUIRED = ["accountName", "name", "accountNo", "ifsc"] as const;
+
+export const sellerBankSchema = z
+  .object({
+    accountName: z.string().trim().default(""),
+    name: z.string().trim().default(""),
+    accountNo: z.string().trim().default(""),
+    ifsc: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .refine((v) => v === "" || /^[A-Z]{4}0[A-Z\d]{6}$/.test(v), "That is not a valid IFSC")
+      .default(""),
+    upi: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .refine((v) => v === "" || /^[\w.\-]{3,}@[a-z]{3,}$/.test(v), "That is not a UPI id")
+      .default(""),
+  })
+  .superRefine((bank, ctx) => {
+    const filled = BANK_REQUIRED.filter((key) => bank[key] !== "");
+    if (filled.length === 0 || filled.length === BANK_REQUIRED.length) return;
+    for (const key of BANK_REQUIRED) {
+      if (bank[key] !== "") continue;
+      ctx.addIssue({
+        code: "custom",
+        path: [key],
+        message: "Fill in all four bank details, or leave all four blank",
+      });
+    }
+  });
+
+export const sellerSchema = z.object({
+  version: versionField,
+  gstin: gstinSchema
+    .refine((v) => v !== "", "A tax invoice needs the seller's GSTIN")
+    .refine(
+      (v) => v === "" || v.startsWith(GUJARAT_STATE_CODE),
+      `Must be a Gujarat (${GUJARAT_STATE_CODE}) registration — the tax engine treats Gujarat as home`,
+    ),
+  bank: sellerBankSchema,
+});
 
 export const supplierSchema = z.object({
   version: versionField,

@@ -4,6 +4,7 @@ import { Invoice, type InvoiceDoc } from "@/lib/db/models/Invoice";
 import { Product } from "@/lib/db/models/Product";
 import { Contact } from "@/lib/db/models/Contact";
 import { recordAudit } from "@/lib/db/models/AuditLog";
+import { getSeller } from "@/lib/admin/settings";
 import type { LeanDoc } from "@/lib/db/lean";
 import { allocateCreditNoteNumber, allocateInvoiceNumber } from "./invoice-number";
 import {
@@ -154,6 +155,13 @@ export async function issueInvoice(
   if (!contact) throw new InvoiceError("That customer no longer exists.");
 
   const snapshotted = await snapshotLines(request.lines);
+  /*
+    Who is selling, copied like the party. The setting can change; this
+    document must not. sellerSchema guarantees the GSTIN is a Gujarat
+    registration, which is what lets the tax engine keep GUJARAT_STATE_CODE
+    as home below.
+  */
+  const seller = await getSeller();
   const placeOfSupply = request.placeOfSupplyStateCode || GUJARAT_STATE_CODE;
   const supplyType = supplyTypeFor(GUJARAT_STATE_CODE, placeOfSupply);
   const computed = computeInvoice(
@@ -170,6 +178,7 @@ export async function issueInvoice(
     status: "issued",
     issuedAt,
     contactId: contact._id,
+    seller,
     party: {
       name: contact.name ?? "",
       businessName: contact.businessName ?? "",
@@ -469,6 +478,9 @@ export async function issueCreditNote(
     contactId: original.contactId,
     // The party as it was on the original, not as the contact reads today.
     party: original.party,
+    // And the seller as it was — an original issued before the snapshot
+    // existed takes today's, which is what it was printed from anyway.
+    seller: original.seller ?? (await getSeller()),
     placeOfSupplyStateCode: original.placeOfSupplyStateCode,
     supplyType: original.supplyType,
     lines: computed.lines.map((line, i) => ({

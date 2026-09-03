@@ -60,6 +60,8 @@ export function recordHref(entity: string, entityId: string): string | null {
       return `/admin/testimonials/${entityId}`;
     case "User":
       return "/admin/users";
+    case "Settings":
+      return "/admin/settings";
     default:
       return null;
   }

@@ -11,6 +11,7 @@ describe("recordHref", () => {
     expect(recordHref("Product", "abc")).toBe("/admin/products/abc");
     expect(recordHref("Post", "abc")).toBe("/admin/blog/abc");
     expect(recordHref("Testimonial", "abc")).toBe("/admin/testimonials/abc");
+    expect(recordHref("Settings", "seller")).toBe("/admin/settings");
   });
 
   it("returns null rather than a guessed path", () => {

@@ -4,6 +4,7 @@ import {
   postSchema,
   productSchema,
   purchaseSchema,
+  sellerSchema,
   stockItemSchema,
   supplierSchema,
   testimonialSchema,
@@ -12,6 +13,7 @@ import {
   EMPTY_POST,
   EMPTY_PRODUCT,
   EMPTY_PURCHASE,
+  EMPTY_SELLER,
   EMPTY_STOCK,
   EMPTY_SUPPLIER,
   EMPTY_TESTIMONIAL,
@@ -105,6 +107,12 @@ const PAIRS: {
     empty: EMPTY_SUPPLIER as unknown as Record<string, unknown>,
   },
   {
+    name: "sellerSchema ↔ SellerSettingsForm",
+    schema: sellerSchema,
+    empty: EMPTY_SELLER as unknown as Record<string, unknown>,
+    groups: ["bank"],
+  },
+  {
     name: "testimonialSchema ↔ TestimonialForm",
     schema: testimonialSchema,
     empty: EMPTY_TESTIMONIAL as unknown as Record<string, unknown>,
@@ -127,7 +135,8 @@ describe.each(PAIRS)("$name", ({ schema, empty, groups = [] }) => {
   it("the schema shape can be read", () => {
     // Without this every check below would pass on an empty key list.
     expect(shape).not.toBeNull();
-    expect(Object.keys(shape!).length).toBeGreaterThan(3);
+    // The seller schema is the smallest: version, gstin, bank.
+    expect(Object.keys(shape!).length).toBeGreaterThanOrEqual(3);
   });
 
   it("the form carries every top-level field", () => {

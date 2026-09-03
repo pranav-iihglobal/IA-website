@@ -223,6 +223,16 @@ const NAV: (NavItem | NavGroup)[] = [
     label: "Settings",
     items: [
       {
+        href: "/admin/settings",
+        // The seller's GSTIN and bank details. Owners only, like Team: it is
+        // what every legal document the company issues says about the company.
+        label: "Business",
+        needs: "users:manage",
+        icon: (
+          <Icon path="M4 21V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v15M4 21h16M8 8h3M8 12h3M8 16h3M15 11h3a2 2 0 0 1 2 2v8" />
+        ),
+      },
+      {
         href: "/admin/activity",
         label: "Activity",
         needs: "users:read",

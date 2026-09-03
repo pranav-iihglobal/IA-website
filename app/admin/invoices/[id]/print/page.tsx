@@ -4,7 +4,8 @@ import { isValidObjectId } from "mongoose";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Invoice } from "@/lib/db/models/Invoice";
 import { requirePageAccess } from "@/lib/admin/page-guard";
-import { SELLER, SITE } from "@/lib/content";
+import { SITE } from "@/lib/content";
+import { sellerFrom } from "@/lib/erp/seller";
 import { formatINR } from "@/lib/money";
 import { formatRate } from "@/lib/erp/tax";
 import { formatIstDateLong } from "@/lib/time";
@@ -49,6 +50,8 @@ export default async function InvoicePrintPage({
 
   const intra = doc.supplyType === "intra";
   const isCredit = doc.documentType === "credit_note";
+  // The invoice's own copy of who sold it — never the current setting.
+  const seller = sellerFrom(doc.seller);
   const rateRows = summariseByRate(doc.lines ?? []);
 
   /* Displayed magnitude. The stored sign is what the sums rely on. */
@@ -97,11 +100,10 @@ export default async function InvoicePrintPage({
         </div>
       </div>
 
-      {!SELLER.gstin && (
+      {!seller.gstin && (
         <p className="mb-4 border-2 border-red-600 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
           This is NOT a valid tax invoice: IKSARVA&rsquo;s own GSTIN is missing.
-          Set <code>SELLER.gstin</code> in lib/content.ts before issuing this to
-          a customer.
+          Set it on the Settings page before issuing this to a customer.
         </p>
       )}
 
@@ -122,8 +124,8 @@ export default async function InvoicePrintPage({
             {SITE.phoneDisplay} · {SITE.email}
           </p>
           <p className="mt-1 text-[12px] font-semibold">
-            GSTIN: {SELLER.gstin || "— not set —"}
-            {SELLER.pan ? ` · PAN: ${SELLER.pan}` : ""}
+            GSTIN: {seller.gstin || "— not set —"}
+            {seller.pan ? ` · PAN: ${seller.pan}` : ""}
           </p>
         </div>
         <div className="text-right">
@@ -332,14 +334,14 @@ export default async function InvoicePrintPage({
         printed invoice without having to ring anyone for the account number.
       */}
       {/* Not printed on a credit note: the money moves the other way. */}
-      {!isCredit && SELLER.bank.accountNo && (
+      {!isCredit && seller.bank.accountNo && (
         <div className="mt-3 border-t border-black/30 pt-2 text-[11px] leading-relaxed">
           <p className="font-semibold">Payment</p>
           <p>
-            {SELLER.bank.accountName} · {SELLER.bank.name} · A/c{" "}
-            {SELLER.bank.accountNo} · IFSC {SELLER.bank.ifsc}
+            {seller.bank.accountName} · {seller.bank.name} · A/c{" "}
+            {seller.bank.accountNo} · IFSC {seller.bank.ifsc}
           </p>
-          {SELLER.bank.upi && <p>UPI: {SELLER.bank.upi}</p>}
+          {seller.bank.upi && <p>UPI: {seller.bank.upi}</p>}
         </div>
       )}
 
