@@ -105,7 +105,7 @@ function toStockRow(d: LeanDoc): StockRowShape {
 }
 
 /** The same rule as needsReorder(): tracked, and at or below the level. */
-const LOW_FILTER: LeanDoc = {
+export const LOW_FILTER: LeanDoc = {
   reorderLevel: { $gt: 0 },
   $expr: { $lte: [{ $ifNull: ["$onHand", 0] }, "$reorderLevel"] },
 };

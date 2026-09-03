@@ -5,9 +5,11 @@ import { Product } from "@/lib/db/models/Product";
 import { Testimonial } from "@/lib/db/models/Testimonial";
 import { Post } from "@/lib/db/models/Post";
 import { currentActiveUser } from "@/lib/auth/current-user";
-import { can } from "@/lib/auth/permissions";
+import { can, type Access } from "@/lib/auth/permissions";
 import { dashboardFigures } from "@/lib/erp/reports";
 import { BusinessTiles } from "@/components/admin/BusinessTiles";
+import { TodayPanel } from "@/components/admin/TodayPanel";
+import { todayPanel } from "@/lib/admin/today";
 
 export const metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
@@ -233,6 +235,22 @@ async function Tiles({
   );
 }
 
+/** Three short cards, the panel's usual shape, so nothing shifts when it lands. */
+function TodaySkeleton() {
+  return (
+    <div className="space-y-3" aria-hidden="true">
+      <div className="admin-skeleton h-3 w-12 rounded" />
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="admin-card p-3">
+          <div className="admin-skeleton h-4 w-32 rounded" />
+          <div className="admin-skeleton mt-2 h-3 w-full rounded" />
+          <div className="admin-skeleton mt-1.5 h-3 w-3/4 rounded" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Same geometry as the tiles, so nothing shifts when the counts land. */
 function TilesSkeleton() {
   return (
@@ -275,6 +293,21 @@ async function BusinessSection() {
     );
   }
   return <BusinessTiles figures={figures} />;
+}
+
+/**
+ * "What needs doing today", in its own Suspense boundary so a slow query
+ * cannot hold up the rest, and so a failure degrades to a missing panel.
+ */
+async function TodaySection({ access }: { access: Access }) {
+  let data;
+  try {
+    data = await todayPanel(access);
+  } catch (error) {
+    console.error("[dashboard] could not read the Today panel", error);
+    return null;
+  }
+  return <TodayPanel data={data} />;
 }
 
 export default async function AdminDashboardPage() {
@@ -327,27 +360,39 @@ export default async function AdminDashboardPage() {
       </header>
 
       {/*
-        The business first, the content second. A director opens this to see
-        what the month looks like and who owes money, not to count blog posts
-        — and the ERP figures are gated on billing:read, so someone without it
-        simply does not see them.
+        Today FIRST on a phone, beside the figures on desktop — the same
+        right column the invoice page uses. See lib/admin/today.ts for why a
+        panel here and not a rail on every screen.
+
+        Then the business, then the content. A director opens this to see
+        what to do, what the month looks like and who owes money, not to
+        count blog posts — and the ERP figures are gated on billing:read, so
+        someone without it simply does not see them.
       */}
-      {can(me, "billing:read") && (
-        <div className="mt-8">
-          <Suspense fallback={<TilesSkeleton />}>
-            <BusinessSection />
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
+        <div className="order-first min-w-0 lg:order-none lg:col-start-2 lg:row-span-2">
+          <Suspense fallback={<TodaySkeleton />}>
+            <TodaySection access={me ? { role: me.role, modules: me.modules } : { role: "viewer", modules: {} }} />
           </Suspense>
         </div>
-      )}
 
-      <div className="mt-8">
-        <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-ink-faint">
-          Content
-        </h2>
-        {/* Everything above this streams before the database is asked. */}
-        <Suspense fallback={<TilesSkeleton />}>
-          <Tiles show={show} />
-        </Suspense>
+        <div className="min-w-0 space-y-8 lg:col-start-1 lg:row-start-1">
+          {can(me, "billing:read") && (
+            <Suspense fallback={<TilesSkeleton />}>
+              <BusinessSection />
+            </Suspense>
+          )}
+
+          <div>
+            <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-ink-faint">
+              Content
+            </h2>
+            {/* Everything above this streams before the database is asked. */}
+            <Suspense fallback={<TilesSkeleton />}>
+              <Tiles show={show} />
+            </Suspense>
+          </div>
+        </div>
       </div>
     </>
   );
