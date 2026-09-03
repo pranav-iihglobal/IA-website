@@ -1248,6 +1248,57 @@ export function FilterTabs({
  * you had just tapped to reach. The heading steps down on small screens and
  * the gap below it tightens; from sm up it is exactly what it was.
  */
+/**
+ * The top of every record page: back link, title, pills, meta, actions.
+ *
+ * Contact, invoice, supplier, stock and purchase each laid this out by hand
+ * and each drifted a little — a different gap here, a subtitle there. One
+ * component, so a fix to the tap target on the back link lands on all five.
+ * The slots are deliberately loose: `pills` is the small row of StatusPills
+ * and faint text, `meta` is one sentence under it, `actions` the buttons.
+ */
+export function RecordHeader({
+  backHref,
+  backLabel,
+  title,
+  subtitle,
+  pills,
+  meta,
+  actions,
+}: {
+  backHref: string;
+  backLabel: string;
+  title: ReactNode;
+  /** A line or two under the title — a person's own name under their business. */
+  subtitle?: ReactNode;
+  /** StatusPills and faint text, laid out as one wrapping row. */
+  pills?: ReactNode;
+  /** One sentence under the pills: what a credit note reverses, a bill's description. */
+  meta?: ReactNode;
+  actions?: ReactNode;
+}) {
+  return (
+    <>
+      <Link
+        href={backHref}
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-muted hover:text-ink"
+      >
+        ← {backLabel}
+      </Link>
+
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="font-display text-2xl font-bold text-ink-strong">{title}</h1>
+          {subtitle && <div className="text-sm text-ink-muted">{subtitle}</div>}
+          {pills && <p className="mt-2 flex flex-wrap items-center gap-2 text-xs">{pills}</p>}
+          {meta && <p className="mt-1.5 text-sm text-ink-muted">{meta}</p>}
+        </div>
+        {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      </header>
+    </>
+  );
+}
+
 export function FormPageHeader({
   backHref,
   backLabel,

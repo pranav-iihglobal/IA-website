@@ -6,7 +6,7 @@ import { can } from "@/lib/auth/permissions";
 import { getInvoiceDetail } from "@/lib/erp/invoice-detail";
 import { recordHistory } from "@/lib/admin/history";
 import { RecordHistory } from "@/components/admin/RecordHistory";
-import { StatusPill } from "@/components/admin/ui";
+import { RecordHeader, StatusPill } from "@/components/admin/ui";
 import { formatINR, formatRupees } from "@/lib/money";
 import { formatRate } from "@/lib/erp/tax";
 import { formatIstDateLong } from "@/lib/time";
@@ -75,19 +75,12 @@ export default async function InvoiceDetailPage({
 
   return (
     <div className="space-y-5">
-      <Link
-        href="/admin/invoices"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-muted hover:text-ink"
-      >
-        ← Invoices
-      </Link>
-
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold text-ink-strong">
-            {invoice.number || "(no number)"}
-          </h1>
-          <p className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+      <RecordHeader
+        backHref="/admin/invoices"
+        backLabel="Invoices"
+        title={invoice.number || "(no number)"}
+        pills={
+          <>
             <StatusPill status={isCredit ? "credit note" : invoice.status} />
             {!isCredit && <StatusPill status={invoice.payment.status} />}
             {invoice.isHistorical && <StatusPill status="filed" />}
@@ -100,9 +93,11 @@ export default async function InvoiceDetailPage({
             {invoice.financialYear && (
               <span className="text-ink-faint">FY {invoice.financialYear}</span>
             )}
-          </p>
-          {isCredit && invoice.againstNumber && (
-            <p className="mt-1.5 text-sm text-ink-muted">
+          </>
+        }
+        meta={
+          isCredit && invoice.againstNumber ? (
+            <>
               Reverses{" "}
               {invoice.againstInvoiceId ? (
                 <Link
@@ -114,48 +109,49 @@ export default async function InvoiceDetailPage({
               ) : (
                 <span className="font-semibold text-ink">{invoice.againstNumber}</span>
               )}
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/admin/invoices/${invoice.id}/print`}
-            className="admin-btn admin-btn-primary admin-tap"
-          >
-            Print
-          </Link>
-          {canWrite && live && (
+            </>
+          ) : undefined
+        }
+        actions={
+          <>
             <Link
-              href={`/admin/invoices/${invoice.id}/payment`}
-              className="admin-btn admin-tap border border-line bg-raised/70 text-ink hover:border-olive"
+              href={`/admin/invoices/${invoice.id}/print`}
+              className="admin-btn admin-btn-primary admin-tap"
             >
-              Payment
+              Print
             </Link>
-          )}
-          {/*
-            Offered only while there is something left to credit. A fully
-            credited invoice used to still show the button, and the form
-            behind it opened with every line at zero.
-          */}
-          {canWrite && live && invoice.creditable && (
-            <Link
-              href={`/admin/invoices/${invoice.id}/credit-note`}
-              className="admin-btn admin-tap border border-line bg-raised/70 text-ink hover:border-olive"
-            >
-              Credit note
-            </Link>
-          )}
-          {canCancel && open && (
-            <Link
-              href={`/admin/invoices/${invoice.id}/cancel`}
-              className="admin-btn admin-tap text-ink-soft hover:bg-danger/12 hover:text-danger"
-            >
-              Cancel
-            </Link>
-          )}
-        </div>
-      </header>
+            {canWrite && live && (
+              <Link
+                href={`/admin/invoices/${invoice.id}/payment`}
+                className="admin-btn admin-tap border border-line bg-raised/70 text-ink hover:border-olive"
+              >
+                Payment
+              </Link>
+            )}
+            {/*
+              Offered only while there is something left to credit. A fully
+              credited invoice used to still show the button, and the form
+              behind it opened with every line at zero.
+            */}
+            {canWrite && live && invoice.creditable && (
+              <Link
+                href={`/admin/invoices/${invoice.id}/credit-note`}
+                className="admin-btn admin-tap border border-line bg-raised/70 text-ink hover:border-olive"
+              >
+                Credit note
+              </Link>
+            )}
+            {canCancel && open && (
+              <Link
+                href={`/admin/invoices/${invoice.id}/cancel`}
+                className="admin-btn admin-tap text-ink-soft hover:bg-danger/12 hover:text-danger"
+              >
+                Cancel
+              </Link>
+            )}
+          </>
+        }
+      />
 
       {invoice.status === "cancelled" && (
         <p className="admin-card border-danger/40 px-4 py-3 text-sm font-semibold text-danger">

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { StatusPill } from "./ui";
+import { RecordHeader, StatusPill } from "./ui";
 import type { SampledProduct } from "@/lib/crm/profile";
 import { ContactNotes, type ContactNote } from "./ContactNotes";
 import { ContactTimeline } from "./ContactTimeline";
@@ -220,21 +220,22 @@ export function ContactProfile({
 
   return (
     <div className="space-y-5">
-      <Link
-        href={backHref}
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-muted hover:text-ink"
-      >
-        ← {backLabel}
-      </Link>
-
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold text-ink-strong">{title}</h1>
-          {contact.businessName && contact.name !== contact.businessName && (
-            <p className="text-sm text-ink-muted">{contact.name}</p>
-          )}
-          {contact.nameGu && <p className="text-sm text-ink-muted">{contact.nameGu}</p>}
-          <p className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+      <RecordHeader
+        backHref={backHref}
+        backLabel={backLabel}
+        title={title}
+        subtitle={
+          (contact.businessName && contact.name !== contact.businessName) || contact.nameGu ? (
+            <>
+              {contact.businessName && contact.name !== contact.businessName && (
+                <p>{contact.name}</p>
+              )}
+              {contact.nameGu && <p>{contact.nameGu}</p>}
+            </>
+          ) : undefined
+        }
+        pills={
+          <>
             {isLead ? (
               <StatusPill status="lead" />
             ) : (
@@ -250,32 +251,34 @@ export function ContactProfile({
             )}
             {isDealer && <StatusPill status="dealer" />}
             {contact.isSample && <StatusPill status="sample" />}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {/*
-            Raising an invoice for the person on screen used to mean reading
-            their name, going to Invoices and searching for them again. The
-            party arrives prefilled — see InvoiceWorkspace.
-          */}
-          {canBill && (
-            <Link
-              href={`/admin/invoices/new?party=${contact.id}`}
-              className="admin-btn admin-tap border border-line bg-raised/70 text-ink hover:border-olive hover:bg-surface-muted"
-            >
-              Raise an invoice
-            </Link>
-          )}
-          {canEdit && (
-            <Link
-              href={`/admin/contacts/${contact.id}/edit`}
-              className="admin-btn admin-btn-primary admin-tap"
-            >
-              Edit
-            </Link>
-          )}
-        </div>
-      </header>
+          </>
+        }
+        actions={
+          <>
+            {/*
+              Raising an invoice for the person on screen used to mean reading
+              their name, going to Invoices and searching for them again. The
+              party arrives prefilled — see InvoiceWorkspace.
+            */}
+            {canBill && (
+              <Link
+                href={`/admin/invoices/new?party=${contact.id}`}
+                className="admin-btn admin-tap border border-line bg-raised/70 text-ink hover:border-olive hover:bg-surface-muted"
+              >
+                Raise an invoice
+              </Link>
+            )}
+            {canEdit && (
+              <Link
+                href={`/admin/contacts/${contact.id}/edit`}
+                className="admin-btn admin-btn-primary admin-tap"
+              >
+                Edit
+              </Link>
+            )}
+          </>
+        }
+      />
 
       {/*
         Gated on billing:read, not crm:read. Someone chasing follow-ups has no

@@ -5,7 +5,7 @@ import { requirePageAccess } from "@/lib/admin/page-guard";
 import { can } from "@/lib/auth/permissions";
 import { recordHistory } from "@/lib/admin/history";
 import { RecordHistory } from "@/components/admin/RecordHistory";
-import { StatusPill } from "@/components/admin/ui";
+import { RecordHeader, StatusPill } from "@/components/admin/ui";
 import { connectToDatabase } from "@/lib/db/connect";
 import { StockItem, needsReorder } from "@/lib/db/models/StockItem";
 import { formatINR, formatRupees } from "@/lib/money";
@@ -60,36 +60,31 @@ export default async function StockDetailPage({
 
   return (
     <div className="space-y-5">
-      <Link
-        href="/admin/stock"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-muted hover:text-ink"
-      >
-        ← Stock
-      </Link>
-
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold text-ink-strong">
-            {doc.name}
-          </h1>
-          <p className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+      <RecordHeader
+        backHref="/admin/stock"
+        backLabel="Stock"
+        title={doc.name}
+        pills={
+          <>
             {low && <StatusPill status="unpaid" />}
             {doc.isSample && <StatusPill status="sample" />}
             <span className="text-ink-faint">
               {KIND_LABELS[doc.kind ?? "finished"] ?? doc.kind}
             </span>
             {doc.sku && <span className="text-ink-faint">{doc.sku}</span>}
-          </p>
-        </div>
-        {can(me, "billing:write") && (
-          <Link
-            href={`/admin/stock/${id}/edit`}
-            className="admin-btn admin-btn-primary admin-tap"
-          >
-            Record a count
-          </Link>
-        )}
-      </header>
+          </>
+        }
+        actions={
+          can(me, "billing:write") ? (
+            <Link
+              href={`/admin/stock/${id}/edit`}
+              className="admin-btn admin-btn-primary admin-tap"
+            >
+              Record a count
+            </Link>
+          ) : undefined
+        }
+      />
 
       {low && (
         <p className="admin-card px-4 py-3 text-sm font-semibold text-danger">

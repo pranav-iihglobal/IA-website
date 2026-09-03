@@ -6,7 +6,7 @@ import { can } from "@/lib/auth/permissions";
 import { recordHistory } from "@/lib/admin/history";
 import { getSupplierDetail } from "@/lib/erp/suppliers";
 import { RecordHistory } from "@/components/admin/RecordHistory";
-import { EmptyState, StatusPill } from "@/components/admin/ui";
+import { EmptyState, RecordHeader, StatusPill } from "@/components/admin/ui";
 import { purchaseCategoryLabel } from "@/lib/erp/purchase-categories";
 import { telHref } from "@/lib/crm/contact-links";
 import { formatINR, formatRupees } from "@/lib/money";
@@ -41,17 +41,12 @@ export default async function SupplierDetailPage({
 
   return (
     <div className="space-y-5">
-      <Link
-        href="/admin/suppliers"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-muted hover:text-ink"
-      >
-        ← Suppliers
-      </Link>
-
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold text-ink-strong">{supplier.name}</h1>
-          <p className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+      <RecordHeader
+        backHref="/admin/suppliers"
+        backLabel="Suppliers"
+        title={supplier.name}
+        pills={
+          <>
             {supplier.isSample && <StatusPill status="sample" />}
             {supplier.gstin ? (
               <span className="text-ink-faint">GSTIN {supplier.gstin}</span>
@@ -63,21 +58,23 @@ export default async function SupplierDetailPage({
                 {[supplier.city, supplier.state].filter(Boolean).join(", ")}
               </span>
             )}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {tel && (
-            <a href={tel} className="admin-btn admin-tap border border-line bg-raised/70 text-ink hover:border-olive">
-              Call {supplier.phone}
-            </a>
-          )}
-          {can(me, "billing:write") && (
-            <Link href={`/admin/suppliers/${id}/edit`} className="admin-btn admin-btn-primary admin-tap">
-              Edit
-            </Link>
-          )}
-        </div>
-      </header>
+          </>
+        }
+        actions={
+          <>
+            {tel && (
+              <a href={tel} className="admin-btn admin-tap border border-line bg-raised/70 text-ink hover:border-olive">
+                Call {supplier.phone}
+              </a>
+            )}
+            {can(me, "billing:write") && (
+              <Link href={`/admin/suppliers/${id}/edit`} className="admin-btn admin-btn-primary admin-tap">
+                Edit
+              </Link>
+            )}
+          </>
+        }
+      />
 
       <section className="admin-card p-4">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
