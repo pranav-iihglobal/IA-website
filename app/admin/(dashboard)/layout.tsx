@@ -74,7 +74,8 @@ export default async function DashboardLayout({
           /* -1 so the skip link can move focus here without adding it to the
              tab order for everybody else. */
           tabIndex={-1}
-          className="min-w-0 flex-1 px-4 pb-10 pt-[74px] sm:px-8 lg:py-9"
+          /* pb clears the bottom tab bar (0 from lg, where it is not rendered). */
+          className="min-w-0 flex-1 px-4 pb-[calc(var(--admin-tabbar)+2.5rem)] pt-[74px] sm:px-8 lg:py-9"
         >
           {/* Same 1600px ceiling as the public site — see .container-page. */}
           <div className="mx-auto w-full max-w-[100rem]">

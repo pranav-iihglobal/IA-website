@@ -553,6 +553,14 @@ a:hover > .logo-wiggle {
 @layer components {
 
 .admin-ui {
+  /*
+    The bottom tab bar's height on a phone, safe-area included, and ZERO from
+    lg up where the sidebar takes over. Everything that sits at the bottom of
+    the screen — the page's own padding, a form's sticky save bar, the toast
+    stack — offsets by this one variable, so the bar can never cover a Save
+    button and a height change here is a change everywhere.
+  */
+  --admin-tabbar: calc(3.5rem + env(safe-area-inset-bottom, 0px));
   /* Warm neutral workspace: lighter than the public pages so form surfaces
      read as "paper on a desk" rather than marketing sections. */
   --admin-bg: #f6f4e6;
@@ -990,6 +998,13 @@ select.admin-input {
 .admin-ui .admin-input,
 .admin-ui .admin-tap {
   min-height: 2.75rem;
+}
+/* lg and up: the sidebar is on screen, the tab bar is not. Same breakpoint
+   the bar and the sidebar switch on (Tailwind's lg, 64rem). */
+@media (min-width: 64rem) {
+  .admin-ui {
+    --admin-tabbar: 0px;
+  }
 }
 /* Icon-only controls need the width too, not just the height. */
 .admin-ui .admin-tap-square {

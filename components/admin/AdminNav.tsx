@@ -237,6 +237,30 @@ const NAV: (NavItem | NavGroup)[] = [
 const isGroup = (entry: NavItem | NavGroup): entry is NavGroup =>
   "items" in entry;
 
+/**
+ * The four places the directors go every day, as a bottom bar on the phone.
+ *
+ * Every screen used to start with the hamburger: open the drawer, find the
+ * link, tap it. Today (the dashboard), Leads, Customers and Invoices are
+ * where almost every visit goes, and they are one tap now. "More" opens the
+ * same drawer for everything else. Hrefs, not a second table: the label,
+ * icon, permission and active-matching all come from NAV, so the bar can
+ * never disagree with the sidebar about what a person may see.
+ */
+const TAB_HREFS = ["/admin", "/admin/leads", "/admin/customers", "/admin/invoices"];
+
+function navItemByHref(href: string): NavItem | undefined {
+  for (const entry of NAV) {
+    if (isGroup(entry)) {
+      const hit = entry.items.find((item) => item.href === href);
+      if (hit) return hit;
+    } else if (entry.href === href) {
+      return entry;
+    }
+  }
+  return undefined;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Which groups are folded away — remembered per browser                      */
 /* -------------------------------------------------------------------------- */
@@ -320,6 +344,8 @@ export function AdminNav({ user }: { user: AdminUser }) {
   const [open, setOpen] = useState(false);
   const drawerRef = useRef<HTMLElement>(null);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
+  /** The button that opened the drawer this time, for focus to return to. */
+  const openerRef = useRef<HTMLButtonElement | null>(null);
   const [avatarFailed, setAvatarFailed] = useState(false);
   const collapsed = useSyncExternalStore(
     subscribeCollapsed,
@@ -364,10 +390,26 @@ export function AdminNav({ user }: { user: AdminUser }) {
     if (!open) return;
 
     const drawer = drawerRef.current;
-    const opener = hamburgerRef.current;
-    // The first link, so the drawer announces itself and Tab continues from
-    // there rather than from wherever focus happened to be.
-    drawer?.querySelector<HTMLElement>("a, button")?.focus();
+    // Whichever button opened it — the hamburger or the tab bar's More — is
+    // where focus goes back to on close.
+    const opener = openerRef.current ?? hamburgerRef.current;
+    /*
+      The first link, so the drawer announces itself and Tab continues from
+      there rather than from wherever focus happened to be.
+
+      On the next frame, after a forced style flush, and it ALSO needed the
+      visibility change below to be a step rather than a transition: focus()
+      on an element the browser computes as hidden does nothing, silently,
+      and with `visibility` in the transition list the drawer still read as
+      hidden at the instant it opened. Measured — focus stayed on the button
+      that opened it, from the hamburger as well as from the tab bar, until
+      both of these were in place.
+    */
+    const frame = requestAnimationFrame(() => {
+      if (!drawer) return;
+      void drawer.offsetHeight;
+      drawer.querySelector<HTMLElement>("a, button")?.focus();
+    });
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -397,9 +439,11 @@ export function AdminNav({ user }: { user: AdminUser }) {
 
     document.addEventListener("keydown", onKey);
     return () => {
+      cancelAnimationFrame(frame);
       document.removeEventListener("keydown", onKey);
       // Back where it came from, so closing does not drop focus onto <body>.
       opener?.focus();
+      openerRef.current = null;
     };
   }, [open]);
 
@@ -438,6 +482,16 @@ export function AdminNav({ user }: { user: AdminUser }) {
       const items = entry.items.filter(allowed);
       return items.length > 0 ? [{ ...entry, items }] : [];
     });
+  }, [user.access]);
+
+  // The bar's tabs, in the same permission terms as the sidebar.
+  const tabs = useMemo(() => {
+    const out: NavItem[] = [];
+    for (const href of TAB_HREFS) {
+      const item = navItemByHref(href);
+      if (item && (!item.needs || can(user.access, item.needs))) out.push(item);
+    }
+    return out;
   }, [user.access]);
 
   const NavLink = ({ item, note }: { item: NavItem; note?: string | null }) => {
@@ -577,6 +631,62 @@ export function AdminNav({ user }: { user: AdminUser }) {
       )}
 
       {/*
+        Bottom tab bar — phone only. Under the drawer and its backdrop (z-30)
+        so opening the menu covers it. Height is --admin-tabbar, which the
+        page padding, the form save bar and the toasts all offset by.
+        The dashboard tab reads "Today": it is where the day starts.
+      */}
+      <nav
+        aria-label="Quick navigation"
+        className="fixed inset-x-0 bottom-0 z-20 border-t border-olive-dark bg-olive pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
+      >
+        <ul className="flex h-14 items-stretch">
+          {tabs.map((item) => {
+            const active = itemActive(item, pathname);
+            return (
+              <li key={item.href} className="min-w-0 flex-1">
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`admin-tap flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-semibold ${
+                    active
+                      ? "text-cornsilk-light"
+                      : "text-cornsilk hover:text-cornsilk-light"
+                  }`}
+                >
+                  <span
+                    className={`flex h-7 w-12 items-center justify-center rounded-full ${
+                      active ? "bg-olive-dark/70" : ""
+                    }`}
+                  >
+                    {item.icon}
+                  </span>
+                  <span className="truncate">{item.href === "/admin" ? "Today" : item.label}</span>
+                </Link>
+              </li>
+            );
+          })}
+          <li className="min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                openerRef.current = e.currentTarget;
+                setOpen(true);
+              }}
+              aria-expanded={open}
+              aria-controls="admin-drawer"
+              className="admin-tap flex h-full w-full flex-col items-center justify-center gap-0.5 text-[11px] font-semibold text-cornsilk hover:text-cornsilk-light"
+            >
+              <span className="flex h-7 w-12 items-center justify-center rounded-full">
+                <Icon path="M5 12h.01M12 12h.01M19 12h.01" />
+              </span>
+              <span>More</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+
+      {/*
         `invisible` when closed, not just translated off-screen. A transform
         alone leaves every link in the tab order, so tabbing off the mobile
         top bar used to walk invisibly through the whole menu. Visibility is
@@ -593,8 +703,16 @@ export function AdminNav({ user }: { user: AdminUser }) {
         role={open ? "dialog" : undefined}
         aria-modal={open ? true : undefined}
         aria-label={open ? "Menu" : undefined}
-        className={`admin-drawer fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col bg-olive text-cornsilk transition-[transform,visibility] duration-300 lg:visible lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
-          open ? "visible translate-x-0" : "invisible -translate-x-full"
+        /*
+          Visibility as a STEP, not a transition: instant on open, so focus
+          can move in on the next frame; delayed until the slide-out has
+          finished on close, so the drawer does not vanish mid-slide. The
+          transform is the only thing that animates.
+        */
+        className={`admin-drawer fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col bg-olive text-cornsilk lg:visible lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+          open
+            ? "visible translate-x-0 [transition:transform_300ms,visibility_0s]"
+            : "invisible -translate-x-full [transition:transform_300ms,visibility_0s_300ms]"
         }`}
       >
         <div className="flex items-center gap-2.5 border-b border-olive-dark/70 px-5 py-5">

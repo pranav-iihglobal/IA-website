@@ -127,7 +127,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       */}
       <div /* Above ConfirmDialog, which is also an overlay at z-50 — a toast about a
            failed delete must not appear behind the dialog that asked for it. */
-        className="pointer-events-none fixed inset-x-4 bottom-6 z-[60] flex flex-col gap-2 sm:left-auto sm:right-6 sm:w-full sm:max-w-sm">
+        className="pointer-events-none fixed inset-x-4 bottom-[calc(var(--admin-tabbar)+1.5rem)] z-[60] flex flex-col gap-2 sm:left-auto sm:right-6 sm:w-full sm:max-w-sm">
         <div className="flex flex-col gap-2" role="alert" aria-live="assertive">
           {failures.map((t) => (
             <ToastItem key={t.id} toast={t} onDismiss={() => dismiss(t.id)} />
