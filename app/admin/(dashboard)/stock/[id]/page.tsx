@@ -67,7 +67,7 @@ export default async function StockDetailPage({
         pills={
           <>
             {low && <StatusPill status="unpaid" />}
-            {doc.isSample && <StatusPill status="sample" />}
+            {doc.isSample && <StatusPill status="demo" />}
             <span className="text-ink-faint">
               {KIND_LABELS[doc.kind ?? "finished"] ?? doc.kind}
             </span>

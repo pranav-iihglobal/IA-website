@@ -135,7 +135,7 @@ export function SupplierWorkspace({
                   !row.gstin || row.isSample ? (
                     <>
                       {!row.gstin && <span className="text-cta">no GSTIN — no input credit</span>}
-                      {row.isSample && <StatusPill status="sample" />}
+                      {row.isSample && <StatusPill status="demo" />}
                     </>
                   ) : undefined
                 }

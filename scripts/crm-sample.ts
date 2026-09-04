@@ -179,7 +179,7 @@ async function contactIdReport() {
   }
 
   /*
-    Sample contacts numbered before the prefix changed to SMP- still hold
+    Demo contacts numbered before the prefix changed to DEMO- still hold
     IKS- ids, and the unique index does not care which are sample: the first
     real dealer allocated IKS-B-001 collides with the sample one and the
     save is refused. Found on the live cluster, not reported by this
@@ -187,10 +187,10 @@ async function contactIdReport() {
   */
   const staleSample = await Contact.countDocuments({
     isSample: true,
-    contactId: { $regex: /^(?!SMP-)/, $gt: "" },
+    contactId: { $regex: /^(?!DEMO-)/, $gt: "" },
   });
   if (staleSample > 0) {
-    console.log(`    ⚠ ${staleSample} sample contacts carry real-looking ids (not SMP-). A real`);
+    console.log(`    ⚠ ${staleSample} demo contacts carry real-looking ids (IKS- or SMP-, not DEMO-). A real`);
     console.log("      contact allocated the same number cannot be saved. Re-seed, in this order:");
     console.log("        npm run crm-sample -- seed 500");
     console.log("        npm run erp-sample -- seed");

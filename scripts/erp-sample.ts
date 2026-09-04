@@ -13,7 +13,7 @@
  *
  *   1. Every document is written with `isSample: true`, and `wipe` deletes on
  *      that flag and nothing else.
- *   2. Sample invoices take their numbers from a SEPARATE series with an `SMP`
+ *   2. Demo invoices take their numbers from a SEPARATE series with a `DEMO`
  *      prefix. Sharing the real counter would mean wiping them left permanent
  *      gaps in an issued GST sequence.
  *
@@ -31,8 +31,8 @@ import { Supplier } from "../lib/db/models/Supplier";
 import { computeInvoice, GUJARAT_STATE_CODE, supplyTypeFor } from "../lib/erp/tax";
 import {
   financialYear,
-  formatSampleCreditNoteNumber,
-  formatSampleInvoiceNumber,
+  formatDemoCreditNoteNumber,
+  formatDemoInvoiceNumber,
 } from "../lib/erp/invoice-number";
 import { formatRupees } from "../lib/money";
 import { buildStockItems, buildPurchases, buildSuppliers, SAMPLE_SKUS } from "./erp-sample-data";
@@ -99,7 +99,7 @@ async function seedInvoices(count: number) {
           : { status: "unpaid", paidPaise: 0 };
 
     docs.push({
-      number: formatSampleInvoiceNumber(issuedAt, i + 1),
+      number: formatDemoInvoiceNumber(issuedAt, i + 1),
       financialYear: financialYear(issuedAt),
       status: i % 23 === 0 ? "cancelled" : "issued",
       issuedAt,
@@ -218,7 +218,7 @@ async function seedCreditNotes(count: number) {
       againstInvoiceId: original._id,
       againstNumber: original.number,
       reason: whole ? "Goods returned" : "Short delivery",
-      number: formatSampleCreditNoteNumber(issuedAt, i + 1),
+      number: formatDemoCreditNoteNumber(issuedAt, i + 1),
       financialYear: financialYear(issuedAt),
       status: "issued",
       issuedAt,
@@ -283,7 +283,7 @@ async function main() {
       Purchase.deleteMany({ isSample: true }),
       Supplier.deleteMany({ isSample: true }),
       // Sample counters only — the real invoice series is never touched.
-      Counter.deleteMany({ _id: /^sample-/ }),
+      Counter.deleteMany({ _id: /^(sample|demo)-/ }),
     ]);
     console.log(
       `\n  Deleted ${inv.deletedCount} invoices, ${stock.deletedCount} stock items, ` +

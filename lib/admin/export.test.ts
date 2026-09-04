@@ -147,7 +147,7 @@ describe("what the cells say", () => {
   it("marks a sample row and a low stock item", () => {
     const cells = stockExportRow(stock);
     expect(cells[STOCK_EXPORT_HEADERS.indexOf("Needs ordering")]).toBe("yes");
-    expect(cells[STOCK_EXPORT_HEADERS.indexOf("Sample")]).toBe("yes");
+    expect(cells[STOCK_EXPORT_HEADERS.indexOf("Demo")]).toBe("yes");
   });
 
   it("writes owed as the pipeline's figure, net of credit notes", () => {

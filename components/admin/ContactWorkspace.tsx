@@ -433,7 +433,7 @@ export function ContactWorkspace({
                   <>
                     {row.isSample && (
                       <span className="rounded-full bg-surface-subtle px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-ink-faint">
-                        Sample
+                        Demo
                       </span>
                     )}
                     {row.kind === "customer" && (

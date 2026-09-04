@@ -47,7 +47,7 @@ export default async function SupplierDetailPage({
         title={supplier.name}
         pills={
           <>
-            {supplier.isSample && <StatusPill status="sample" />}
+            {supplier.isSample && <StatusPill status="demo" />}
             {supplier.gstin ? (
               <span className="text-ink-faint">GSTIN {supplier.gstin}</span>
             ) : (

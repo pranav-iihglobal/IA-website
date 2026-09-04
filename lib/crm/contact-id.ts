@@ -20,8 +20,14 @@ import { nextInSeries, raiseSeriesTo } from "@/lib/db/models/Counter";
  * covered by scripts/check-erp.ts.
  */
 
-/** The prefix a real id carries. Sample data uses SMP, see sampleContactSeries. */
+/** The prefix a real id carries. */
 export const CONTACT_ID_PREFIX = "IKS";
+/**
+ * The prefix seeded demo contacts carry — DEMO-C-001. Numbered by index by
+ * the seed script, never from a counter. Not SMP: that prefix belongs to a
+ * real series, the prospects at sample stage (Phase 13.2).
+ */
+export const DEMO_CONTACT_ID_PREFIX = "DEMO";
 
 /** C for a customer, B for a dealer, L for a lead. D is the leads database. */
 export type ContactSeriesLetter = "C" | "B" | "L";
@@ -42,7 +48,7 @@ export function contactSeriesLetter(kind: string, channel: string): ContactSerie
  * The Counter key for a real series: "contact:C".
  *
  * Sample contacts never touch a counter — the seed numbers them by index
- * under the SMP prefix, so a wipe has nothing to reset and a real series can
+ * under the DEMO prefix, so a wipe has nothing to reset and a real series can
  * never be moved by seeding.
  */
 export function contactSeriesKey(letter: ContactSeriesLetter): string {

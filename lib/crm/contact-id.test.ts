@@ -38,7 +38,7 @@ describe("formatContactId", () => {
   });
 
   it("can carry the sample prefix", () => {
-    expect(formatContactId("L", 7, "SMP")).toBe("SMP-L-007");
+    expect(formatContactId("L", 7, "DEMO")).toBe("DEMO-L-007");
   });
 });
 
@@ -50,7 +50,7 @@ describe("parseContactId", () => {
 
   it("is loose about the prefix and letter — the leads database is IKS-D-", () => {
     expect(parseContactId("IKS-D-2403")).toEqual({ prefix: "IKS", letter: "D", sequence: 2403 });
-    expect(parseContactId("SMP-C-009")).toEqual({ prefix: "SMP", letter: "C", sequence: 9 });
+    expect(parseContactId("DEMO-C-009")).toEqual({ prefix: "DEMO", letter: "C", sequence: 9 });
   });
 
   it("forgives case and whitespace, as a typed id arrives", () => {
@@ -75,7 +75,7 @@ describe("isAllocatedSeries", () => {
 
   it("never seeds a real series from the leads database or from sample data", () => {
     expect(isAllocatedSeries(parseContactId("IKS-D-2403")!)).toBe(false);
-    expect(isAllocatedSeries(parseContactId("SMP-C-001")!)).toBe(false);
+    expect(isAllocatedSeries(parseContactId("DEMO-C-001")!)).toBe(false);
   });
 });
 

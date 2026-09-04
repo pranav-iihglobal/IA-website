@@ -108,38 +108,42 @@ export async function seedFromIssuedNumber(value: string): Promise<boolean> {
 /**
  * Seeded invoices get their OWN series, and it is visible in the number.
  *
+ * DEMO, not SMP: the SMP prefix now belongs to a REAL series — sample notes,
+ * the free samples given to a prospect at sample stage (see Phase 13.8).
+ * Seeded data is demo data, and its number says so.
+ *
  * They cannot share the real counter. Wiping sample data would then leave
  * permanent holes in an issued GST sequence — and a missing number is
  * something the department asks about, which is the whole reason the counter
  * is atomic in the first place.
  *
- * The `SMP` prefix is deliberate rather than cosmetic: a number that looked
+ * The `DEMO` prefix is deliberate rather than cosmetic: a number that looked
  * real would eventually be read out to somebody as if it were.
  */
-export function sampleSeriesKey(date: Date): string {
-  return `sample-${seriesKey(date)}`;
+export function demoSeriesKey(date: Date): string {
+  return `demo-${seriesKey(date)}`;
 }
 
-export function formatSampleInvoiceNumber(date: Date, sequence: number): string {
+export function formatDemoInvoiceNumber(date: Date, sequence: number): string {
   const { mm, yy } = stamp(date);
-  return `SMP.${mm}.${yy}.${String(sequence).padStart(3, "0")}`;
+  return `DEMO.${mm}.${yy}.${String(sequence).padStart(3, "0")}`;
 }
 
 /**
- * A sample credit note: SMP.CN.MM.YY.NNN.
+ * A demo credit note: DEMO.CN.MM.YY.NNN.
  *
- * Still starts SMP., so `isSampleInvoiceNumber` catches it and it can never be
+ * Still starts DEMO., so `isDemoInvoiceNumber` catches it and it can never be
  * mistaken for a real document — and the CN in the middle says which kind it
  * is at a glance.
  */
-export function formatSampleCreditNoteNumber(date: Date, sequence: number): string {
+export function formatDemoCreditNoteNumber(date: Date, sequence: number): string {
   const { mm, yy } = stamp(date);
-  return `SMP.CN.${mm}.${yy}.${String(sequence).padStart(3, "0")}`;
+  return `DEMO.CN.${mm}.${yy}.${String(sequence).padStart(3, "0")}`;
 }
 
 /** True for a number this app issued as sample data. */
-export function isSampleInvoiceNumber(value: string): boolean {
-  return /^SMP\./.test(value.trim());
+export function isDemoInvoiceNumber(value: string): boolean {
+  return /^DEMO\./.test(value.trim());
 }
 
 /* -------------------------------------------------------------------------- */

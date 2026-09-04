@@ -45,7 +45,7 @@ export default async function SalesOverviewPage() {
           {o.sampleInvoices > 0 && (
             <>
               {" "}
-              <span className="text-cta">{o.sampleInvoices} sample invoices are not counted.</span>
+              <span className="text-cta">{o.sampleInvoices} demo invoices are not counted.</span>
             </>
           )}
         </p>

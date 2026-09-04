@@ -250,7 +250,7 @@ export function ContactProfile({
               <span className="text-ink-faint">was {contact.formerIds.join(", ")}</span>
             )}
             {isDealer && <StatusPill status="dealer" />}
-            {contact.isSample && <StatusPill status="sample" />}
+            {contact.isSample && <StatusPill status="demo" />}
           </>
         }
         actions={

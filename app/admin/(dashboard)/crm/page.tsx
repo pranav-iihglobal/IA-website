@@ -37,7 +37,7 @@ export default async function CrmOverviewPage() {
           {o.sampleContacts > 0 && (
             <>
               {" "}
-              <span className="text-cta">{o.sampleContacts} sample contacts are not counted.</span>
+              <span className="text-cta">{o.sampleContacts} demo contacts are not counted.</span>
             </>
           )}
         </p>

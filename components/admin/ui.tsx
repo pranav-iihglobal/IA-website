@@ -844,7 +844,7 @@ export function StatusPill({ status }: { status: string }) {
       somebody who has never bought reads "Prospect".
     */
     lead: "bg-alloy/15 text-ink-strong ring-alloy/40",
-    sample: "bg-alloy/15 text-ink-strong ring-alloy/40",
+    demo: "bg-alloy/15 text-ink-strong ring-alloy/40",
   };
   const dot: Record<string, string> = {
     published: "bg-olive",
@@ -873,7 +873,7 @@ export function StatusPill({ status }: { status: string }) {
     Prospect: "bg-camel-dark/60",
 
     dealer: "bg-camel-dark/60",
-    sample: "bg-alloy",
+    demo: "bg-alloy",
   };
   return (
     <span

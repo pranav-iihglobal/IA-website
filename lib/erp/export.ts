@@ -61,7 +61,7 @@ export const STOCK_EXPORT_HEADERS = [
   "Location",
   "Last counted",
   "Notes",
-  "Sample",
+  "Demo",
 ];
 
 export function stockExportRow(row: StockRowShape): (string | number)[] {

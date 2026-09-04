@@ -80,7 +80,7 @@ export default async function PurchaseDetailPage({
         pills={
           <>
             <StatusPill status={doc.paymentStatus ?? "unpaid"} />
-            {doc.isSample && <StatusPill status="sample" />}
+            {doc.isSample && <StatusPill status="demo" />}
             {doc.billNo && <span className="text-ink-faint">{doc.billNo}</span>}
             {doc.billDate && (
               <span className="text-ink-faint">

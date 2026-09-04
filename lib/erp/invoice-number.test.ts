@@ -4,8 +4,8 @@ import {
   financialYear,
   formatCreditNoteNumber,
   formatInvoiceNumber,
-  formatSampleCreditNoteNumber,
-  isSampleInvoiceNumber,
+  formatDemoCreditNoteNumber,
+  isDemoInvoiceNumber,
   parseInvoiceNumber,
   seriesKey,
 } from "./invoice-number";
@@ -129,17 +129,17 @@ describe("the month segment is India's month", () => {
   });
 
   it("applies to the sample and credit-note series too", () => {
-    expect(formatSampleCreditNoteNumber(earlyOnTheFirst, 1)).toBe("SMP.CN.10.26.001");
+    expect(formatDemoCreditNoteNumber(earlyOnTheFirst, 1)).toBe("DEMO.CN.10.26.001");
     expect(formatCreditNoteNumber(earlyOnTheFirst, 1)).toBe("CN.10.26.001");
   });
 });
 
 describe("sample numbers", () => {
   it("marks a sample credit note as sample AND as a credit note", () => {
-    const n = formatSampleCreditNoteNumber(new Date(2026, 8, 4), 3);
-    expect(n).toBe("SMP.CN.09.26.003");
+    const n = formatDemoCreditNoteNumber(new Date(2026, 8, 4), 3);
+    expect(n).toBe("DEMO.CN.09.26.003");
     // The wipe and every "is this real?" check key off the SMP. prefix.
-    expect(isSampleInvoiceNumber(n)).toBe(true);
+    expect(isDemoInvoiceNumber(n)).toBe(true);
   });
 });
 

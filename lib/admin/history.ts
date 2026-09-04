@@ -122,7 +122,7 @@ const FIELD_LABELS: Record<string, string> = {
   followUpStatus: "Follow-up status",
   businessName: "Business",
   nameGu: "Name (Gujarati)",
-  isSample: "Sample",
+  isSample: "Demo",
   modules: "Module access",
   lastOrderAt: "Last order",
   billDate: "Bill date",

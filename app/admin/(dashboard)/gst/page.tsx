@@ -90,9 +90,9 @@ export default async function GstPage({
       {sampleCount > 0 && (
         <p className="admin-card px-4 py-2.5 text-sm text-ink">
           <strong className="font-semibold">
-            {sampleCount} sample invoice{sampleCount === 1 ? "" : "s"} excluded.
+            {sampleCount} demo invoice{sampleCount === 1 ? "" : "s"} excluded.
           </strong>{" "}
-          Seeded data never appears in a GST return. That is why the totals here
+          Seeded demo data never appears in a GST return. That is why the totals here
           are lower than the invoice list for this month.
         </p>
       )}

@@ -84,7 +84,7 @@ export default async function InvoiceDetailPage({
             <StatusPill status={isCredit ? "credit note" : invoice.status} />
             {!isCredit && <StatusPill status={invoice.payment.status} />}
             {invoice.isHistorical && <StatusPill status="filed" />}
-            {invoice.isSample && <StatusPill status="sample" />}
+            {invoice.isSample && <StatusPill status="demo" />}
             {invoice.issuedAt && (
               <span className="text-ink-faint">
                 {formatIstDateLong(new Date(invoice.issuedAt))}

@@ -36,7 +36,7 @@ export const CONTACT_EXPORT_HEADERS = [
   "Next action",
   "Follow-up due",
   "GSTIN",
-  "Sample",
+  "Demo",
   "Updated",
 ];
 

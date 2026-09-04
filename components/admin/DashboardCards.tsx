@@ -329,7 +329,7 @@ function SampleNotice({ sample }: { sample: DashboardData["sample"] }) {
   if (parts.length === 0) return null;
   return (
     <p className="text-xs text-ink-soft">
-      Sample data on the cluster: {parts.join(" and ")}. Not counted in any figure here.
+      Demo data on the cluster: {parts.join(" and ")}. Not counted in any figure here.
     </p>
   );
 }
