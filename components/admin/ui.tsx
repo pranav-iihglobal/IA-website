@@ -1367,6 +1367,7 @@ export function ListCard({
   meta,
   actions,
   children,
+  as: Tag = "li",
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
@@ -1381,9 +1382,11 @@ export function ListCard({
   actions?: ReactNode;
   /** Anything else, between the pills and the footer. */
   children?: ReactNode;
+  /** A div when a SwipeRow is the list item around it. */
+  as?: "li" | "div";
 }) {
   return (
-    <li className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4">
+    <Tag className="admin-bleed min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="font-display text-base font-bold leading-snug text-ink-strong [overflow-wrap:anywhere]">
@@ -1412,7 +1415,7 @@ export function ListCard({
           {actions && <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">{actions}</div>}
         </div>
       )}
-    </li>
+    </Tag>
   );
 }
 
@@ -1427,6 +1430,7 @@ export function RecordCard({
   label,
   actions,
   removable = true,
+  as: Tag = "li",
 }: {
   /** Square-ish image or initial, already sized by the caller. */
   thumb: ReactNode;
@@ -1450,6 +1454,8 @@ export function RecordCard({
   actions?: ReactNode;
   /** False hides Delete, for rows that must not be removed. */
   removable?: boolean;
+  /** A div when a SwipeRow is the list item around it. */
+  as?: "li" | "div";
 }) {
   return (
     /*
@@ -1460,7 +1466,7 @@ export function RecordCard({
       inside a 350px grid on a phone: every admin list scrolled sideways, and
       truncation never kicked in because the box just grew instead.
     */
-    <li className="admin-bleed group relative min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4 shadow-[0_1px_2px_rgba(95,47,20,0.05)] transition-shadow focus-within:shadow-[0_4px_14px_-6px_rgba(95,47,20,0.28)]">
+    <Tag className="admin-bleed group relative min-w-0 rounded-2xl border border-line-soft/60 bg-surface p-4 shadow-[0_1px_2px_rgba(95,47,20,0.05)] transition-shadow focus-within:shadow-[0_4px_14px_-6px_rgba(95,47,20,0.28)]">
       <div className="flex items-start gap-3">
         {thumb}
         <div className="min-w-0 flex-1">
@@ -1538,7 +1544,7 @@ export function RecordCard({
         )}
         </div>
       </div>
-    </li>
+    </Tag>
   );
 }
 

@@ -15,6 +15,8 @@ import {
   SearchInput,
 } from "./ui";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { SwipeRow } from "./SwipeRow";
+import { RowMenu } from "./RowMenu";
 import { useToast } from "./Toast";
 import { formatRupees } from "@/lib/money";
 import { telHref, whatsappHref } from "@/lib/crm/contact-links";
@@ -135,39 +137,6 @@ function CallLink({ phone, name }: { phone: string; name: string }) {
           </svg>
         </a>
       )}
-    </>
-  );
-}
-
-/**
- * Done, or push it a week — the two outcomes of a follow-up call.
- *
- * Text rather than icons: these change a date on a record, and an
- * unlabelled tick beside an unlabelled clock is a guess.
- */
-function FollowUpActions({
-  onDone,
-  onSnooze,
-}: {
-  onDone: () => void;
-  onSnooze: () => void;
-}) {
-  return (
-    <>
-      <button
-        type="button"
-        onClick={onDone}
-        className="admin-btn admin-tap shrink-0 border border-line px-3 text-xs font-semibold text-ink-muted hover:border-olive hover:text-ink"
-      >
-        Done
-      </button>
-      <button
-        type="button"
-        onClick={onSnooze}
-        className="admin-btn admin-tap shrink-0 border border-line px-3 text-xs font-semibold text-ink-muted hover:border-olive hover:text-ink"
-      >
-        +1 week
-      </button>
     </>
   );
 }
@@ -379,8 +348,11 @@ export function ContactWorkspace({
           )}
           <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
             {rows.map((row) => (
+              /* Swipe left for Delete; every action is behind ⋯ as well. */
+              <SwipeRow key={row.id} label={row.name} onDelete={() => setDeleting(row)} className="admin-bleed">
               <RecordCard
-                key={row.id}
+                as="div"
+                removable={false}
                 label={row.name}
                 /*
                   The profile, not the edit form. A row was opening straight
@@ -402,14 +374,25 @@ export function ContactWorkspace({
                       No permission check here, matching Delete and Edit on
                       the same card: this screen has one gate, at the page,
                       and the route refuses a write without crm:write anyway.
+                      Call and WhatsApp stay as taps; Done and +1 week moved
+                      into the menu — five pills on a 390px card wrapped onto
+                      a second line on every row.
                     */}
-                    {row.overdue && (
-                      <FollowUpActions
-                        onDone={() => setFollowUp(row, "done")}
-                        onSnooze={() => setFollowUp(row, "snooze")}
-                      />
-                    )}
                     <CallLink phone={row.phone} name={row.name} />
+                    <RowMenu
+                      label={row.name}
+                      items={[
+                        { label: "Open", href: `/admin/contacts/${row.id}` },
+                        { label: "Edit", href: `/admin/contacts/${row.id}/edit` },
+                        ...(row.overdue
+                          ? [
+                              { label: "Follow-up done", onClick: () => setFollowUp(row, "done") },
+                              { label: "Snooze a week", onClick: () => setFollowUp(row, "snooze") },
+                            ]
+                          : []),
+                        { label: "Delete", tone: "danger" as const, onClick: () => setDeleting(row) },
+                      ]}
+                    />
                   </>
                 }
                 thumb={
@@ -471,6 +454,7 @@ export function ContactWorkspace({
                     : row.nextAction || row.phone || undefined
                 }
               />
+              </SwipeRow>
             ))}
           </ul>
           <Pagination

@@ -1065,6 +1065,36 @@ body:has(.admin-shell) {
 }
 
 /*
+  Swipe-to-reveal rows — see components/admin/SwipeRow.tsx.
+
+  pan-y hands the browser vertical scrolling and leaves the horizontal
+  component to the row. The front layer slides; the layer beneath is the
+  revealed Delete. The settle after a release is animated unless motion is
+  turned off, in which case the row simply lands.
+*/
+.admin-ui .admin-swipe {
+  touch-action: pan-y;
+  overflow: hidden;
+}
+.admin-ui .admin-swipe-front {
+  will-change: transform;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .admin-ui .admin-swipe-settling {
+    transition: transform 180ms ease-out;
+  }
+}
+/* The bleeding card's rounded corners are clipped by the row when it bleeds too. */
+@media (max-width: 639px) {
+  .admin-ui .admin-swipe.admin-bleed {
+    margin-inline: calc(var(--admin-gutter) * -1);
+  }
+  .admin-ui .admin-swipe.admin-bleed > .admin-swipe-front > .admin-bleed {
+    margin-inline: 0;
+  }
+}
+
+/*
   Touch: no 300ms tap delay, no double-tap zoom on controls, no grey flash.
   Zooming the PAGE still works (maximumScale is 5); only tapping a control
   twice stops being a zoom.

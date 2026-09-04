@@ -28,6 +28,7 @@ export default async function SuppliersPage({
         initial={initial}
         initialQuery={listQueryKey(query)}
         canWrite={can(me, "billing:write")}
+        canDelete={can(me, "billing:delete")}
       />
     </Suspense>
   );

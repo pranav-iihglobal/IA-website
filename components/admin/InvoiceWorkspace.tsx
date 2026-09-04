@@ -23,6 +23,7 @@ import { invoiceListQuery } from "@/lib/erp/list-query";
 import { INVOICE_SORTS } from "@/lib/admin/sorts";
 import type { InvoiceList, InvoiceRow } from "@/lib/erp/list";
 import { useListState } from "./useListState";
+import { RowMenu } from "./RowMenu";
 import { useViewMode } from "./useViewMode";
 
 /**
@@ -221,7 +222,7 @@ export function InvoiceWorkspace({
                   )}
                 </>
               }
-              actions={<InvoiceActions row={row} canWrite={canWrite} canCancel={canCancel} />}
+              actions={<InvoiceActions row={row} canWrite={canWrite} canCancel={canCancel} compact />}
             />
           ))}
         </ul>
@@ -254,16 +255,45 @@ function InvoiceActions({
   row,
   canWrite,
   canCancel,
+  compact = false,
 }: {
   row: InvoiceRow;
   canWrite: boolean;
   canCancel: boolean;
+  /** The card: Print and Payment as pills, the rest behind ⋯. */
+  compact?: boolean;
 }) {
   // Payment and Credit: a real, issued SALE. Cancel: any issued document.
   const live = !row.isHistorical && !isCredit(row) && !isSampleNote(row) && row.status === "issued";
   const cancellable = !row.isHistorical && row.status === "issued";
   const pill =
     "admin-tap inline-flex items-center rounded-full border border-line px-3 py-1 text-xs font-semibold text-ink-muted hover:border-olive";
+  if (compact) {
+    return (
+      <>
+        <Link href={`/admin/invoices/${row.id}/print`} className={pill}>
+          Print
+        </Link>
+        {canWrite && live && (
+          <Link href={`/admin/invoices/${row.id}/payment`} className={pill}>
+            Payment
+          </Link>
+        )}
+        <RowMenu
+          label={row.number || "this document"}
+          items={[
+            { label: "Open", href: `/admin/invoices/${row.id}` },
+            { label: "Print", href: `/admin/invoices/${row.id}/print` },
+            ...(canWrite && live ? [{ label: "Record a payment", href: `/admin/invoices/${row.id}/payment` }] : []),
+            ...(canWrite && live ? [{ label: "Credit note", href: `/admin/invoices/${row.id}/credit-note` }] : []),
+            ...(canCancel && cancellable
+              ? [{ label: "Cancel", tone: "danger" as const, href: `/admin/invoices/${row.id}/cancel` }]
+              : []),
+          ]}
+        />
+      </>
+    );
+  }
   return (
     <>
       <Link href={`/admin/invoices/${row.id}/print`} className={pill}>

@@ -15,6 +15,8 @@ import {
   ListCard,
 } from "./ui";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { SwipeRow } from "./SwipeRow";
+import { RowMenu } from "./RowMenu";
 import { useToast } from "./Toast";
 import { formatRupees } from "@/lib/money";
 import { useListState } from "./useListState";
@@ -221,8 +223,16 @@ export function StockWorkspace({
         <>
         <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
           {rows.map((row) => (
-            <ListCard
+            /* Swipe left for Delete; the ⋯ menu holds every action. */
+            <SwipeRow
               key={row.id}
+              label={row.name}
+              disabled={!canDelete}
+              onDelete={() => setDeleting(row)}
+              className="admin-bleed"
+            >
+            <ListCard
+              as="div"
               title={
                 /* Opens the record. "Count" below goes straight to the form,
                    because that is the frequent act — but the count HISTORY
@@ -247,32 +257,29 @@ export function StockWorkspace({
                 </>
               }
               actions={
-                canWrite || canDelete ? (
-                  <>
-                    {canWrite && (
-                      <Link
-                        href={`/admin/stock/${row.id}/edit`}
-                        className="admin-tap inline-flex items-center rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-ink-muted hover:border-olive"
-                      >
-                        Count
-                      </Link>
-                    )}
-                    {canDelete && (
-                      <button
-                        type="button"
-                        onClick={() => setDeleting(row)}
-                        aria-label={`Delete ${row.name}`}
-                        className="admin-tap-square rounded-full p-2 text-ink-soft hover:bg-danger/12 hover:text-danger"
-                      >
-                        <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-                          <path d="M8 2h4a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2h-.4l-.7 9.1A2 2 0 0 1 12.9 17H7.1a2 2 0 0 1-2-1.9L4.4 6H4a1 1 0 0 1 0-2h3V3a1 1 0 0 1 1-1Zm1 2h2V4H9Zm-2.6 2 .7 8.9a.5.5 0 0 0 .5.4h5.8a.5.5 0 0 0 .5-.4l.7-8.9H6.4Z" />
-                        </svg>
-                      </button>
-                    )}
-                  </>
-                ) : undefined
+                <>
+                  {canWrite && (
+                    <Link
+                      href={`/admin/stock/${row.id}/edit`}
+                      className="admin-tap inline-flex items-center rounded-full border border-line px-3.5 py-1.5 text-xs font-semibold text-ink-muted hover:border-olive"
+                    >
+                      Count
+                    </Link>
+                  )}
+                  <RowMenu
+                    label={row.name}
+                    items={[
+                      { label: "Open", href: `/admin/stock/${row.id}` },
+                      ...(canWrite ? [{ label: "Record a count", href: `/admin/stock/${row.id}/edit` }] : []),
+                      ...(canDelete
+                        ? [{ label: "Delete", tone: "danger" as const, onClick: () => setDeleting(row) }]
+                        : []),
+                    ]}
+                  />
+                </>
               }
             />
+            </SwipeRow>
           ))}
         </ul>
         <Pagination page={page} pages={pages} total={total} pageSize={pageSize} onChange={setPage} />

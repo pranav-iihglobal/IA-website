@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { SwipeRow } from "./SwipeRow";
+import { RowMenu } from "./RowMenu";
+import { useToast } from "./Toast";
+import { adminFetch } from "@/lib/admin/fetch";
 import {
   EmptyState,
   ErrorBanner,
@@ -27,11 +33,18 @@ export function SupplierWorkspace({
   initial,
   initialQuery,
   canWrite,
+  canDelete = false,
 }: {
   initial: SupplierList;
   initialQuery?: string;
   canWrite: boolean;
+  canDelete?: boolean;
 }) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [deleting, setDeleting] = useState<SupplierRow | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [rows, setRows] = useState<SupplierRow[]>(initial.items);
   const [total, setTotal] = useState(initial.total);
   const [pages, setPages] = useState(initial.pages);
@@ -62,6 +75,26 @@ export function SupplierWorkspace({
       setLoading(false);
     }
   }, [query]);
+
+  /*
+    Refused when the supplier is on any bill or stock item (409) — the reason
+    lands inside the dialog, where the person is looking.
+  */
+  async function remove() {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    const result = await adminFetch<{ ok: boolean }>(`/api/admin/suppliers/${deleting.id}`, { method: "DELETE" });
+    setDeleteBusy(false);
+    if (!result.ok) {
+      setDeleteError(result.error ?? "Could not delete");
+      return;
+    }
+    toast(`${deleting.name} deleted`);
+    setDeleting(null);
+    router.refresh();
+    void load();
+  }
 
   const alreadyServed = useRef(initialQuery ?? null);
   useEffect(() => {
@@ -119,8 +152,18 @@ export function SupplierWorkspace({
         <>
           <ul className="admin-rows grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
             {rows.map((row) => (
-              <ListCard
+              <SwipeRow
                 key={row.id}
+                label={row.name}
+                disabled={!canDelete}
+                onDelete={() => {
+                  setDeleteError(null);
+                  setDeleting(row);
+                }}
+                className="admin-bleed"
+              >
+              <ListCard
+                as="div"
                 title={
                   <Link href={`/admin/suppliers/${row.id}`} className="hover:text-cta hover:underline">
                     {row.name}
@@ -139,12 +182,49 @@ export function SupplierWorkspace({
                     </>
                   ) : undefined
                 }
+                actions={
+                  canWrite || canDelete ? (
+                    <RowMenu
+                      label={row.name}
+                      items={[
+                        { label: "Open", href: `/admin/suppliers/${row.id}` },
+                        ...(canWrite ? [{ label: "Edit", href: `/admin/suppliers/${row.id}/edit` }] : []),
+                        ...(canDelete
+                          ? [
+                              {
+                                label: "Delete",
+                                tone: "danger" as const,
+                                onClick: () => {
+                                  setDeleteError(null);
+                                  setDeleting(row);
+                                },
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
+                  ) : undefined
+                }
               />
+              </SwipeRow>
             ))}
           </ul>
           <Pagination page={page} pages={pages} total={total} pageSize={pageSize} onChange={setPage} />
         </>
       )}
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title={`Delete ${deleting?.name ?? ""}?`}
+        message="A supplier on any bill or stock item cannot be deleted — correct the record instead. One with nothing against it is simply removed."
+        confirmLabel="Delete"
+        busy={deleteBusy}
+        error={deleteError}
+        onConfirm={() => void remove()}
+        onCancel={() => {
+          if (!deleteBusy) setDeleting(null);
+        }}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useViewMode } from "./useViewMode";
 import { formatINR, formatRupees } from "@/lib/money";
 import { paymentReminder } from "@/lib/crm/contact-links";
 import { ReachPills } from "./ReachPills";
+import { RowMenu } from "./RowMenu";
 import type { OutstandingRow } from "@/lib/erp/reports";
 
 /**
@@ -57,7 +58,21 @@ export function OutstandingList({ rows }: { rows: OutstandingRow[] }) {
                 : undefined
             }
             meta={row.partyPhone}
-            actions={<Chase row={row} />}
+            actions={
+              <>
+                <Chase row={row} />
+                <RowMenu
+                  label={row.number}
+                  items={[
+                    { label: "Open invoice", href: `/admin/invoices/${row.invoiceId}` },
+                    { label: "Record a payment", href: `/admin/invoices/${row.invoiceId}/payment` },
+                    ...(row.contactId
+                      ? [{ label: "Everything they owe", href: `/admin/outstanding/${row.contactId}` }]
+                      : []),
+                  ]}
+                />
+              </>
+            }
           />
         ))}
       </ul>
