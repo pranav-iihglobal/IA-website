@@ -31,7 +31,7 @@ describe("groupByIstDay", () => {
     expect(groups.map((g) => [g.label, g.entries.length])).toEqual([
       ["Today", 2],
       ["Yesterday", 1],
-      ["30 August 2026", 1],
+      ["30 Aug 2026", 1],
     ]);
   });
 
