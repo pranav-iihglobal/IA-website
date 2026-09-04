@@ -95,21 +95,29 @@ export interface BillableParty {
   gstin: string;
   /** b2c or b2b — decides which price the form suggests. */
   channel: string;
+  /** "sample" for a prospect whose first invoice this would be. */
+  stage: string;
 }
 
 export async function getBillableParties(): Promise<BillableParty[]> {
   try {
     await connectToDatabase();
-    // Customers and dealers only. A lead has not bought anything, and offering
-    // one here would invite raising an invoice against somebody who has not.
     /*
-      Real customers only. A seeded contact in this picker means a REAL invoice
+      Customers and dealers, plus prospects at SAMPLE STAGE — their first
+      invoice is what makes them a customer (lib/crm/trading.ts), so the
+      picker has to offer them. A cold lead is still not here: nobody has
+      decided they are buying.
+
+      Real records only. A seeded contact in this picker means a REAL invoice
       can be raised against a fake person — and because the invoice snapshots
       the party, it would look perfectly correct afterwards, right up until
       `crm-sample -- wipe` deletes the contact it points at.
     */
-    const docs = await Contact.find({ kind: "customer", isSample: { $ne: true } })
-      .select("name businessName contactId village district channel dealer")
+    const docs = await Contact.find({
+      isSample: { $ne: true },
+      $or: [{ kind: "customer" }, { stage: "sample" }],
+    })
+      .select("name businessName contactId village district channel dealer stage")
       .sort({ name: 1 })
       .limit(2000)
       .lean();
@@ -118,10 +126,12 @@ export async function getBillableParties(): Promise<BillableParty[]> {
       id: String(c._id),
       name: c.businessName || c.name || "(unnamed)",
       hint:
-        [c.contactId, c.village, c.district].filter(Boolean).join(" · ") ||
-        undefined,
+        [c.contactId, c.village, c.district, c.stage === "sample" ? "sample stage" : ""]
+          .filter(Boolean)
+          .join(" · ") || undefined,
       gstin: c.dealer?.gstin ?? "",
       channel: c.channel ?? "",
+      stage: c.stage ?? "customer",
     })) as BillableParty[];
   } catch (error) {
     console.error("[admin] could not load billable parties:", error);

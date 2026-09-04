@@ -45,6 +45,10 @@ export function buildFilter(params: URLSearchParams): LeanDoc {
   const channel = params.get("channel");
   if (channel === "b2c" || channel === "b2b") filter.channel = channel;
 
+  // Sample stage: given a sample, not yet bought. SMP- ids.
+  const stage = params.get("stage");
+  if (stage === "sample" || stage === "customer") filter.stage = stage;
+
   const district = params.get("district");
   if (district) filter.district = district;
 

@@ -27,6 +27,7 @@ const contact: ContactRow = {
   version: 0,
   kind: "customer",
   channel: "b2c",
+  stage: "customer",
   name: "Dipen Prajapati",
   businessName: "",
   phone: "9825012345",

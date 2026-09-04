@@ -179,13 +179,13 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       allocation existed, being edited for the first time since.
     */
     const converted = seriesChanges(
-      { kind: before.kind ?? "lead", channel: before.channel ?? "" },
+      { kind: before.kind ?? "lead", channel: before.channel ?? "", stage: before.stage ?? "customer" },
       parsed.data,
     );
     const previousId: string = before.contactId ?? "";
     const contactId =
       converted || !parsed.data.contactId
-        ? await allocateContactId(parsed.data.kind, parsed.data.channel)
+        ? await allocateContactId(parsed.data.kind, parsed.data.channel, parsed.data.stage)
         : parsed.data.contactId;
     const record = { ...parsed.data, contactId };
     const formerIds =

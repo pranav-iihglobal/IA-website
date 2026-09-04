@@ -42,6 +42,8 @@ export interface ContactFormValues {
   contactId: string;
   kind: "lead" | "customer";
   channel: "b2c" | "b2b" | "";
+  /** Sample stage numbers in the SMP series and converts on the first invoice. */
+  stage: "sample" | "customer";
   name: string;
   nameGu: string;
   businessName: string;
@@ -314,6 +316,21 @@ export function ContactForm({
               onChange={(v) => set({ email: v })}
               error={errors.email}
             />
+            <SelectField
+              label="Stage"
+              value={values.stage}
+              onChange={(v) => set({ stage: v === "sample" ? "sample" : "customer" })}
+              options={[
+                { value: "sample", label: "Sample stage" },
+                { value: "customer", label: "Regular" },
+              ]}
+              error={errors.stage}
+              hint={
+                values.stage === "sample"
+                  ? "Only receiving samples so far. Numbered SMP-; their first invoice makes them a regular customer with an IKS- id."
+                  : "Numbered IKS-."
+              }
+            />
             <TextField
               label="Id"
               kind="code"
@@ -323,7 +340,7 @@ export function ContactForm({
               hint={
                 values.contactId
                   ? "Printed on their paperwork. Change it only to match what is on paper."
-                  : "Leave blank and one is allocated on save — IKS-L-013, the next in the series."
+                  : `Leave blank and one is allocated on save — ${values.stage === "sample" ? "SMP" : "IKS"}-L-013, the next in the series.`
               }
             />
           </div>

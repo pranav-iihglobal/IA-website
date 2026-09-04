@@ -164,6 +164,7 @@ export function emptyContact(): ContactFormValues {
     contactId: "",
     kind: "lead",
     channel: "",
+    stage: "customer",
     name: "",
     nameGu: "",
     businessName: "",

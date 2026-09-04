@@ -50,6 +50,7 @@ export default async function ContactProfilePage({
     contactId: c.contactId ?? "",
     formerIds: (c.formerIds ?? []).map((v: unknown) => String(v)),
     kind: c.kind ?? "lead",
+    stage: c.stage === "sample" ? "sample" : "customer",
     channel: c.channel ?? "",
     name: c.name ?? "",
     nameGu: c.nameGu ?? "",
@@ -148,7 +149,9 @@ export default async function ContactProfilePage({
         looks perfectly correct right up until the wipe deletes them.
       */
       canBill={
-        can(me, "billing:write") && contact.kind === "customer" && !contact.isSample
+        can(me, "billing:write") &&
+        (contact.kind === "customer" || contact.stage === "sample") &&
+        !contact.isSample
       }
       backHref={`/admin/${scope}`}
       backLabel={backLabel}

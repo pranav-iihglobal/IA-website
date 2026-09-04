@@ -109,6 +109,8 @@ export interface ContactRow {
   version: number;
   kind: "lead" | "customer";
   channel: "b2c" | "b2b" | "";
+  /** "sample" while they are only receiving samples; SMP- ids. */
+  stage: "sample" | "customer";
   name: string;
   businessName: string;
   phone: string;
@@ -147,6 +149,7 @@ export function toContactRow(doc: LeanDoc): ContactRow {
     contactId: doc.contactId ?? "",
     kind: doc.kind ?? "lead",
     channel: doc.channel ?? "",
+    stage: doc.stage === "sample" ? "sample" : "customer",
     name: doc.name ?? "",
     businessName: doc.businessName ?? "",
     phone: doc.phone ?? "",

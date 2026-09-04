@@ -27,6 +27,7 @@ export function toContactFormValues(doc: LeanDoc): ContactFormValues {
     contactId: doc.contactId ?? "",
     kind: doc.kind === "customer" ? "customer" : "lead",
     channel: doc.channel === "b2b" ? "b2b" : doc.channel === "b2c" ? "b2c" : "",
+    stage: doc.stage === "sample" ? "sample" : "customer",
     name: doc.name ?? "",
     nameGu: doc.nameGu ?? "",
     businessName: doc.businessName ?? "",

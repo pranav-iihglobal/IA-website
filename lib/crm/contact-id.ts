@@ -29,6 +29,24 @@ export const CONTACT_ID_PREFIX = "IKS";
  */
 export const DEMO_CONTACT_ID_PREFIX = "DEMO";
 
+/**
+ * The prefix a prospect at SAMPLE STAGE carries — SMP-L-007.
+ *
+ * A real series with real counters, unlike DEMO: these are people who have
+ * been given a sample and not yet bought. Their first real invoice moves them
+ * to the IKS series (see lib/crm/trading.ts) and the SMP id stays on the
+ * record as a former id, because it is what the sample register says.
+ */
+export const SAMPLE_STAGE_PREFIX = "SMP";
+
+export type ContactPrefix = typeof CONTACT_ID_PREFIX | typeof SAMPLE_STAGE_PREFIX;
+export type ContactStage = "sample" | "customer";
+
+/** Which prefix a contact numbers under: SMP at sample stage, IKS otherwise. */
+export function contactPrefix(stage: string | undefined): ContactPrefix {
+  return stage === "sample" ? SAMPLE_STAGE_PREFIX : CONTACT_ID_PREFIX;
+}
+
 /** C for a customer, B for a dealer, L for a lead. D is the leads database. */
 export type ContactSeriesLetter = "C" | "B" | "L";
 
@@ -45,14 +63,19 @@ export function contactSeriesLetter(kind: string, channel: string): ContactSerie
 }
 
 /**
- * The Counter key for a real series: "contact:C".
+ * The Counter key for a real series: "contact:C" for IKS, "contact:SMP:C"
+ * for the sample-stage series — the IKS keys keep the names the cluster
+ * already holds.
  *
- * Sample contacts never touch a counter — the seed numbers them by index
+ * Demo contacts never touch a counter — the seed numbers them by index
  * under the DEMO prefix, so a wipe has nothing to reset and a real series can
  * never be moved by seeding.
  */
-export function contactSeriesKey(letter: ContactSeriesLetter): string {
-  return `contact:${letter}`;
+export function contactSeriesKey(
+  letter: ContactSeriesLetter,
+  prefix: ContactPrefix = CONTACT_ID_PREFIX,
+): string {
+  return prefix === CONTACT_ID_PREFIX ? `contact:${letter}` : `contact:${prefix}:${letter}`;
 }
 
 /**
@@ -86,32 +109,65 @@ export function parseContactId(value: string): ParsedContactId | null {
   return { prefix: match[1], letter: match[2], sequence: Number(match[3]) };
 }
 
-/** True when this id belongs to a real series this module allocates from. */
+/** True when this id belongs to a real series this module allocates from — IKS or SMP. */
 export function isAllocatedSeries(parsed: ParsedContactId): parsed is ParsedContactId & {
+  prefix: ContactPrefix;
   letter: ContactSeriesLetter;
 } {
-  return parsed.prefix === CONTACT_ID_PREFIX && /^[CBL]$/.test(parsed.letter);
+  return (
+    (parsed.prefix === CONTACT_ID_PREFIX || parsed.prefix === SAMPLE_STAGE_PREFIX) &&
+    /^[CBL]$/.test(parsed.letter)
+  );
+}
+
+/** What a contact record says about where it numbers. */
+export interface SeriesFacts {
+  kind: string;
+  channel: string;
+  stage?: string;
 }
 
 /**
  * Whether changing kind or channel moves a contact to a different series —
  * the moment a converted lead is given its customer id.
  */
-export function seriesChanges(
-  before: { kind: string; channel: string },
-  after: { kind: string; channel: string },
-): boolean {
+export function seriesChanges(before: SeriesFacts, after: SeriesFacts): boolean {
   return (
+    contactPrefix(before.stage) !== contactPrefix(after.stage) ||
     contactSeriesLetter(before.kind, before.channel) !==
-    contactSeriesLetter(after.kind, after.channel)
+      contactSeriesLetter(after.kind, after.channel)
   );
 }
 
 /** Take the next id in the real series for this kind of contact. */
-export async function allocateContactId(kind: string, channel: string): Promise<string> {
+export async function allocateContactId(
+  kind: string,
+  channel: string,
+  stage: string = "customer",
+): Promise<string> {
   const letter = contactSeriesLetter(kind, channel);
-  const sequence = await nextInSeries(contactSeriesKey(letter));
-  return formatContactId(letter, sequence);
+  const prefix = contactPrefix(stage);
+  const sequence = await nextInSeries(contactSeriesKey(letter, prefix));
+  return formatContactId(letter, sequence, prefix);
+}
+
+/**
+ * What a sample-stage contact becomes on their first real order, or null
+ * when nothing changes.
+ *
+ * They become a customer on their existing channel — a sample-stage dealer
+ * stays a dealer — and leave the SMP series. Pure, so the moment can be
+ * tested without an invoice.
+ */
+export function conversionOnFirstOrder(
+  contact: SeriesFacts,
+): { kind: "customer"; channel: "b2c" | "b2b"; stage: "customer" } | null {
+  if (contact.stage !== "sample") return null;
+  return {
+    kind: "customer",
+    channel: contact.channel === "b2b" ? "b2b" : "b2c",
+    stage: "customer",
+  };
 }
 
 /**
@@ -125,6 +181,6 @@ export async function allocateContactId(kind: string, channel: string): Promise<
 export async function seedFromContactId(value: string): Promise<boolean> {
   const parsed = parseContactId(value);
   if (!parsed || !isAllocatedSeries(parsed)) return false;
-  await raiseSeriesTo(contactSeriesKey(parsed.letter), parsed.sequence);
+  await raiseSeriesTo(contactSeriesKey(parsed.letter, parsed.prefix), parsed.sequence);
   return true;
 }

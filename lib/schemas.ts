@@ -570,6 +570,8 @@ export const contactSchema = z.object({
     .default(""),
   kind: z.enum(["lead", "customer"]).default("lead"),
   channel: z.enum(["b2c", "b2b", ""]).default(""),
+  /** Sample stage numbers in the SMP series — see lib/crm/contact-id.ts. */
+  stage: z.enum(["sample", "customer"]).default("customer"),
 
   name: z.string().trim().min(1, "Name is required"),
   nameGu: z.string().trim().default(""),

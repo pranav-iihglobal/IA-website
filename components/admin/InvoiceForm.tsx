@@ -605,6 +605,8 @@ function QuickAddCustomer({
       id: response.data.id,
       name: values.name.trim(),
       hint: [values.village, values.district].filter(Boolean).join(" · "),
+      // Added from the invoice form: they are buying, so a regular customer.
+      stage: "customer",
       // No GSTIN, so this is a B2C sale — summarised as B2CS on the return.
       gstin: "",
       channel: "b2c",

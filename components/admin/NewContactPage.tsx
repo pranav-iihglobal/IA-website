@@ -27,7 +27,10 @@ const NOUN: Record<Scope, { title: string; back: string }> = {
 const DEFAULTS: Record<Scope, Partial<ReturnType<typeof emptyContact>>> = {
   customers: { kind: "customer", channel: "b2c" },
   dealers: { kind: "customer", channel: "b2b" },
-  leads: { kind: "lead" },
+  // The Leads screen IS the sample pipeline — their Samples_Leads sheet — so a
+  // lead created here starts at sample stage. Cold leads from the database
+  // arrive by import with their own IKS-D ids.
+  leads: { kind: "lead", stage: "sample" },
 };
 
 export async function NewContactPage({ scope }: { scope: Scope }) {

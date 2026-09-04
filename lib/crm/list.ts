@@ -19,7 +19,7 @@ const PAGE_SIZE = 25;
 
 /** The columns the list renders. Everything else stays on the server. */
 const LIST_FIELDS =
-  "contactId kind channel name businessName phone village taluka district region crop source owner followUpAt lastContactAt lead customer dealer isSample updatedAt updatedBy";
+  "contactId kind channel stage name businessName phone village taluka district region crop source owner followUpAt lastContactAt lead customer dealer isSample updatedAt updatedBy";
 
 export interface ContactList {
   items: ContactRow[];

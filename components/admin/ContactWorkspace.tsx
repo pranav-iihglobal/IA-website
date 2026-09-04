@@ -67,6 +67,8 @@ const SCOPE: Record<Scope, { title: string; noun: string }> = {
 const LEAD_FILTERS = [
   { value: "", label: "All" },
   { value: "due", label: "Due" },
+  // A stored stage, not a derived status: given a sample, not yet bought.
+  { value: "sample", label: "Sample stage" },
   { value: "not_contacted", label: "New" },
   { value: "interested", label: "Interested" },
 ];
@@ -79,6 +81,7 @@ const CUSTOMER_FILTERS = [
   { value: "at_risk", label: "At risk" },
   { value: "dormant", label: "Dormant" },
   { value: "prospect", label: "Prospect" },
+  { value: "sample", label: "Sample stage" },
 ];
 
 function initialOf(row: ContactRow) {
@@ -434,6 +437,11 @@ export function ContactWorkspace({
                     {row.isSample && (
                       <span className="rounded-full bg-surface-subtle px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-ink-faint">
                         Demo
+                      </span>
+                    )}
+                    {row.stage === "sample" && (
+                      <span className="rounded-full bg-laurel/20 px-2 py-0.5 text-[11px] font-semibold text-ink-strong">
+                        Sample stage
                       </span>
                     )}
                     {row.kind === "customer" && (

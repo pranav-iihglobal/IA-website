@@ -5,6 +5,7 @@ import { Product } from "@/lib/db/models/Product";
 import { Contact } from "@/lib/db/models/Contact";
 import { recordAudit } from "@/lib/db/models/AuditLog";
 import { getSeller } from "@/lib/admin/settings";
+import { applyTradingDelta, convertOnFirstOrder, tradingDelta } from "@/lib/crm/trading";
 import type { LeanDoc } from "@/lib/db/lean";
 import { allocateCreditNoteNumber, allocateInvoiceNumber } from "./invoice-number";
 import {
@@ -150,7 +151,7 @@ export async function issueInvoice(
   await connectToDatabase();
 
   const contact = await Contact.findById(request.contactId)
-    .select("name businessName phone village taluka district pin state dealer")
+    .select("name businessName phone village taluka district pin state dealer kind channel stage")
     .lean();
   if (!contact) throw new InvoiceError("That customer no longer exists.");
 
@@ -239,6 +240,14 @@ export async function issueInvoice(
     },
   });
 
+  /*
+    The customer record learns about the sale — the stored figures the list
+    sorts and filters on — and a sample-stage prospect becomes a customer
+    on this, their first real order. Both AFTER the invoice exists.
+  */
+  await applyTradingDelta(contact._id, tradingDelta(invoice, "apply"), issuedAt);
+  await convertOnFirstOrder(contact._id, actor, invoice.number);
+
   return invoice;
 }
 
@@ -280,6 +289,9 @@ export async function cancelInvoice(
     after: { status: "cancelled", reason: invoice.cancelledReason },
     note: `${invoice.number} kept its number.`,
   });
+
+  // The sale did not happen after all; the customer record says so too.
+  await applyTradingDelta(invoice.contactId, tradingDelta(invoice, "undo"));
 
   return invoice;
 }
@@ -529,6 +541,9 @@ export async function issueCreditNote(
     },
     note: `credits ${original.number}`,
   });
+
+  // Money back to the customer: their lifetime revenue comes down by it.
+  await applyTradingDelta(note.contactId, tradingDelta(note, "apply"));
 
   return note;
 }

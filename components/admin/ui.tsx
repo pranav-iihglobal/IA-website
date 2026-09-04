@@ -845,6 +845,8 @@ export function StatusPill({ status }: { status: string }) {
     */
     lead: "bg-alloy/15 text-ink-strong ring-alloy/40",
     demo: "bg-alloy/15 text-ink-strong ring-alloy/40",
+    // A prospect still on samples — a stage of a real person, not demo data.
+    "sample stage": "bg-laurel/20 text-ink-strong ring-laurel/50",
   };
   const dot: Record<string, string> = {
     published: "bg-olive",
@@ -874,6 +876,7 @@ export function StatusPill({ status }: { status: string }) {
 
     dealer: "bg-camel-dark/60",
     demo: "bg-alloy",
+    "sample stage": "bg-laurel",
   };
   return (
     <span

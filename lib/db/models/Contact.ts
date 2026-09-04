@@ -94,6 +94,14 @@ const contactSchema = new Schema(
     },
     /** Only meaningful when kind is "customer". A dealer is channel b2b. */
     channel: { type: String, enum: ["b2c", "b2b", ""], default: "" },
+    /**
+     * "sample": a prospect who has been given a sample and not yet bought,
+     * numbered in the SMP series. "customer": everyone else, IKS. The first
+     * real invoice moves a sample-stage record to "customer" and re-numbers
+     * it — see lib/crm/trading.ts. Not the same thing as isSample below,
+     * which marks seeded demo data.
+     */
+    stage: { type: String, enum: ["sample", "customer"], default: "customer", index: true },
 
     name: { type: String, required: true, trim: true },
     /** Their Progressive_Farmers sheet carries Gujarati names alongside. */

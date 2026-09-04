@@ -214,21 +214,27 @@ async function contactIdReport() {
   const ids = (await Contact.find({ isSample: { $ne: true }, contactId: { $gt: "" } })
     .select("contactId")
     .lean()) as { contactId?: string }[];
-  const highest: Record<ContactSeriesLetter, number> = { C: 0, B: 0, L: 0 };
+  // Both real prefixes: IKS, and SMP for prospects at sample stage.
+  const highest = new Map<string, number>();
   for (const doc of ids) {
     const parsed = parseContactId(doc.contactId ?? "");
     if (parsed && isAllocatedSeries(parsed)) {
-      highest[parsed.letter] = Math.max(highest[parsed.letter], parsed.sequence);
+      const key = contactSeriesKey(parsed.letter, parsed.prefix);
+      highest.set(key, Math.max(highest.get(key) ?? 0, parsed.sequence));
     }
   }
-  for (const letter of ["C", "B", "L"] as const) {
-    const at = await peekSeries(contactSeriesKey(letter));
-    const line = `    ${contactSeriesKey(letter).padEnd(12)} counter ${at}, highest on file ${highest[letter]}`;
-    if (at < highest[letter]) {
-      console.log(`${line}  ⚠ BEHIND — the next allocation would reuse an id.`);
-      console.log(`      Seed it: db.counters.updateOne({ _id: "${contactSeriesKey(letter)}" }, { $max: { seq: ${highest[letter]} } }, { upsert: true })`);
-    } else {
-      console.log(line);
+  for (const prefix of ["IKS", "SMP"] as const) {
+    for (const letter of ["C", "B", "L"] as const satisfies readonly ContactSeriesLetter[]) {
+      const key = contactSeriesKey(letter, prefix);
+      const top = highest.get(key) ?? 0;
+      const at = await peekSeries(key);
+      const line = `    ${key.padEnd(16)} counter ${at}, highest on file ${top}`;
+      if (at < top) {
+        console.log(`${line}  ⚠ BEHIND — the next allocation would reuse an id.`);
+        console.log(`      Seed it: db.counters.updateOne({ _id: "${key}" }, { $max: { seq: ${top} } }, { upsert: true })`);
+      } else {
+        console.log(line);
+      }
     }
   }
 }

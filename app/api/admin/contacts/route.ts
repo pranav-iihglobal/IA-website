@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     */
     const contactId =
       parsed.data.contactId ||
-      (await allocateContactId(parsed.data.kind, parsed.data.channel));
+      (await allocateContactId(parsed.data.kind, parsed.data.channel, parsed.data.stage));
     const record = { ...parsed.data, contactId };
 
     const created = await Contact.create({

@@ -36,6 +36,8 @@ export interface ProfileContact {
   /** Ids this record carried before conversion — see Contact.formerIds. */
   formerIds: string[];
   kind: string;
+  /** "sample" while they are only receiving samples. */
+  stage: "sample" | "customer";
   channel: string;
   name: string;
   nameGu: string;
@@ -250,6 +252,7 @@ export function ContactProfile({
               <span className="text-ink-faint">was {contact.formerIds.join(", ")}</span>
             )}
             {isDealer && <StatusPill status="dealer" />}
+            {contact.stage === "sample" && <StatusPill status="sample stage" />}
             {contact.isSample && <StatusPill status="demo" />}
           </>
         }
@@ -372,14 +375,12 @@ export function ContactProfile({
           */}
           {(contact.storedOrders > 0 || contact.storedRevenuePaise > 0) && (
             <p className="rounded-xl bg-surface-muted/50 px-3 py-2 text-xs text-ink-muted">
-              <span className="font-semibold text-ink">
-                Carried over from the sheets:
-              </span>{" "}
+              <span className="font-semibold text-ink">On the record:</span>{" "}
               {contact.storedOrders} order
               {contact.storedOrders === 1 ? "" : "s"},{" "}
-              {formatRupees(contact.storedRevenuePaise)}. The figures above count
-              only invoices raised in this system — the two merge once the
-              historical invoices are imported.
+              {formatRupees(contact.storedRevenuePaise)} — what was carried over
+              from the sheets plus every invoice raised here. The figures above
+              count only the invoices in this system.
             </p>
           )}
 
