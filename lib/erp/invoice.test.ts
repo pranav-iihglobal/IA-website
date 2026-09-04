@@ -21,7 +21,7 @@ const floraMax: LineProduct = {
   name: { en: "FloraMax" },
   hsnCode: "31010099",
   gstRateBps: 500,
-  packSizes: [{ label: "25g sachet" }],
+  packSizes: [{ label: "25g sachet", unitsPerBox: 10 }],
 };
 
 const line = (over: Partial<DraftLine> = {}): DraftLine => ({
@@ -325,5 +325,29 @@ describe("creditDiscount", () => {
     );
     expect(sold.grandTotalPaise).toBe(94500);
     expect(sold.grandTotalPaise + credited.grandTotalPaise).toBe(0);
+  });
+});
+
+describe("boxes", () => {
+  it("multiplies a box order out to pieces and keeps how it was ordered", () => {
+    const out = snapshotLine(line({ quantity: 3, uom: "box" }), floraMax, 0);
+    expect(out.tax.quantity).toBe(30);
+    expect(out.uom).toBe("box");
+    expect(out.boxes).toBe(3);
+    expect(out.unitsPerBox).toBe(10);
+    // Price stays per piece: 30 × ₹245.
+    expect(out.tax.quantity * out.tax.unitPricePaise).toBe(30 * 24500);
+  });
+
+  it("refuses a box order on a pack that is not sold by the box", () => {
+    const loose: LineProduct = { ...floraMax, packSizes: [{ label: "25g sachet" }] };
+    expect(() => snapshotLine(line({ quantity: 3, uom: "box" }), loose, 0)).toThrow(/by the box/);
+  });
+
+  it("leaves a piece order alone", () => {
+    const out = snapshotLine(line({ quantity: 7 }), floraMax, 0);
+    expect(out.tax.quantity).toBe(7);
+    expect(out.uom).toBe("piece");
+    expect(out.boxes).toBe(0);
   });
 });

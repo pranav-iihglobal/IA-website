@@ -105,6 +105,7 @@ export function RaiseInvoiceForm({
             productId: l.productId,
             packLabel: l.packLabel,
             quantity: Number(l.quantity) || 0,
+            uom: l.uom,
             unitPrice: l.unitPrice,
             discountType: l.discountType,
             discount: l.discountType === "flat" ? l.discount : "",

@@ -80,6 +80,8 @@ export const packSizeSchema = z
     farmerPrice: rupeeField("Farmer price"),
     dealerPrice: rupeeField("Dealer price"),
     cost: rupeeField("Cost"),
+    /** Packs per box for dealer orders; 0 = not sold by the box. */
+    unitsPerBox: z.coerce.number().int("Whole packs per box").min(0).default(0),
   })
   // Renamed on the way out, so the stored name always says its unit.
   .transform(({ mrp, farmerPrice, dealerPrice, cost, ...rest }) => ({
@@ -730,7 +732,9 @@ export const followUpActionSchema = z.object({
 export const invoiceLineSchema = z.object({
   productId: objectIdSchema,
   packLabel: z.string().trim().default(""),
+  /** Pieces — or boxes when uom is "box"; the server multiplies out. */
   quantity: z.coerce.number().int().positive("Quantity must be at least 1"),
+  uom: z.enum(["piece", "box"]).default("piece"),
   /** Rupees in, paise out — the same boundary as a product price. */
   unitPrice: rupeeField("Price"),
   /** Flat: rupees. Percent: a number of percent, 0–100. One of the two is read. */

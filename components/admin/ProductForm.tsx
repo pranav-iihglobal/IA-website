@@ -65,6 +65,8 @@ export interface ProductFormValues {
     farmerPrice?: number | string;
     dealerPrice?: number | string;
     cost?: number | string;
+    /** Packs per box, for dealers who order by the box. */
+    unitsPerBox?: number | string;
   }[];
   regulatory: { fcoCompliant: boolean; fcoSchedule: string; licenseNo: string };
 
@@ -843,6 +845,7 @@ export function ProductForm({
                         farmerPrice: "",
                         dealerPrice: "",
                         cost: "",
+                        unitsPerBox: "",
                       },
                     ])
                   }
@@ -879,6 +882,21 @@ export function ProductForm({
                             "packSizes",
                             values.packSizes.map((p, idx) =>
                               idx === i ? { ...p, netQuantity: v } : p,
+                            ),
+                          )
+                        }
+                      />
+                      <TextField
+                        label="Per box"
+                        kind="integer"
+                        min={0}
+                        hint="Packs in a box. Dealers order by the box."
+                        value={values.packSizes[i].unitsPerBox ?? ""}
+                        onChange={(v) =>
+                          update(
+                            "packSizes",
+                            values.packSizes.map((p, idx) =>
+                              idx === i ? { ...p, unitsPerBox: v } : p,
                             ),
                           )
                         }

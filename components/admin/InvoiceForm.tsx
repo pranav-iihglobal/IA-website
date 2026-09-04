@@ -11,6 +11,7 @@ import {
 } from "./ui";
 import { formatINR, paiseToRupeeString, rupeesToPaise } from "@/lib/money";
 import { computeInvoice, formatRate, supplyTypeFor, GUJARAT_STATE_CODE, clampDiscount, resolveDiscount } from "@/lib/erp/tax";
+import { toPieces } from "@/lib/erp/quantity";
 import type { BillableParty, BillableProduct } from "@/lib/admin/invoice-options";
 import { usePartyHistory } from "./usePartyHistory";
 import { adminFetch } from "@/lib/admin/fetch";
@@ -41,7 +42,9 @@ import { formatIstDateLong } from "@/lib/time";
 export interface InvoiceLineValues {
   productId: string;
   packLabel: string;
+  /** Pieces, or boxes when uom is "box". */
   quantity: string;
+  uom: "piece" | "box";
   /** Rupees, as typed. lib/schemas.ts converts to paise on the way in. */
   unitPrice: string;
   /** Rupees when flat, a percentage when percent — whatever was typed. */
@@ -57,7 +60,15 @@ export interface InvoiceFormValues {
 }
 
 export function emptyInvoiceLine(): InvoiceLineValues {
-  return { productId: "", packLabel: "", quantity: "1", unitPrice: "", discount: "", discountType: "flat" };
+  return {
+    productId: "",
+    packLabel: "",
+    quantity: "1",
+    uom: "piece",
+    unitPrice: "",
+    discount: "",
+    discountType: "flat",
+  };
 }
 
 export function emptyInvoice(): InvoiceFormValues {
@@ -88,7 +99,13 @@ export function invoicePreview(
   const ready = values.lines
     .map((line) => {
       const product = byId.get(line.productId);
-      const quantity = Number(line.quantity);
+      const pack = product?.packs.find((p) => p.label === line.packLabel);
+      // Boxes become pieces the same way the server does it.
+      const typed = Number(line.quantity);
+      const quantity =
+        line.uom === "box" && pack && pack.unitsPerBox > 0
+          ? toPieces(typed, "box", pack.unitsPerBox)
+          : typed;
       const unitPricePaise = rupeesToPaise(line.unitPrice);
       if (
         !product ||
@@ -231,6 +248,7 @@ export function InvoiceCustomerStep({
                 productId: l.productId,
                 packLabel: l.packLabel,
                 quantity: String(l.quantity),
+                uom: l.uom,
                 unitPrice: l.unitPrice,
                 discount: l.discount,
                 discountType: l.discountType,
@@ -329,6 +347,7 @@ export function InvoiceLinesStep({
                   productId,
                   packLabel: only?.label ?? "",
                   unitPrice: suggestPrice(only, party),
+                  uom: suggestUom(only, party),
                 });
               }}
             />
@@ -348,6 +367,7 @@ export function InvoiceLinesStep({
                       product.packs.find((p) => p.label === packLabel),
                       party,
                     ),
+                    uom: suggestUom(product.packs.find((p) => p.label === packLabel), party),
                   })
                 }
                 options={[
@@ -356,13 +376,46 @@ export function InvoiceLinesStep({
                 ]}
               />
             )}
-            <TextField
-              label="Quantity"
-              kind="quantity"
-              min={1}
-              value={line.quantity}
-              onChange={(quantity) => setLine(i, { quantity })}
-            />
+            <div>
+              <TextField
+                label={line.uom === "box" ? "Boxes" : "Quantity"}
+                kind="quantity"
+                min={1}
+                value={line.quantity}
+                onChange={(quantity) => setLine(i, { quantity })}
+                error={errors[`lines.${i}.quantity`]}
+                hint={
+                  line.uom === "box" && pack && pack.unitsPerBox > 0
+                    ? `× ${pack.unitsPerBox} per box = ${toPieces(Number(line.quantity) || 0, "box", pack.unitsPerBox)} pieces`
+                    : undefined
+                }
+              />
+              {/* By the box, for a pack that has a box size — dealers order that way. */}
+              {pack && pack.unitsPerBox > 0 && (
+                <div role="group" aria-label="Order by" className="mt-1.5 flex gap-1.5">
+                  {(
+                    [
+                      { value: "piece", label: "Pieces" },
+                      { value: "box", label: `Boxes of ${pack.unitsPerBox}` },
+                    ] as const
+                  ).map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={line.uom === option.value}
+                      onClick={() => setLine(i, { uom: option.value })}
+                      className={`admin-tap rounded-full border px-3 text-xs font-semibold ${
+                        line.uom === option.value
+                          ? "border-olive bg-accent-soft text-ink-strong"
+                          : "border-line text-ink-muted hover:border-olive"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <div>
               <TextField
                 label="Price each"
@@ -482,6 +535,14 @@ export function InvoiceLinesStep({
  * reason a price is on the request and the rate is not is that prices really
  * are negotiated.
  */
+/** Dealers order by the box where the pack has a box size; everyone else by the piece. */
+function suggestUom(
+  pack: { unitsPerBox: number } | undefined,
+  party: BillableParty | undefined,
+): "piece" | "box" {
+  return party?.channel === "b2b" && (pack?.unitsPerBox ?? 0) > 0 ? "box" : "piece";
+}
+
 function suggestPrice(
   pack: { farmerPricePaise: number | null; dealerPricePaise: number | null; mrpPaise: number | null } | undefined,
   party: BillableParty | undefined,

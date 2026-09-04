@@ -25,7 +25,9 @@ import { paiseToRupeeString } from "@/lib/money";
 export interface HistoricLine {
   productId: string;
   packLabel: string;
+  /** Boxes when uom is "box", else pieces — as the form types it. */
   quantity: number;
+  uom: "piece" | "box";
   /** Rupees as a string, ready for the form's own money fields. */
   unitPrice: string;
   /** Rupees when flat, percent when percent — as the form types it. */
@@ -107,7 +109,8 @@ export async function partyHistory(contactId: string): Promise<PartyHistory> {
           .map((l: LeanDoc) => ({
             productId: String(l.productId),
             packLabel: l.packLabel ?? "",
-            quantity: l.quantity ?? 1,
+            uom: l.uom === "box" && (l.boxes ?? 0) > 0 ? "box" : "piece",
+            quantity: l.uom === "box" && (l.boxes ?? 0) > 0 ? l.boxes : (l.quantity ?? 1),
             unitPrice: paiseToRupeeString(l.unitPricePaise ?? 0),
             discountType: l.discountType === "percent" ? "percent" : "flat",
             discount:

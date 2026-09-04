@@ -20,6 +20,8 @@ export interface BillablePack {
   mrpPaise: number | null;
   farmerPricePaise: number | null;
   dealerPricePaise: number | null;
+  /** Packs per box; 0 when not sold by the box. */
+  unitsPerBox: number;
 }
 
 export interface BillableProduct {
@@ -75,6 +77,7 @@ export async function getBillableProducts(): Promise<BillableProduct[]> {
           mrpPaise: paise(pack.mrpPaise),
           farmerPricePaise: paise(pack.farmerPricePaise),
           dealerPricePaise: paise(pack.dealerPricePaise),
+          unitsPerBox: typeof pack.unitsPerBox === "number" ? pack.unitsPerBox : 0,
         })),
         blockedReason: missing.length
           ? `Needs ${missing.join(" and ")} before it can be invoiced.`

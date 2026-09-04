@@ -95,7 +95,12 @@ const lineSchema = new Schema(
     /** The pack, e.g. "25g sachet", as it was named at the time. */
     packLabel: { type: String, default: "", trim: true },
     hsn: { type: String, default: "", trim: true },
+    /** PIECES, always — tax, HSN, credits and stock all count pieces. */
     quantity: { type: Number, required: true },
+    /** How it was ordered: "box" when a dealer bought N boxes of unitsPerBox. */
+    uom: { type: String, enum: ["piece", "box"], default: "piece" },
+    boxes: { type: Number, default: 0 },
+    unitsPerBox: { type: Number, default: 0 },
     /** Integer paise, before tax and before any discount. */
     unitPricePaise: { type: Number, required: true },
     /** The resolved discount in paise — what the taxable value was reduced by. */

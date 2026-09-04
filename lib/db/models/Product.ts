@@ -55,6 +55,12 @@ const packSizeSchema = new Schema(
     dealerPricePaise: { type: Number, min: 0 },
     /** What the pack costs to make and fill. Admin-only; drives margin. */
     costPaise: { type: Number, min: 0 },
+    /**
+     * How many of this pack make a box, for dealers who buy by the box.
+     * 0 means it is not sold by the box. Prices stay per pack; a box is a
+     * quantity, not a price — see lib/erp/quantity.ts.
+     */
+    unitsPerBox: { type: Number, min: 0, default: 0 },
   },
   { _id: false },
 );

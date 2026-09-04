@@ -29,7 +29,11 @@ export interface DetailLine {
   description: string;
   packLabel: string;
   hsn: string;
+  /** Pieces. How it was ordered is beside it — see describeQuantity(). */
   quantity: number;
+  uom: "piece" | "box";
+  boxes: number;
+  unitsPerBox: number;
   unitPricePaise: number;
   discountPaise: number;
   /** How it was stated — "10%" reads better than the paise it came to. */
@@ -185,6 +189,9 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
       packLabel: l.packLabel ?? "",
       hsn: l.hsn ?? "",
       quantity,
+      uom: l.uom === "box" ? "box" : "piece",
+      boxes: l.boxes ?? 0,
+      unitsPerBox: l.unitsPerBox ?? 0,
       unitPricePaise: l.unitPricePaise ?? 0,
       discountPaise: l.discountPaise ?? 0,
       discountType: l.discountType === "percent" ? "percent" : "flat",

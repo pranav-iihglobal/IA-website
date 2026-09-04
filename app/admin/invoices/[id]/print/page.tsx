@@ -7,6 +7,7 @@ import { requirePageAccess } from "@/lib/admin/page-guard";
 import { SITE } from "@/lib/content";
 import { sellerFrom } from "@/lib/erp/seller";
 import { formatINR } from "@/lib/money";
+import { describeQuantity } from "@/lib/erp/quantity";
 import { formatRate } from "@/lib/erp/tax";
 import { formatIstDateLong } from "@/lib/time";
 import type { LeanDoc } from "@/lib/db/lean";
@@ -56,7 +57,6 @@ export default async function InvoicePrintPage({
 
   /* Displayed magnitude. The stored sign is what the sums rely on. */
   const money = (paise: number) => formatINR(isCredit ? Math.abs(paise ?? 0) : (paise ?? 0));
-  const count = (quantity: number) => (isCredit ? Math.abs(quantity ?? 0) : quantity);
 
   return (
     /*
@@ -223,7 +223,7 @@ export default async function InvoicePrintPage({
               </td>
               <td className="py-1.5 pr-2">{line.hsn}</td>
               <td className="py-1.5 pr-2 text-right tabular-nums">
-                {count(line.quantity)}
+                {describeQuantity(line as { quantity: number; uom?: string; boxes?: number })}
               </td>
               <td className="py-1.5 pr-2 text-right tabular-nums">
                 {formatINR(line.unitPricePaise)}

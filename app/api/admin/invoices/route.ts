@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
           productId: l.productId,
           packLabel: l.packLabel,
           quantity: l.quantity,
+          uom: l.uom,
           unitPricePaise: l.unitPrice ?? 0,
           discountType: l.discountType,
           discountValue:

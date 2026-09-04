@@ -17,6 +17,7 @@ import {
   GUJARAT_STATE_CODE,
   type InvoiceLineInput,
 } from "./tax";
+import { toPieces, type Uom } from "./quantity";
 
 /**
  * Raising and cancelling invoices.
@@ -34,7 +35,9 @@ export interface DraftLine {
   productId: string;
   /** Which pack of that product, by its label. */
   packLabel: string;
+  /** Pieces — or boxes when uom is "box"; snapshotLine multiplies out. */
   quantity: number;
+  uom?: Uom;
   /**
    * Paise. Sent because a negotiated price is real — a dealer does not always
    * pay the list price. The RATE is never sent; see below.
@@ -61,7 +64,7 @@ export interface LineProduct {
   name?: { en?: string };
   hsnCode?: string;
   gstRateBps?: number;
-  packSizes?: { label?: string }[];
+  packSizes?: { label?: string; unitsPerBox?: number }[];
 }
 
 /** The snapshot, plus the bits the tax engine has no business knowing about. */
@@ -72,6 +75,10 @@ export interface SnapshottedLine {
   /** How the discount was stated; tax.discountPaise is what it came to. */
   discountType: DiscountType;
   discountValue: number;
+  /** How the quantity was ordered; tax.quantity is always pieces. */
+  uom: Uom;
+  boxes: number;
+  unitsPerBox: number;
 }
 
 /**
@@ -112,6 +119,22 @@ export function snapshotLine(
   if (!Number.isInteger(line.quantity) || line.quantity <= 0) {
     throw new InvoiceError(`${at}: quantity must be a whole number above zero.`);
   }
+
+  /*
+    Boxes become pieces HERE, once. Everything downstream — tax, the HSN
+    summary, the credit ceiling, stock — counts pieces; how it was ordered is
+    kept beside them so the print can say "3 boxes (30)".
+  */
+  const packForBox = (product.packSizes ?? []).find((p) => p.label === line.packLabel);
+  const uom: Uom = line.uom ?? "piece";
+  const unitsPerBox = packForBox?.unitsPerBox ?? 0;
+  if (uom === "box" && !(Number.isInteger(unitsPerBox) && unitsPerBox > 0)) {
+    throw new InvoiceError(
+      `${at}: that pack is not sold by the box — set packs per box on the product, or order pieces.`,
+    );
+  }
+  const boxes = uom === "box" ? line.quantity : 0;
+  const pieces = toPieces(line.quantity, uom, unitsPerBox);
   if (!Number.isInteger(line.unitPricePaise) || line.unitPricePaise < 0) {
     throw new InvoiceError(`${at}: the price is not a valid amount.`);
   }
@@ -130,7 +153,7 @@ export function snapshotLine(
   if (discountType === "percent" && discountValue > 10_000) {
     throw new InvoiceError(`${at}: a discount cannot be more than 100%.`);
   }
-  const grossPaise = line.quantity * line.unitPricePaise;
+  const grossPaise = pieces * line.unitPricePaise;
   const discountPaise = clampDiscount(
     grossPaise,
     resolveDiscount(grossPaise, discountType, discountValue),
@@ -142,7 +165,7 @@ export function snapshotLine(
     tax: {
       description: [product.name?.en, line.packLabel].filter(Boolean).join(" — "),
       hsn: product.hsnCode,
-      quantity: line.quantity,
+      quantity: pieces,
       unitPricePaise: line.unitPricePaise,
       discountPaise,
       gstRateBps: product.gstRateBps,
@@ -151,6 +174,9 @@ export function snapshotLine(
     packLabel: pack?.label ?? line.packLabel,
     discountType,
     discountValue,
+    uom,
+    boxes,
+    unitsPerBox: uom === "box" ? unitsPerBox : 0,
   };
 }
 
@@ -258,6 +284,9 @@ export async function issueInvoice(
         packLabel: snapshotted[i].packLabel,
         hsn: line.hsn,
         quantity: line.quantity,
+        uom: snapshotted[i].uom,
+        boxes: snapshotted[i].boxes,
+        unitsPerBox: snapshotted[i].unitsPerBox,
         unitPricePaise: line.unitPricePaise,
         discountPaise: line.discountPaise ?? 0,
         discountType: snapshotted[i].discountType,
@@ -559,7 +588,10 @@ export async function issueCreditNote(
       description: line.description,
       packLabel: originalLines[picks[i].index]?.packLabel ?? "",
       hsn: line.hsn,
+      // Pieces. A box order is credited by the piece — "3 boxes" on the
+      // original, 30 pieces on the note, so a part-credit of a box is possible.
       quantity: line.quantity,
+      uom: "piece",
       unitPricePaise: line.unitPricePaise,
       discountPaise: line.discountPaise ?? 0,
       discountType: originalLines[picks[i].index]?.discountType ?? "flat",

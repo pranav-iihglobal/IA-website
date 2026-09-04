@@ -70,6 +70,7 @@ function toFormValues(doc: LeanDoc): ProductFormValues {
       unit: p.unit ?? "g",
       mrp: rupeesOrBlank(p.mrpPaise),
       farmerPrice: rupeesOrBlank(p.farmerPricePaise),
+      unitsPerBox: p.unitsPerBox ? String(p.unitsPerBox) : "",
       dealerPrice: rupeesOrBlank(p.dealerPricePaise),
       cost: rupeesOrBlank(p.costPaise),
     })),

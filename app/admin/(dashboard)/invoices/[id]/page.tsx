@@ -7,6 +7,7 @@ import { getInvoiceDetail } from "@/lib/erp/invoice-detail";
 import { recordHistory } from "@/lib/admin/history";
 import { RecordHistory } from "@/components/admin/RecordHistory";
 import { RecordHeader, StatusPill } from "@/components/admin/ui";
+import { describeQuantity } from "@/lib/erp/quantity";
 import { formatINR, formatRupees } from "@/lib/money";
 import { formatRate } from "@/lib/erp/tax";
 import { formatIstDateLong } from "@/lib/time";
@@ -60,7 +61,6 @@ export default async function InvoiceDetailPage({
 
   /* Displayed magnitude. The stored sign is what every sum relies on. */
   const money = (paise: number) => formatINR(isCredit ? Math.abs(paise) : paise);
-  const count = (quantity: number) => (isCredit ? Math.abs(quantity) : quantity);
 
   const partyName = invoice.party.businessName || invoice.party.name;
   const tel = telHref(invoice.party.phone);
@@ -266,7 +266,7 @@ export default async function InvoiceDetailPage({
                       </td>
                       <td className="py-2 pr-3 text-ink-muted">{line.hsn}</td>
                       <td className="py-2 pr-3 text-right tabular-nums">
-                        {count(line.quantity)}
+                        {describeQuantity(line)}
                       </td>
                       <td className="py-2 pr-3 text-right tabular-nums">
                         {formatINR(line.unitPricePaise)}
