@@ -152,8 +152,14 @@ export function ContactForm({
   */
   const duplicates = useDuplicateContacts(values.phone, contactId);
 
-  const isDealer = scope === "dealers";
   const isLead = scope === "leads";
+  /*
+    From the record, not the screen. A customer can be made a dealer (or a
+    dealer a customer) on the form now — the toggle in the first step — and
+    the dealer-terms step and labels must follow the choice live, not the
+    list the page was opened from.
+  */
+  const isDealer = !isLead && values.channel === "b2b";
   const back = listHref(scope);
 
   function apply(next: ContactFormValues) {
@@ -257,10 +263,49 @@ export function ContactForm({
       id: "who",
       title: "Who they are",
       description: "Name and how to reach them",
-      errorKeys: ["name", "nameGu", "businessName", "phone", "altPhone", "email", "contactId"],
+      errorKeys: ["name", "nameGu", "businessName", "phone", "altPhone", "email", "contactId", "channel"],
       complete: Boolean(values.name.trim()),
       content: (
         <Section title="Who they are" description="Name and how to reach them.">
+          {/*
+            Customer or dealer, on the record itself. There was no way to make
+            an existing customer a dealer short of a database edit: the
+            Convert step is for leads only. The server already treats a
+            channel change as a conversion — a new id in the other series,
+            the old one kept.
+          */}
+          {!isLead && (
+            <div role="group" aria-label="Customer or dealer" className="flex flex-wrap items-center gap-2">
+              {(
+                [
+                  { value: "b2c", label: "Customer" },
+                  { value: "b2b", label: "Dealer" },
+                ] as const
+              ).map((option) => {
+                const active = values.channel === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => set({ channel: option.value })}
+                    className={`admin-tap rounded-full border px-4 text-sm font-semibold transition-colors ${
+                      active
+                        ? "border-olive bg-accent-soft text-ink-strong"
+                        : "border-line text-ink-muted hover:border-olive hover:text-ink"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+              <span className="text-xs text-ink-soft">
+                {contactId && initial.channel !== values.channel
+                  ? `Moves to the ${values.channel === "b2b" ? "dealer" : "customer"} series on save — a new id, the old one kept.`
+                  : "A dealer buys to resell and needs a GSTIN."}
+              </span>
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField
               label={isDealer ? "Proprietor name" : "Name"}
