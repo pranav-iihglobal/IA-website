@@ -17,6 +17,7 @@ import {
 import { adminFetch } from "@/lib/admin/fetch";
 import { useSaveShortcut } from "@/lib/admin/form-hooks";
 import type { BillableParty, BillableProduct } from "@/lib/admin/invoice-options";
+import type { SchemeRule } from "@/lib/erp/schemes";
 
 /**
  * Raising an invoice, on its own page.
@@ -37,10 +38,13 @@ export function RaiseInvoiceForm({
   parties,
   /** Prefilled from a customer's profile: /admin/invoices/new?party=<id>. */
   initialPartyId = "",
+  /** The seasonal schemes live when the page loaded — see invoicePreview(). */
+  schemes = [],
 }: {
   products: BillableProduct[];
   parties: BillableParty[];
   initialPartyId?: string;
+  schemes?: SchemeRule[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -155,8 +159,8 @@ export function RaiseInvoiceForm({
     if (!saving) void issue();
   });
 
-  const preview = invoicePreview(values, products);
   const party = allParties.find((p) => p.id === values.contactId);
+  const preview = invoicePreview(values, products, schemes, party);
   const linesReady = preview?.counted ?? 0;
 
   const steps: WizardStep[] = [
@@ -189,6 +193,7 @@ export function RaiseInvoiceForm({
           onChange={change}
           products={products}
           party={party}
+          schemes={schemes}
           errors={errors}
         />
       ),

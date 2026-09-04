@@ -834,6 +834,11 @@ export function StatusPill({ status }: { status: string }) {
     stock: "bg-laurel/20 text-ink-strong ring-laurel/50",
     // A stock item whose count follows the sales of its pack.
     linked: "bg-laurel/20 text-ink-strong ring-laurel/50",
+    // Schemes, by the clock: live, not yet, over, or switched off.
+    active: "bg-accent-soft/60 text-ink-muted ring-laurel",
+    upcoming: "bg-alloy/15 text-ink-strong ring-alloy/40",
+    expired: "bg-surface-strong/40 text-ink-faint ring-line-soft",
+    off: "bg-surface-strong/40 text-ink-faint ring-line-soft",
 
     // Derived customer states — see STATUS_LABELS in lib/crm/shape.ts.
     Active: "bg-accent-soft/60 text-ink-muted ring-laurel",
@@ -874,6 +879,10 @@ export function StatusPill({ status }: { status: string }) {
     payment: "bg-camel-dark/60",
     stock: "bg-laurel",
     linked: "bg-laurel",
+    active: "bg-olive",
+    upcoming: "bg-alloy",
+    expired: "bg-camel-dark/50",
+    off: "bg-camel-dark/50",
 
     Active: "bg-olive",
     "At risk": "bg-alloy",

@@ -55,6 +55,8 @@ export function recordHref(entity: string, entityId: string): string | null {
       return `/admin/stock/${entityId}`;
     case "Supplier":
       return `/admin/suppliers/${entityId}`;
+    case "Scheme":
+      return `/admin/schemes/${entityId}/edit`;
     case "Product":
       return `/admin/products/${entityId}`;
     case "Post":
@@ -123,6 +125,14 @@ const FIELD_LABELS: Record<string, string> = {
   packLabel: "Pack",
   stockItemId: "Stock item",
   reorderLevel: "Reorder level",
+  startAt: "Starts",
+  endAt: "Ends",
+  discountType: "Discount as",
+  discountValue: "Discount",
+  productIds: "Products",
+  channel: "Channel",
+  enabled: "On",
+  schemeName: "Scheme",
   followUpAt: "Follow-up",
   followUpStatus: "Follow-up status",
   businessName: "Business",

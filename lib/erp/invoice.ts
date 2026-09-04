@@ -19,6 +19,8 @@ import {
 } from "./tax";
 import { toPieces, type Uom } from "./quantity";
 import { InvoiceError } from "./invoice-error";
+import { pickScheme, type SchemeRule } from "./schemes";
+import { schemesActiveAt } from "./scheme-store";
 import {
   assertNoShortage,
   deductStock,
@@ -88,6 +90,21 @@ export interface SnapshottedLine {
   uom: Uom;
   boxes: number;
   unitsPerBox: number;
+  /** The seasonal scheme that supplied the discount, when nothing was typed. */
+  schemeId: string | null;
+  schemeName: string;
+}
+
+/**
+ * What the moment of issue knows that a line does not: which schemes are
+ * live, and whose invoice this is. Optional, because a test of the rate and
+ * HSN rules has no business setting up a season.
+ */
+export interface IssueContext {
+  schemes: SchemeRule[];
+  /** The party's channel — b2c or b2b — for schemes aimed at one side. */
+  channel: string;
+  at: Date;
 }
 
 /**
@@ -111,6 +128,7 @@ export function snapshotLine(
   line: DraftLine,
   product: LineProduct | undefined,
   index: number,
+  context?: IssueContext,
 ): SnapshottedLine {
   const at = `Line ${index + 1}`;
   if (!product) throw new InvoiceError(`${at}: that product no longer exists.`);
@@ -163,10 +181,30 @@ export function snapshotLine(
     throw new InvoiceError(`${at}: a discount cannot be more than 100%.`);
   }
   const grossPaise = pieces * line.unitPricePaise;
-  const discountPaise = clampDiscount(
+  const typed = clampDiscount(
     grossPaise,
     resolveDiscount(grossPaise, discountType, discountValue),
   );
+
+  /*
+    A typed discount wins; a scheme fills the blank. The person raising the
+    invoice knows something the rule does not — a negotiated price, a
+    complaint being settled — so anything typed, even a smaller amount than
+    the scheme would give, is what goes on the document. Where nothing was
+    typed, the best live scheme for this pack and this party supplies the
+    discount AND its own type and value, so the print reads "10%" the way a
+    typed percentage would, with the scheme's name beside it.
+  */
+  const applied =
+    typed === 0 && context
+      ? pickScheme(
+          context.schemes,
+          { productId: line.productId, channel: context.channel },
+          grossPaise,
+          context.at,
+        )
+      : null;
+  const discountPaise = applied ? applied.discountPaise : typed;
 
   const pack = (product.packSizes ?? []).find((p) => p.label === line.packLabel);
 
@@ -181,11 +219,13 @@ export function snapshotLine(
     },
     productId: line.productId,
     packLabel: pack?.label ?? line.packLabel,
-    discountType,
-    discountValue,
+    discountType: applied ? applied.scheme.discountType : discountType,
+    discountValue: applied ? applied.scheme.discountValue : discountValue,
     uom,
     boxes,
     unitsPerBox: uom === "box" ? unitsPerBox : 0,
+    schemeId: applied ? applied.scheme.id : null,
+    schemeName: applied ? applied.scheme.name : "",
   };
 }
 
@@ -212,7 +252,10 @@ export function creditDiscount(
 }
 
 /** Fetch the products these lines name, then snapshot each one. */
-async function snapshotLines(lines: DraftLine[]): Promise<SnapshottedLine[]> {
+async function snapshotLines(
+  lines: DraftLine[],
+  context: IssueContext,
+): Promise<SnapshottedLine[]> {
   if (lines.length === 0) throw new InvoiceError("An invoice needs at least one line.");
 
   const products = await Product.find({ _id: { $in: lines.map((l) => l.productId) } })
@@ -220,7 +263,7 @@ async function snapshotLines(lines: DraftLine[]): Promise<SnapshottedLine[]> {
     .lean();
   const byId = new Map(products.map((p: LeanDoc) => [String(p._id), p as LineProduct]));
 
-  return lines.map((line, i) => snapshotLine(line, byId.get(line.productId), i));
+  return lines.map((line, i) => snapshotLine(line, byId.get(line.productId), i, context));
 }
 
 /**
@@ -242,7 +285,17 @@ export async function issueInvoice(
     .lean();
   if (!contact) throw new InvoiceError("That customer no longer exists.");
 
-  const snapshotted = await snapshotLines(request.lines);
+  /*
+    The moment of issue is fixed FIRST, because the schemes live at that
+    moment decide the discounts, and the number allocated later carries its
+    month. One clock reading for the whole document.
+  */
+  const issuedAt = request.issuedAt ?? new Date();
+  const snapshotted = await snapshotLines(request.lines, {
+    schemes: await schemesActiveAt(issuedAt),
+    channel: contact.channel ?? "",
+    at: issuedAt,
+  });
   /*
     Who is selling, copied like the party. The setting can change; this
     document must not. sellerSchema guarantees the GSTIN is a Gujarat
@@ -256,8 +309,6 @@ export async function issueInvoice(
     snapshotted.map((s) => s.tax),
     supplyType,
   );
-
-  const issuedAt = request.issuedAt ?? new Date();
 
   /*
     Stock, BEFORE the number. A line asking for more than is on the shelf is
@@ -340,6 +391,8 @@ export async function issueInvoice(
           discountPaise: line.discountPaise ?? 0,
           discountType: snapshotted[i].discountType,
           discountValue: snapshotted[i].discountValue,
+          schemeId: snapshotted[i].schemeId,
+          schemeName: snapshotted[i].schemeName,
           gstRateBps: line.gstRateBps,
           taxableValuePaise: line.taxableValuePaise,
           cgstPaise: line.cgstPaise,
@@ -689,6 +742,8 @@ export async function issueCreditNote(
       discountPaise: line.discountPaise ?? 0,
       discountType: originalLines[picks[i].index]?.discountType ?? "flat",
       discountValue: originalLines[picks[i].index]?.discountValue ?? 0,
+      schemeId: originalLines[picks[i].index]?.schemeId ?? null,
+      schemeName: originalLines[picks[i].index]?.schemeName ?? "",
       gstRateBps: line.gstRateBps,
       taxableValuePaise: line.taxableValuePaise,
       cgstPaise: line.cgstPaise,

@@ -115,6 +115,13 @@ const lineSchema = new Schema(
     /** How it was stated: flat paise, or percent in basis points. For the print. */
     discountType: { type: String, enum: ["flat", "percent"], default: "flat" },
     discountValue: { type: Number, default: 0 },
+    /**
+     * The seasonal scheme that supplied the discount, when nothing was typed.
+     * Named as well as referenced, because the print says "Kharif 10%" and
+     * the scheme may be renamed or deleted long after.
+     */
+    schemeId: { type: Schema.Types.ObjectId, ref: "Scheme", default: null },
+    schemeName: { type: String, default: "", trim: true },
     /** Basis points: 500 is 5%. Copied from the product AT ISSUE. */
     gstRateBps: { type: Number, required: true, min: 0, max: 10_000 },
 

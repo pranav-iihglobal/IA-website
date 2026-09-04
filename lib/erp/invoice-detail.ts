@@ -39,6 +39,8 @@ export interface DetailLine {
   /** How it was stated — "10%" reads better than the paise it came to. */
   discountType: "flat" | "percent";
   discountValue: number;
+  /** The seasonal scheme that supplied the discount, or "". */
+  schemeName: string;
   gstRateBps: number;
   taxableValuePaise: number;
   cgstPaise: number;
@@ -196,6 +198,7 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
       discountPaise: l.discountPaise ?? 0,
       discountType: l.discountType === "percent" ? "percent" : "flat",
       discountValue: l.discountValue ?? 0,
+      schemeName: l.schemeName ?? "",
       gstRateBps: l.gstRateBps ?? 0,
       taxableValuePaise: l.taxableValuePaise ?? 0,
       cgstPaise: l.cgstPaise ?? 0,

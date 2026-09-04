@@ -5,6 +5,8 @@ import {
   getBillableParties,
   getBillableProducts,
 } from "@/lib/admin/invoice-options";
+import { getActiveSchemes } from "@/lib/erp/scheme-store";
+import { describeSchemeDiscount } from "@/lib/erp/schemes";
 
 export const metadata = { title: "Raise an invoice" };
 export const dynamic = "force-dynamic";
@@ -16,9 +18,10 @@ export default async function RaiseInvoicePage({
 }) {
   await requirePageAccess("billing:write");
 
-  const [products, parties, url] = await Promise.all([
+  const [products, parties, schemes, url] = await Promise.all([
     getBillableProducts(),
     getBillableParties(),
+    getActiveSchemes(),
     searchParams,
   ]);
 
@@ -51,11 +54,23 @@ export default async function RaiseInvoicePage({
         </p>
       )}
 
+      {/* Said up front: the discounts that will fill in on their own. */}
+      {schemes.length > 0 && (
+        <p className="admin-card mt-6 px-4 py-2.5 text-sm text-ink">
+          <strong className="font-semibold">
+            {schemes.length === 1 ? "A scheme is live:" : `${schemes.length} schemes are live:`}
+          </strong>{" "}
+          {schemes.map((s) => `${s.name} (${describeSchemeDiscount(s)})`).join(", ")}.
+          Applied where no discount is typed.
+        </p>
+      )}
+
       <div className="mt-8">
         <RaiseInvoiceForm
           products={products}
           parties={parties}
           initialPartyId={party ?? ""}
+          schemes={schemes}
         />
       </div>
     </>

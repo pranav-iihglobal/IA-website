@@ -907,6 +907,76 @@ export const supplierSchema = z.object({
   notes: z.string().trim().default(""),
 });
 
+/**
+ * A seasonal scheme — see lib/db/models/Scheme.ts.
+ *
+ * The discount is typed as rupees or as a percentage and stored as the pair
+ * an invoice line stores (flat paise, or percent in basis points), so the
+ * engine applies it with the same resolver a typed discount goes through.
+ * The dates come from `datetime-local` inputs and are read as IST — a
+ * scheme that starts "1 June at 00:00" starts at midnight in Gujarat.
+ */
+export const schemeSchema = z
+  .object({
+    version: versionField,
+    name: z.string().trim().min(1, "Name the scheme — it is printed on the invoice"),
+    discountType: z.enum(["flat", "percent"]).default("percent"),
+    /** Rupees when flat, percent when percent — whatever was typed. */
+    discount: z
+      .union([z.string(), z.number()])
+      .transform((v) => String(v).trim())
+      .refine((v) => v !== "" && Number.isFinite(Number(v)), "How much does it take off?")
+      .refine((v) => Number(v) > 0, "A scheme has to take something off"),
+    productIds: z.array(objectIdSchema).default([]),
+    channel: z.enum(["both", "b2c", "b2b"]).default("both"),
+    startAt: z
+      .string()
+      .trim()
+      .min(1, "When does it start?")
+      .transform((v, ctx) => {
+        const parsed = parseIstDateTimeInput(v);
+        if (!parsed) ctx.addIssue({ code: "custom", message: "That is not a date and time" });
+        return parsed ?? new Date(NaN);
+      }),
+    endAt: z
+      .string()
+      .trim()
+      .min(1, "When does it end?")
+      .transform((v, ctx) => {
+        const parsed = parseIstDateTimeInput(v);
+        if (!parsed) ctx.addIssue({ code: "custom", message: "That is not a date and time" });
+        return parsed ?? new Date(NaN);
+      }),
+    enabled: z.boolean().default(true),
+    notes: z.string().trim().default(""),
+  })
+  /*
+    Object-level checks run even when a field above has already failed, and
+    then see `undefined` where that field would be — so each one steps aside
+    for anything not yet valid rather than throwing out of the validator.
+  */
+  .refine(
+    (v) => v.discountType !== "percent" || v.discount === undefined || Number(v.discount) <= 100,
+    { message: "A percentage is between 0 and 100", path: ["discount"] },
+  )
+  .refine(
+    (v) =>
+      !(v.startAt instanceof Date) ||
+      !(v.endAt instanceof Date) ||
+      Number.isNaN(v.startAt.getTime()) ||
+      Number.isNaN(v.endAt.getTime()) ||
+      v.endAt.getTime() > v.startAt.getTime(),
+    { message: "The end has to be after the start", path: ["endAt"] },
+  )
+  .transform(({ discount, ...rest }) => ({
+    ...rest,
+    // Basis points for a percentage, paise for rupees — one resolver downstream.
+    discountValue:
+      rest.discountType === "percent"
+        ? Math.round(Number(discount) * 100)
+        : (rupeesToPaise(discount) ?? 0),
+  }));
+
 export const stockItemSchema = z
   .object({
     version: versionField,

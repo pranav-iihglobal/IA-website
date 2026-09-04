@@ -218,6 +218,7 @@ export default async function InvoicePrintPage({
                   <span className="block text-[11px]">
                     less discount {money(Math.abs(line.discountPaise))}
                     {line.discountType === "percent" ? ` (${(line.discountValue ?? 0) / 100}%)` : ""}
+                    {line.schemeName ? ` — ${line.schemeName}` : ""}
                   </span>
                 ) : null}
               </td>

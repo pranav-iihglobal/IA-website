@@ -116,6 +116,13 @@ const NAV: (NavItem | NavGroup)[] = [
         icon: <Icon path="M12 3v18M8 7h6.5a2.5 2.5 0 0 1 0 5h-5a2.5 2.5 0 0 0 0 5H16" />,
       },
       {
+        href: "/admin/schemes",
+        module: "billing",
+        label: "Schemes",
+        needs: "billing:read",
+        icon: <Icon path="M20 12 12 20 4 12V4h8l8 8ZM7.5 7.5h.01M14 10l-4 4" />,
+      },
+      {
         href: "/admin/gst",
         module: "billing",
         label: "GST return",

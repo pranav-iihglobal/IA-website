@@ -22,6 +22,7 @@ export const AUDIT_ENTITIES: { value: string; label: string }[] = [
   { value: "Purchase", label: "Purchases" },
   { value: "StockItem", label: "Stock" },
   { value: "Supplier", label: "Suppliers" },
+  { value: "Scheme", label: "Schemes" },
   { value: "Product", label: "Products" },
   { value: "Post", label: "Blog posts" },
   { value: "Testimonial", label: "Testimonials" },

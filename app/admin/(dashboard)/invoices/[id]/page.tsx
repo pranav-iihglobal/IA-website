@@ -247,6 +247,7 @@ export default async function InvoiceDetailPage({
                           <p className="text-xs text-ink-muted">
                             Discount {money(Math.abs(line.discountPaise))}
                             {line.discountType === "percent" && ` (${line.discountValue / 100}%)`}
+                            {line.schemeName && ` — ${line.schemeName}`}
                           </p>
                         )}
                         {/*

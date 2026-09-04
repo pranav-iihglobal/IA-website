@@ -5,6 +5,7 @@ import type { TestimonialFormValues } from "@/components/admin/TestimonialForm";
 import type { StockFormValues } from "@/components/admin/StockForm";
 import type { PurchaseFormValues } from "@/components/admin/PurchaseForm";
 import type { SupplierFormValues } from "@/components/admin/SupplierForm";
+import type { SchemeFormValues } from "@/components/admin/SchemeForm";
 import type { SellerFormValues } from "@/components/admin/SellerSettingsForm";
 import type { ContactFormValues } from "@/components/admin/ContactForm";
 
@@ -141,6 +142,18 @@ export const EMPTY_PURCHASE: PurchaseFormValues = {
   paidByName: "",
   paymentStatus: "unpaid",
   paid: "",
+  notes: "",
+};
+
+export const EMPTY_SCHEME: SchemeFormValues = {
+  name: "",
+  discountType: "percent",
+  discount: "",
+  productIds: [],
+  channel: "both",
+  startAt: "",
+  endAt: "",
+  enabled: true,
   notes: "",
 };
 

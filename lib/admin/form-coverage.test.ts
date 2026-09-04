@@ -4,6 +4,7 @@ import {
   postSchema,
   productSchema,
   purchaseSchema,
+  schemeSchema,
   sellerSchema,
   stockItemSchema,
   supplierSchema,
@@ -13,6 +14,7 @@ import {
   EMPTY_POST,
   EMPTY_PRODUCT,
   EMPTY_PURCHASE,
+  EMPTY_SCHEME,
   EMPTY_SELLER,
   EMPTY_STOCK,
   EMPTY_SUPPLIER,
@@ -105,6 +107,11 @@ const PAIRS: {
     name: "supplierSchema ↔ SupplierForm",
     schema: supplierSchema,
     empty: EMPTY_SUPPLIER as unknown as Record<string, unknown>,
+  },
+  {
+    name: "schemeSchema ↔ SchemeForm",
+    schema: schemeSchema,
+    empty: EMPTY_SCHEME as unknown as Record<string, unknown>,
   },
   {
     name: "sellerSchema ↔ SellerSettingsForm",

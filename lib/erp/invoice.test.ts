@@ -351,3 +351,49 @@ describe("boxes", () => {
     expect(out.boxes).toBe(0);
   });
 });
+
+describe("seasonal schemes on a line", () => {
+  const kharif = {
+    id: "k",
+    name: "Kharif 10%",
+    discountType: "percent" as const,
+    discountValue: 1000,
+    productIds: [],
+    channel: "both" as const,
+    startAt: "2026-06-01T00:00:00+05:30",
+    endAt: "2026-09-01T00:00:00+05:30",
+    enabled: true,
+  };
+  const during = { schemes: [kharif], channel: "b2c", at: new Date("2026-07-10T09:00:00+05:30") };
+
+  it("fills a blank discount from the live scheme, naming it", () => {
+    const out = snapshotLine(line(), floraMax, 0, during);
+    // 10 × ₹245 = ₹2,450; 10% is ₹245.
+    expect(out.tax.discountPaise).toBe(24_500);
+    expect(out.discountType).toBe("percent");
+    expect(out.discountValue).toBe(1000);
+    expect(out.schemeId).toBe("k");
+    expect(out.schemeName).toBe("Kharif 10%");
+  });
+
+  it("a typed discount wins, even a smaller one", () => {
+    const out = snapshotLine(line({ discountType: "flat", discountValue: 500 }), floraMax, 0, during);
+    expect(out.tax.discountPaise).toBe(500);
+    expect(out.schemeId).toBeNull();
+    expect(out.schemeName).toBe("");
+  });
+
+  it("applies nothing outside the window, or with no context at all", () => {
+    const after = { ...during, at: new Date("2026-09-01T00:00:00+05:30") };
+    expect(snapshotLine(line(), floraMax, 0, after).tax.discountPaise).toBe(0);
+    expect(snapshotLine(line(), floraMax, 0).schemeId).toBeNull();
+  });
+
+  it("respects the scheme's channel and product list", () => {
+    const dealers = { ...kharif, id: "d", channel: "b2b" as const };
+    expect(snapshotLine(line(), floraMax, 0, { ...during, schemes: [dealers] }).schemeId).toBeNull();
+    expect(snapshotLine(line(), floraMax, 0, { ...during, schemes: [dealers], channel: "b2b" }).schemeId).toBe("d");
+    const other = { ...kharif, id: "o", productIds: ["zzz"] };
+    expect(snapshotLine(line(), floraMax, 0, { ...during, schemes: [other] }).schemeId).toBeNull();
+  });
+});

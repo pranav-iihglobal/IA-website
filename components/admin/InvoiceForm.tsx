@@ -13,6 +13,7 @@ import { formatINR, paiseToRupeeString, rupeesToPaise } from "@/lib/money";
 import { computeInvoice, formatRate, supplyTypeFor, GUJARAT_STATE_CODE, clampDiscount, resolveDiscount } from "@/lib/erp/tax";
 import { toPieces } from "@/lib/erp/quantity";
 import type { BillablePack, BillableParty, BillableProduct } from "@/lib/admin/invoice-options";
+import { describeSchemeDiscount, pickScheme, type SchemeRule } from "@/lib/erp/schemes";
 import { usePartyHistory } from "./usePartyHistory";
 import { adminFetch } from "@/lib/admin/fetch";
 import { districtOptions } from "@/lib/crm/places";
@@ -94,6 +95,9 @@ export function emptyInvoice(): InvoiceFormValues {
 export function invoicePreview(
   values: InvoiceFormValues,
   products: BillableProduct[],
+  /** The schemes live now, and whose invoice it is — see previewDiscount(). */
+  schemes: SchemeRule[] = [],
+  party?: BillableParty,
 ): { invoice: ReturnType<typeof computeInvoice>; counted: number } | null {
   const byId = new Map(products.map((p) => [p.id, p]));
   const ready = values.lines
@@ -122,7 +126,7 @@ export function invoicePreview(
         quantity,
         unitPricePaise,
         // The same resolution the server does — see snapshotLine().
-        discountPaise: previewDiscount(line, quantity * unitPricePaise),
+        discountPaise: previewDiscount(line, quantity * unitPricePaise, schemes, party),
         gstRateBps: product.gstRateBps,
       };
     })
@@ -137,13 +141,42 @@ export function invoicePreview(
 }
 
 /** What a typed discount comes to on a line, flat or percent, clamped like the server. */
-function previewDiscount(line: InvoiceLineValues, grossPaise: number): number {
+function typedDiscount(line: InvoiceLineValues, grossPaise: number): number {
   if (line.discountType === "percent") {
     const percent = Number(line.discount);
     if (!Number.isFinite(percent) || percent <= 0) return 0;
     return clampDiscount(grossPaise, resolveDiscount(grossPaise, "percent", Math.round(percent * 100)));
   }
   return clampDiscount(grossPaise, rupeesToPaise(line.discount) ?? 0);
+}
+
+/**
+ * The scheme that would fill a blank discount on this line, or null.
+ *
+ * The same pickScheme() the server runs, on the schemes the page loaded and
+ * the browser's clock. The two can disagree only across a scheme boundary
+ * while the form is open, and the server's `issuedAt` governs.
+ */
+function schemeFor(
+  line: InvoiceLineValues,
+  grossPaise: number,
+  schemes: SchemeRule[],
+  party: BillableParty | undefined,
+) {
+  if (typedDiscount(line, grossPaise) > 0 || !line.productId) return null;
+  return pickScheme(schemes, { productId: line.productId, channel: party?.channel ?? "" }, grossPaise, new Date());
+}
+
+/** Typed wins; a scheme fills the blank — the rule snapshotLine() applies. */
+function previewDiscount(
+  line: InvoiceLineValues,
+  grossPaise: number,
+  schemes: SchemeRule[],
+  party: BillableParty | undefined,
+): number {
+  const typed = typedDiscount(line, grossPaise);
+  if (typed > 0) return typed;
+  return schemeFor(line, grossPaise, schemes, party)?.discountPaise ?? 0;
 }
 
 /** Indian state codes, as GSTR-1 wants them. Gujarat first, then by code. */
@@ -290,6 +323,7 @@ export function InvoiceLinesStep({
   onChange,
   products,
   party,
+  schemes = [],
   errors = {},
 }: {
   values: InvoiceFormValues;
@@ -297,6 +331,8 @@ export function InvoiceLinesStep({
   products: BillableProduct[];
   /** Decides which price is suggested, and whose history is read. */
   party?: BillableParty;
+  /** Live now. Shown under a blank discount when one would apply. */
+  schemes?: SchemeRule[];
   errors?: Record<string, string>;
 }) {
   const set = (patch: Partial<InvoiceFormValues>) => onChange({ ...values, ...patch });
@@ -328,6 +364,13 @@ export function InvoiceLinesStep({
           const line = values.lines[i];
           const product = byId.get(line.productId);
           const pack = product?.packs.find((p) => p.label === line.packLabel);
+          const grossForScheme =
+            (toPieces(
+              Number(line.quantity) || 0,
+              line.uom === "box" && pack && pack.unitsPerBox > 0 ? "box" : "piece",
+              pack?.unitsPerBox ?? 0,
+            ) || 0) * (rupeesToPaise(line.unitPrice) ?? 0);
+          const scheme = schemeFor(line, grossForScheme, schemes, party);
 
           return (
           <div className="grid gap-3 sm:grid-cols-2">
@@ -447,6 +490,11 @@ export function InvoiceLinesStep({
                 value={line.discount}
                 onChange={(discount) => setLine(i, { discount })}
                 error={errors[`lines.${i}.discount`] ?? errors[`lines.${i}.discountPercent`]}
+                hint={
+                  scheme
+                    ? `Scheme: ${scheme.scheme.name} (${describeSchemeDiscount(scheme.scheme)}) applies — type a discount to override.`
+                    : undefined
+                }
               />
               {/* Flat or percent. The server resolves either to paise once. */}
               <div role="group" aria-label="Discount as" className="mt-1.5 flex gap-1.5">

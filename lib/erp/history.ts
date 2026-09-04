@@ -113,8 +113,14 @@ export async function partyHistory(contactId: string): Promise<PartyHistory> {
             quantity: l.uom === "box" && (l.boxes ?? 0) > 0 ? l.boxes : (l.quantity ?? 1),
             unitPrice: paiseToRupeeString(l.unitPricePaise ?? 0),
             discountType: l.discountType === "percent" ? "percent" : "flat",
-            discount:
-              l.discountType === "percent"
+            /*
+              A discount a SCHEME supplied is left blank on the repeat: typed,
+              it would win over whatever scheme is live today — or over none —
+              and quietly carry last season's offer into this one.
+            */
+            discount: l.schemeId
+              ? ""
+              : l.discountType === "percent"
                 ? String((l.discountValue ?? 0) / 100)
                 : l.discountPaise
                   ? paiseToRupeeString(l.discountPaise)
