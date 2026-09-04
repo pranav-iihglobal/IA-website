@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { itemActive } from "./nav";
+import { inStrip, itemActive, type NavTarget } from "./nav";
 
 const customers = { href: "/admin/customers", owns: ["/admin/contacts"] };
 
@@ -29,5 +29,13 @@ describe("the item that owns the current page", () => {
     expect(itemActive(dashboard, "/admin")).toBe(true);
     // Without `exact` this would be active on every screen in the panel.
     expect(itemActive(dashboard, "/admin/invoices")).toBe(false);
+  });
+});
+
+describe("which items sit in the phone's strip", () => {
+  it("everything, unless it opts out by name", () => {
+    expect(inStrip({ href: "/admin/invoices" } as NavTarget)).toBe(true);
+    expect(inStrip({})).toBe(true);
+    expect(inStrip({ strip: false })).toBe(false);
   });
 });

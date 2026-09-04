@@ -20,7 +20,7 @@ import {
   type Permission,
 } from "@/lib/auth/permissions";
 import { BetaStar } from "./ui";
-import { itemActive, type NavTarget } from "@/lib/admin/nav";
+import { inStrip, itemActive, type NavTarget } from "@/lib/admin/nav";
 import { GlobalSearch } from "./GlobalSearch";
 
 function Icon({ path }: { path: string }) {
@@ -235,6 +235,7 @@ const NAV: (NavItem | NavGroup)[] = [
         // what every legal document the company issues says about the company.
         label: "Business",
         needs: "users:manage",
+        strip: false,
         icon: (
           <Icon path="M4 21V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v15M4 21h16M8 8h3M8 12h3M8 16h3M15 11h3a2 2 0 0 1 2 2v8" />
         ),
@@ -243,6 +244,7 @@ const NAV: (NavItem | NavGroup)[] = [
         href: "/admin/activity",
         label: "Activity",
         needs: "users:read",
+        strip: false,
         icon: (
           <Icon path="M12 8v4l3 2M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0Z" />
         ),
@@ -253,6 +255,7 @@ const NAV: (NavItem | NavGroup)[] = [
         // and two people-shaped words in one sidebar is one too many.
         label: "Team",
         needs: "users:read",
+        strip: false,
         icon: (
           <Icon path="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm13 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
         ),
@@ -467,21 +470,31 @@ export function AdminNav({ user }: { user: AdminUser }) {
   }, [user.access]);
 
   /*
-    The phone's tab strip: EVERY section the viewer may open, in sidebar
-    order, flattened. The bar used to hold four and a "More" that opened the
-    desktop sidebar as a drawer from the left — reached from a button on the
-    right, which read as odd, and it hid two thirds of the panel behind an
-    extra tap. The strip scrolls sideways instead; the active tab is scrolled
-    into view on every navigation.
+    The phone's tab strip: every section the viewer opens in a working day,
+    in sidebar order, flattened. The bar used to hold four and a "More" that
+    opened the desktop sidebar as a drawer from the left — reached from a
+    button on the right, which read as odd, and it hid two thirds of the
+    panel behind an extra tap. The strip scrolls sideways instead, the active
+    tab centred on every navigation.
+
+    Business, Activity and Team opt OUT (`strip: false`) and go into the
+    account menu — settings-shaped pages nobody opens twenty times a day,
+    and three fewer tabs is the difference between a strip that scrolls a
+    little and one that scrolls a lot.
   */
-  const strip = useMemo(
+  const flat = useMemo(
     () => visible.flatMap((entry) => (isGroup(entry) ? entry.items : [entry])),
     [visible],
   );
+  const strip = useMemo(() => flat.filter(inStrip), [flat]);
+  const menuItems = useMemo(() => flat.filter((item) => !inStrip(item)), [flat]);
 
   useEffect(() => {
     const active = stripRef.current?.querySelector<HTMLElement>('[aria-current="page"]');
-    active?.scrollIntoView({ inline: "center", block: "nearest" });
+    if (!active) return;
+    // Smooth, unless the person has asked their phone for no motion.
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    active.scrollIntoView({ inline: "center", block: "nearest", behavior: still ? "auto" : "smooth" });
   }, [pathname, strip]);
 
   const NavLink = ({ item, note }: { item: NavItem; note?: string | null }) => {
@@ -671,6 +684,28 @@ export function AdminNav({ user }: { user: AdminUser }) {
                       )}
                     </div>
                   </div>
+                  {/* The sections kept out of the strip — see `strip: false`. */}
+                  {menuItems.length > 0 && (
+                    <div className="mt-1 border-b border-line-soft pb-1">
+                      {menuItems.map((item) => {
+                        const active = itemActive(item, pathname);
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            role="menuitem"
+                            aria-current={active ? "page" : undefined}
+                            className={`admin-tap flex items-center gap-2 rounded-xl px-3 text-sm font-semibold hover:bg-surface-muted ${
+                              active ? "bg-surface-muted text-ink-strong" : "text-ink"
+                            }`}
+                          >
+                            <span className="text-ink-muted">{item.icon}</span>
+                            {item.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
                   <Link
                     href="/"
                     target="_blank"
@@ -715,23 +750,30 @@ export function AdminNav({ user }: { user: AdminUser }) {
         className="order-last shrink-0 border-t border-olive-dark bg-olive pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
       >
         <div className="admin-tabstrip-fade">
-          <ul ref={stripRef} className="admin-tabstrip flex h-14 items-stretch overflow-x-auto px-1">
+          {/*
+            The ul is padded half a screen each side (see .admin-tabstrip in
+            globals.css) so the FIRST and LAST tab can sit in the centre too;
+            each li snaps to the centre, so a flick settles on a whole tab.
+            The active tab is bigger — a wider, taller pill and a bold label —
+            so where you are reads at a glance, not only by colour.
+          */}
+          <ul ref={stripRef} className="admin-tabstrip flex h-14 items-stretch overflow-x-auto">
             {strip.map((item) => {
               const active = itemActive(item, pathname);
               return (
-                <li key={item.href} className="min-w-[4.5rem] shrink-0 snap-start">
+                <li key={item.href} className="min-w-[4.5rem] shrink-0 snap-center">
                   <Link
                     href={item.href}
                     aria-current={active ? "page" : undefined}
-                    className={`admin-tap flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-semibold ${
+                    className={`admin-tap flex h-full flex-col items-center justify-center gap-0.5 text-[11px] ${
                       active
-                        ? "text-cornsilk-light"
-                        : "text-cornsilk hover:text-cornsilk-light"
+                        ? "font-bold text-cornsilk-light"
+                        : "font-semibold text-cornsilk hover:text-cornsilk-light"
                     }`}
                   >
                     <span
-                      className={`flex h-7 w-12 items-center justify-center rounded-full ${
-                        active ? "bg-olive-dark/70" : ""
+                      className={`admin-tabstrip-pill flex items-center justify-center rounded-full ${
+                        active ? "h-8 w-14 scale-105 bg-olive-dark" : "h-7 w-12"
                       }`}
                     >
                       {item.icon}

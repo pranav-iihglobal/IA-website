@@ -19,6 +19,18 @@ export interface NavTarget {
    * lost rather than as being somewhere shared.
    */
   owns?: string[];
+  /**
+   * `false` keeps the item OUT of the phone's tab strip; it is reached from
+   * the account menu instead. The sidebar ignores this. For the settings-shaped
+   * pages — Business, Activity, Team — that nobody opens twenty times a day,
+   * so the strip that IS opened twenty times a day stays short.
+   */
+  strip?: false;
+}
+
+/** Does this item belong in the phone's tab strip? Everything does unless it opts out. */
+export function inStrip(item: Pick<NavTarget, "strip">): boolean {
+  return item.strip !== false;
 }
 
 export function itemActive(item: NavTarget, pathname: string): boolean {
