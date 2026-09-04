@@ -55,6 +55,30 @@ export interface CrmOverview {
 
 const REAL = { isSample: { $ne: true } };
 
+/**
+ * Leads by pipeline stage, in the order the stages happen.
+ *
+ * Shared by the Customers overview and the dashboard's funnel, so the two
+ * cannot disagree about how many leads are "interested".
+ */
+export async function leadStageCounts(): Promise<{ total: number; byStage: Count[] }> {
+  await connectToDatabase();
+  const stages = await Contact.aggregate<{ _id: string | null; n: number }>([
+    { $match: { ...REAL, kind: "lead" } },
+    { $group: { _id: "$lead.followUpStatus", n: { $sum: 1 } } },
+  ]);
+  const stageOf = new Map(stages.map((s) => [s._id ?? "", s.n]));
+  return {
+    total: stages.reduce((t, s) => t + s.n, 0),
+    byStage: Object.entries(FOLLOW_UP_LABELS).map(([key, label]) => ({
+      key,
+      label,
+      count: stageOf.get(key) ?? 0,
+      href: `/admin/leads?filter=${key}`,
+    })),
+  };
+}
+
 export async function crmOverview(now = new Date()): Promise<CrmOverview> {
   await connectToDatabase();
   const { year, month } = istParts(now);
@@ -62,11 +86,8 @@ export async function crmOverview(now = new Date()): Promise<CrmOverview> {
   const lastMonth = monthRange(month === 1 ? year - 1 : year, month === 1 ? 12 : month - 1);
   const { atRisk, dormant } = statusCutoffs(now);
 
-  const [stages, sampled, owners, created, statuses, districts, sampleContacts] = await Promise.all([
-    Contact.aggregate<{ _id: string | null; n: number }>([
-      { $match: { ...REAL, kind: "lead" } },
-      { $group: { _id: "$lead.followUpStatus", n: { $sum: 1 } } },
-    ]),
+  const [leads, sampled, owners, created, statuses, districts, sampleContacts] = await Promise.all([
+    leadStageCounts(),
     /*
       Sampled = carries at least one sampled product. Converted = that same
       contact is a customer now. The profile answers "did they BUY what we
@@ -141,15 +162,6 @@ export async function crmOverview(now = new Date()): Promise<CrmOverview> {
     .lean()) as LeanDoc[];
   const names = new Map(products.map((p) => [String(p._id), p.name?.en ?? p.name ?? "(product)"]));
 
-  const stageOf = new Map(stages.map((s) => [s._id ?? "", s.n]));
-  const leadsTotal = stages.reduce((t, s) => t + s.n, 0);
-  const byStage: Count[] = Object.entries(FOLLOW_UP_LABELS).map(([key, label]) => ({
-    key,
-    label,
-    count: stageOf.get(key) ?? 0,
-    href: `/admin/leads?filter=${key}`,
-  }));
-
   const statusOf = new Map(statuses.map((s) => [s._id, s.n]));
   const customersTotal = statuses.reduce((t, s) => t + s.n, 0);
   const byStatus: Count[] = (["active", "at_risk", "dormant", "prospect"] as ContactStatus[]).map(
@@ -175,7 +187,7 @@ export async function crmOverview(now = new Date()): Promise<CrmOverview> {
 
   return {
     monthLabel: `${new Date(thisMonth.from.getTime() + 6 * 3_600_000).toLocaleString("en", { month: "long", timeZone: "UTC" })} ${year}`,
-    leads: { total: leadsTotal, byStage },
+    leads,
     sampling: {
       sampled: byProduct.reduce((t, p) => t + p.sampled, 0),
       converted: byProduct.reduce((t, p) => t + p.converted, 0),

@@ -4,10 +4,8 @@ import { isDatabaseConfigured } from "@/lib/db/connect";
 import { currentActiveUser } from "@/lib/auth/current-user";
 import { betaNote, can, type Access } from "@/lib/auth/permissions";
 import { dashboardData, greeting } from "@/lib/admin/dashboard";
-import { todayPanel } from "@/lib/admin/today";
 import { formatIstDateLong } from "@/lib/time";
 import { CardsSkeleton, DashboardCards } from "@/components/admin/DashboardCards";
-import { TodayPanel } from "@/components/admin/TodayPanel";
 import { ErrorBanner } from "@/components/admin/ui";
 
 export const metadata = { title: "Dashboard" };
@@ -20,43 +18,14 @@ export const dynamic = "force-dynamic";
  * "Manage products, testimonials and blog posts", one primary action (New
  * product), two tile designs, and seeded sales summed into "this month"
  * silently. Now: a greeting and the date in IST, the day's actions beside
- * the title, the Today panel first on a phone and beside the cards on a
- * desktop, three cards for the business and one for the site — each gated
- * on the viewer's own access, each line a link, every figure real.
+ * the title, then the shape of the business as charts — twelve months of
+ * sales, products this month against last, the debt by age, the lead funnel
+ * — and the cards, each gated on the viewer's own access, each line a link,
+ * every figure real. The Today panel was tried and taken out at the
+ * directors' request; its follow-up list is one tap away on Leads.
  */
 
 const NOBODY: Access = { role: "viewer", modules: {} };
-
-/** Three short cards, the panel's usual shape, so nothing shifts when it lands. */
-function TodaySkeleton() {
-  return (
-    <div className="space-y-3" aria-hidden="true">
-      <div className="admin-skeleton h-3 w-12 rounded" />
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="admin-card p-3">
-          <div className="admin-skeleton h-4 w-32 rounded" />
-          <div className="admin-skeleton mt-2 h-3 w-full rounded" />
-          <div className="admin-skeleton mt-1.5 h-3 w-3/4 rounded" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/**
- * "What needs doing today", in its own Suspense boundary so a slow query
- * cannot hold up the rest, and so a failure degrades to a missing panel.
- */
-async function TodaySection({ access }: { access: Access }) {
-  let data;
-  try {
-    data = await todayPanel(access);
-  } catch (error) {
-    console.error("[dashboard] could not read the Today panel", error);
-    return null;
-  }
-  return <TodayPanel data={data} />;
-}
 
 /**
  * The cards and the queries behind them, streamed after the page shell.
@@ -138,23 +107,10 @@ export default async function AdminDashboardPage() {
         </div>
       </header>
 
-      {/*
-        Today FIRST on a phone, beside the cards on desktop — the same right
-        column the invoice page uses. See lib/admin/today.ts for why a panel
-        here and not a rail on every screen. Then the month, then the site.
-      */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
-        <div className="order-first min-w-0 lg:order-none lg:col-start-2">
-          <Suspense fallback={<TodaySkeleton />}>
-            <TodaySection access={access} />
-          </Suspense>
-        </div>
-
-        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
-          <Suspense fallback={<CardsSkeleton />}>
-            <CardsSection access={access} canNewProduct={can(me, "products:write")} />
-          </Suspense>
-        </div>
+      <div className="mt-6 min-w-0">
+        <Suspense fallback={<CardsSkeleton />}>
+          <CardsSection access={access} canNewProduct={can(me, "products:write")} />
+        </Suspense>
       </div>
     </>
   );

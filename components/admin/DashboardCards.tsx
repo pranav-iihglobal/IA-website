@@ -1,17 +1,23 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { OverviewCard } from "./Overview";
+import { AgeingBands } from "./AgeingBands";
+import { FunnelRows, MonthBars, PairedBars } from "./Charts";
 import { formatRupees } from "@/lib/money";
-import type { DashboardData, MoneyCard } from "@/lib/admin/dashboard";
+import type { DashboardData } from "@/lib/admin/dashboard";
 
 /**
- * The dashboard's cards — three for the business, one for the site.
+ * The dashboard's cards — the money and its four charts, the customers,
+ * the operations, and one for the site.
  *
- * Ten tiles in two columns was a long scroll on a phone; three cards is one
- * screen each. Every line is a link to the filtered, sorted list that
+ * The Today panel went: its follow-ups list lives on Leads (`?filter=due`)
+ * and the Customers card keeps the count; what the directors asked for
+ * instead was the SHAPE of the business — twelve months of sales, the
+ * products this month against last, the debt by age, the lead funnel — in
+ * plain SVG and CSS. Every line is a link to the filtered, sorted list that
  * explains it, every "this month" names the month, and colour appears only
  * where the figure means act: money past 60 days, calls overdue, stock to
- * reorder. A healthy ₹0 and a bad figure no longer share a shape.
+ * reorder. One column on a phone, two from md.
  *
  * A plain module, like Overview.tsx: server pages compose it and read
  * nothing across a client boundary.
@@ -78,12 +84,32 @@ export function DashboardCards({
                 href="/admin/sales"
               />
             </ul>
-            <RevenueBars months={money.months} />
+            <MonthBars months={money.months} />
           </div>
         </OverviewCard>
       )}
 
+      {money && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <OverviewCard
+            title="Sales by product"
+            href="/admin/invoices?sort=newest"
+            hint={`${money.monthLabel} against ${money.lastMonthLabel}`}
+          >
+            <PairedBars rows={money.products} thisLabel={money.monthLabel} lastLabel={money.lastMonthLabel} />
+          </OverviewCard>
+          <OverviewCard title="Outstanding by age" href="/admin/outstanding" hint="Every unpaid invoice">
+            <AgeingBands totals={money.ageing} compact />
+          </OverviewCard>
+        </div>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2">
+        {customers && (
+          <OverviewCard title="Leads funnel" href="/admin/crm" beta={beta.crm} hint={`${customers.leads} leads`}>
+            <FunnelRows rows={customers.funnel} />
+          </OverviewCard>
+        )}
         {customers && (
           <OverviewCard title="Customers" href="/admin/crm" beta={beta.crm}>
             <ul className="divide-y divide-line-soft">
@@ -106,6 +132,9 @@ export function DashboardCards({
           </OverviewCard>
         )}
 
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
         {operations && (
           <OverviewCard title="Operations" href="/admin/stock" beta={beta.billing}>
             <ul className="divide-y divide-line-soft">
@@ -137,7 +166,6 @@ export function DashboardCards({
             </ul>
           </OverviewCard>
         )}
-      </div>
 
       {content && (
         <OverviewCard title="Content" hint="The public site">
@@ -180,6 +208,7 @@ export function DashboardCards({
           )}
         </OverviewCard>
       )}
+      </div>
     </div>
   );
 }
@@ -263,59 +292,6 @@ function ContentLine({
 }
 
 /**
- * Six months of sales as bars, in plain SVG.
- *
- * The one chart worth having: sowing seasons are the shape of this business,
- * and six bars say "September is always like this" in a way two figures
- * cannot. No library; the values are in the accessible name.
- */
-function RevenueBars({ months }: { months: MoneyCard["months"] }) {
-  const max = Math.max(1, ...months.map((m) => m.paise));
-  const W = 240;
-  const H = 72;
-  const gap = 8;
-  const bar = (W - gap * (months.length - 1)) / months.length;
-  const label = months.map((m) => `${m.label} ${formatRupees(m.paise)}`).join(", ");
-  return (
-    <figure className="min-w-0">
-      <svg
-        viewBox={`0 0 ${W} ${H + 16}`}
-        className="h-auto w-full"
-        role="img"
-        aria-label={`Sales by month: ${label}`}
-      >
-        {months.map((m, i) => {
-          const h = Math.max(m.paise > 0 ? 2 : 0, Math.round((m.paise / max) * H));
-          const x = i * (bar + gap);
-          const last = i === months.length - 1;
-          return (
-            <g key={`${m.label}-${i}`}>
-              <rect
-                x={x}
-                y={H - h}
-                width={bar}
-                height={h}
-                rx={3}
-                className={last ? "fill-olive" : "fill-olive/40"}
-              />
-              <text
-                x={x + bar / 2}
-                y={H + 12}
-                textAnchor="middle"
-                className="fill-ink-soft text-[10px] font-semibold"
-              >
-                {m.short}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-      <figcaption className="sr-only">{label}</figcaption>
-    </figure>
-  );
-}
-
-/**
  * One honest line while seeded records exist. The Beta stars say a module is
  * unfinished; nothing said the numbers were made up — and the figures above
  * now leave the seeded records OUT, so the line explains the difference
@@ -358,10 +334,17 @@ export function CardsSkeleton(): ReactNode {
     <div className="space-y-4">
       {card(4, "money", true)}
       <div className="grid gap-4 md:grid-cols-2">
-        {card(4, "customers")}
-        {card(3, "operations")}
+        {card(3, "products")}
+        {card(2, "ageing")}
       </div>
-      {card(3, "content")}
+      <div className="grid gap-4 md:grid-cols-2">
+        {card(5, "funnel")}
+        {card(4, "customers")}
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {card(3, "operations")}
+        {card(3, "content")}
+      </div>
     </div>
   );
 }

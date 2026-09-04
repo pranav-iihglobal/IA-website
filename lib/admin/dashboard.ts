@@ -16,6 +16,10 @@ import {
   revenueBetween,
 } from "@/lib/erp/reports";
 import { istHour, istMonthStart, istParts, MONTH_LABELS } from "@/lib/time";
+import { SALES_ONLY } from "@/lib/erp/document-kind";
+import { summariseAgeing, type AgeingTotals } from "@/lib/erp/ageing";
+import { leadStageCounts, type Count } from "@/lib/crm/overview";
+import type { LeanDoc } from "@/lib/db/lean";
 
 /**
  * What the dashboard says, and to whom.
@@ -33,7 +37,10 @@ import { istHour, istMonthStart, istParts, MONTH_LABELS } from "@/lib/time";
  */
 
 const REAL = { isSample: { $ne: true } };
-export const REVENUE_MONTHS = 6;
+/** Twelve, so a season reads against the same season a year ago. */
+export const REVENUE_MONTHS = 12;
+/** Products named on the sales-by-product chart; the rest fold into Other. */
+export const TOP_PRODUCTS = 6;
 
 export interface MonthWindow {
   year: number;
@@ -78,6 +85,35 @@ export function change(now: number, before: number, beforeLabel: string): string
   return `${pct > 0 ? "up" : "down"} ${Math.abs(pct)}% on ${beforeLabel}`;
 }
 
+export interface ProductComparison {
+  name: string;
+  thisPaise: number;
+  lastPaise: number;
+}
+
+/**
+ * The products that sold this month against last, the biggest first, and
+ * everything past the top few folded into one "Other" row so three SKUs
+ * today and thirty tomorrow both fit one card. Pure.
+ */
+export function productComparison(
+  rows: ProductComparison[],
+  top = TOP_PRODUCTS,
+): ProductComparison[] {
+  const sorted = [...rows]
+    .filter((r) => r.thisPaise > 0 || r.lastPaise > 0)
+    .sort((a, b) => b.thisPaise - a.thisPaise || b.lastPaise - a.lastPaise || a.name.localeCompare(b.name));
+  if (sorted.length <= top) return sorted;
+  const kept = sorted.slice(0, top);
+  const rest = sorted.slice(top);
+  kept.push({
+    name: "Other",
+    thisPaise: rest.reduce((n, r) => n + r.thisPaise, 0),
+    lastPaise: rest.reduce((n, r) => n + r.lastPaise, 0),
+  });
+  return kept;
+}
+
 /** "Good morning, Pranav" — by the clock in India, first name only. */
 export function greeting(now: Date, name: string): string {
   const hour = istHour(now);
@@ -103,6 +139,10 @@ export interface MoneyCard {
   gstInputCreditPaise: number;
   /** Oldest first, ending with this month. */
   months: { short: string; label: string; paise: number }[];
+  /** Taxable value by product, this month against last — invoices only. */
+  products: ProductComparison[];
+  /** What is owed, by how long it has waited. Over every unpaid invoice. */
+  ageing: AgeingTotals;
 }
 
 export interface CustomersCard {
@@ -111,6 +151,8 @@ export interface CustomersCard {
   leads: number;
   followUpsDue: number;
   newThisMonth: number;
+  /** Leads by stage, the same counts the Customers overview shows. */
+  funnel: Count[];
 }
 
 export interface OperationsCard {
@@ -161,6 +203,9 @@ export async function dashboardData(access: Access, now = new Date()): Promise<D
     revenueByMonth,
     fyRevenue,
     owed,
+    owedRows,
+    productRows,
+    funnel,
     gstInvoices,
     purchasesMonth,
     unpaidBills,
@@ -189,6 +234,43 @@ export async function dashboardData(access: Access, now = new Date()): Promise<D
           { $group: { _id: null, owed: { $sum: "$owedPaise" }, count: { $sum: 1 }, oldest: { $min: "$issuedAt" } } },
         ])
       : Promise.resolve([]),
+    // Every unpaid invoice, for the ageing bar — not the capped screen list.
+    billing
+      ? Invoice.aggregate<{ owedPaise: number; issuedAt: Date | null }>([
+          ...outstandingPipeline(REAL),
+          { $project: { owedPaise: 1, issuedAt: 1 } },
+        ])
+      : Promise.resolve([]),
+    /*
+      Sales by product, this month and last, from the LINES. Invoices only —
+      a credit note would net a product negative for the month a return
+      came back in, which is a different chart, and a sample note is free.
+      Grouped by product id, falling back to the description for lines
+      written before the id was stored.
+    */
+    billing
+      ? Invoice.aggregate<{ _id: { product: unknown; month: "this" | "last" }; paise: number }>([
+          {
+            $match: {
+              ...REAL,
+              ...SALES_ONLY,
+              status: "issued",
+              issuedAt: { $gte: lastMonth.from, $lt: thisMonth.to },
+            },
+          },
+          { $unwind: "$lines" },
+          {
+            $group: {
+              _id: {
+                product: { $ifNull: ["$lines.productId", "$lines.description"] },
+                month: { $cond: [{ $gte: ["$issuedAt", thisMonth.from] }, "this", "last"] },
+              },
+              paise: { $sum: { $ifNull: ["$lines.taxableValuePaise", 0] } },
+            },
+          },
+        ])
+      : Promise.resolve([]),
+    crm ? leadStageCounts() : Promise.resolve({ total: 0, byStage: [] as Count[] }),
     billing ? invoicesForPeriod(thisMonth.year, thisMonth.month) : Promise.resolve([]),
     billing
       ? Purchase.aggregate<{ count: number; paise: number; credit: number }>([
@@ -251,6 +333,30 @@ export async function dashboardData(access: Access, now = new Date()): Promise<D
     const output = totals.cgstPaise + totals.sgstPaise + totals.igstPaise;
     const credit = purchasesMonth[0]?.credit ?? 0;
     const oldest = owed[0]?.oldest ?? null;
+
+    // Names for the product ids the lines carry; a string key is already a name.
+    const ids = [...new Set(productRows.map((r) => r._id.product).filter((p) => typeof p !== "string"))];
+    const named = ids.length
+      ? ((await Product.find({ _id: { $in: ids } }).select("name").lean()) as LeanDoc[])
+      : [];
+    const nameOf = new Map(named.map((p) => [String(p._id), p.name?.en ?? "(untitled)"]));
+    const byProduct = new Map<string, ProductComparison>();
+    for (const row of productRows) {
+      const key = String(row._id.product);
+      const name = typeof row._id.product === "string" ? row._id.product : nameOf.get(key) ?? "(product no longer on file)";
+      const entry = byProduct.get(key) ?? { name, thisPaise: 0, lastPaise: 0 };
+      if (row._id.month === "this") entry.thisPaise += row.paise;
+      else entry.lastPaise += row.paise;
+      byProduct.set(key, entry);
+    }
+
+    const ageing = summariseAgeing(
+      owedRows.map((r) => ({
+        owedPaise: r.owedPaise,
+        daysOld: r.issuedAt ? Math.floor((now.getTime() - new Date(r.issuedAt).getTime()) / 86_400_000) : 0,
+      })),
+    );
+
     data.money = {
       monthLabel: thisMonth.label,
       lastMonthLabel: lastMonth.label,
@@ -268,6 +374,8 @@ export async function dashboardData(access: Access, now = new Date()): Promise<D
       gstInputCreditPaise: credit,
       gstNetPaise: output - credit,
       months: months.map((m, i) => ({ short: m.short, label: m.label, paise: revenueByMonth[i].total })),
+      products: productComparison([...byProduct.values()]),
+      ageing,
     };
     data.operations = {
       monthLabel: thisMonth.label,
@@ -280,7 +388,7 @@ export async function dashboardData(access: Access, now = new Date()): Promise<D
   }
 
   if (crm) {
-    data.customers = { customers, dealers, leads, followUpsDue, newThisMonth };
+    data.customers = { customers, dealers, leads, followUpsDue, newThisMonth, funnel: funnel.byStage };
   }
 
   if (show.products || show.testimonials || show.posts) {

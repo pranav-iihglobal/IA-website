@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { change, greeting, recentMonths } from "./dashboard";
+import { change, greeting, productComparison, recentMonths } from "./dashboard";
 import { istDay, istHour, istMonth } from "@/lib/time";
 
 /**
@@ -16,6 +16,8 @@ describe("recentMonths", () => {
     expect(months.map((m) => m.short)).toEqual(["May", "Jun", "Jul", "Aug", "Sep", "Oct"]);
     expect(months[5].label).toBe("October");
     expect(months[5].year).toBe(2026);
+    expect(recentMonths(now, 12)).toHaveLength(12);
+    expect(recentMonths(now, 12)[0].label).toBe("November");
   });
 
   it("crosses a year boundary", () => {
@@ -55,5 +57,35 @@ describe("greeting", () => {
     expect(greeting(new Date("2026-09-03T02:30:00.000Z"), "Pranav Patel")).toBe("Good morning, Pranav");
     expect(greeting(new Date("2026-09-03T09:00:00.000Z"), "Dipen")).toBe("Good afternoon, Dipen");
     expect(greeting(new Date("2026-09-03T13:00:00.000Z"), "")).toBe("Good evening");
+  });
+});
+
+describe("productComparison", () => {
+  const row = (name: string, thisPaise: number, lastPaise = 0) => ({ name, thisPaise, lastPaise });
+
+  it("puts the biggest seller this month first", () => {
+    const out = productComparison([row("NPK", 100), row("FloraMax", 300), row("Myco", 200)]);
+    expect(out.map((r) => r.name)).toEqual(["FloraMax", "Myco", "NPK"]);
+  });
+
+  it("keeps a product that sold last month but not this", () => {
+    expect(productComparison([row("Old", 0, 500)])).toEqual([row("Old", 0, 500)]);
+  });
+
+  it("drops a product that sold in neither month", () => {
+    expect(productComparison([row("Nothing", 0, 0), row("A", 1)])).toEqual([row("A", 1)]);
+  });
+
+  it("folds everything past the top into Other, summing both months", () => {
+    const out = productComparison(
+      [row("A", 9), row("B", 8), row("C", 7, 1), row("D", 6, 2), row("E", 5, 3)],
+      3,
+    );
+    expect(out.map((r) => r.name)).toEqual(["A", "B", "C", "Other"]);
+    expect(out[3]).toEqual({ name: "Other", thisPaise: 11, lastPaise: 5 });
+  });
+
+  it("does not add an Other row when everything fits", () => {
+    expect(productComparison([row("A", 1), row("B", 2)], 6).map((r) => r.name)).toEqual(["B", "A"]);
   });
 });
