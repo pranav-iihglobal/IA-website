@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { computeInvoice } from "./tax";
 import {
   InvoiceError,
+  creditDiscount,
   resolveCreditPicks,
   snapshotLine,
   type DraftLine,
@@ -81,6 +82,14 @@ describe("what it refuses", () => {
   it("refuses a price that is not whole paise", () => {
     expect(() => snapshotLine(line({ unitPricePaise: 245.5 }), floraMax, 0)).toThrow(/price/);
     expect(() => snapshotLine(line({ unitPricePaise: -100 }), floraMax, 0)).toThrow(/price/);
+  });
+
+  it("refuses a discount over 100% or below zero", () => {
+    expect(() =>
+      snapshotLine(line({ discountType: "percent", discountValue: 10_001 }), floraMax, 0),
+    ).toThrow(/100%/);
+    expect(() => snapshotLine(line({ discountValue: -5 }), floraMax, 0)).toThrow(/discount/);
+    expect(() => snapshotLine(line({ discountValue: 2.5 }), floraMax, 0)).toThrow(/discount/);
   });
 
   it("says which line is wrong, counting from one", () => {
@@ -263,5 +272,58 @@ describe("a credit note cancels its invoice exactly", () => {
     expect(original.cgstPaise + credit.cgstPaise).toBe(0);
     expect(original.sgstPaise + credit.sgstPaise).toBe(0);
     expect(original.subtotalPaise + credit.subtotalPaise).toBe(0);
+  });
+});
+
+describe("discounts on a line", () => {
+  it("resolves a percentage against the line's gross", () => {
+    // 10 × ₹245 = ₹2,450; 10% = ₹245.00
+    const out = snapshotLine(line({ discountType: "percent", discountValue: 1000 }), floraMax, 0);
+    expect(out.tax.discountPaise).toBe(24500);
+    expect(out.discountType).toBe("percent");
+    expect(out.discountValue).toBe(1000);
+  });
+
+  it("clamps a flat discount to the line rather than going negative", () => {
+    const out = snapshotLine(line({ discountValue: 9_999_999 }), floraMax, 0);
+    expect(out.tax.discountPaise).toBe(245000);
+  });
+
+  it("reads no discount as flat zero", () => {
+    const out = snapshotLine(line(), floraMax, 0);
+    expect(out.tax.discountPaise).toBe(0);
+    expect(out.discountType).toBe("flat");
+  });
+});
+
+describe("creditDiscount", () => {
+  it("gives the whole discount back when the whole line is credited", () => {
+    expect(creditDiscount(10000, 10, 0, 10)).toBe(10000);
+  });
+
+  it("splits it pro rata and the parts sum exactly, however it is cut", () => {
+    // ₹100.01 over 3 pieces: 3334 + 3333 + 3334 = 10001.
+    const a = creditDiscount(10001, 3, 0, 1);
+    const b = creditDiscount(10001, 3, 1, 1);
+    const c = creditDiscount(10001, 3, 2, 1);
+    expect(a + b + c).toBe(10001);
+    expect(creditDiscount(10001, 3, 0, 2) + creditDiscount(10001, 3, 2, 1)).toBe(10001);
+  });
+
+  it("is nothing for an undiscounted line", () => {
+    expect(creditDiscount(0, 10, 0, 4)).toBe(0);
+  });
+
+  it("cancels a discounted invoice to exactly zero through the tax engine", () => {
+    const sold = computeInvoice(
+      [{ ...floraMax, description: "x", hsn: "1", quantity: 10, unitPricePaise: 10000, discountPaise: 10000, gstRateBps: 500 }],
+      "intra",
+    );
+    const credited = computeInvoice(
+      [{ description: "x", hsn: "1", quantity: -10, unitPricePaise: 10000, discountPaise: -creditDiscount(10000, 10, 0, 10), gstRateBps: 500 }],
+      "intra",
+    );
+    expect(sold.grandTotalPaise).toBe(94500);
+    expect(sold.grandTotalPaise + credited.grandTotalPaise).toBe(0);
   });
 });

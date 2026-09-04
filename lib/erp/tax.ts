@@ -32,6 +32,45 @@ const BPS_DIVISOR = 10_000;
 /** Intra-state tax splits in two equal halves; inter-state does not split. */
 export type SupplyType = "intra" | "inter";
 
+/**
+ * How a line's discount was stated: a flat amount in paise, or a percentage
+ * in basis points (1250 = 12.5%). Either way the STORED figure is the
+ * resolved paise — see resolveDiscount() — so a filed line never has to be
+ * re-derived from a percentage.
+ */
+export type DiscountType = "flat" | "percent";
+
+/**
+ * The paise a stated discount comes to on a line.
+ *
+ * Flat: the value IS paise. Percent: value is basis points of the gross
+ * (quantity × price), rounded half away from zero like every other figure in
+ * this file, so 12.5% of ₹33.33 lands on a paisa deterministically.
+ */
+export function resolveDiscount(
+  grossPaise: number,
+  discountType: DiscountType,
+  discountValue: number,
+): number {
+  if (discountType === "percent") {
+    return roundHalfAwayFromZero((grossPaise * discountValue) / BPS_DIVISOR);
+  }
+  return discountValue;
+}
+
+/**
+ * A discount can never be more than the line, in either direction.
+ *
+ * A ₹5,000 flat discount on a ₹2,450 line used to make the taxable value —
+ * and the tax — NEGATIVE, silently. Clamped to the gross, so the most a
+ * discount can do is make a line free. Credit-note lines are negative and
+ * carry a negative discount; the same rule holds mirrored.
+ */
+export function clampDiscount(grossPaise: number, discountPaise: number): number {
+  if (grossPaise >= 0) return Math.min(Math.max(discountPaise, 0), grossPaise);
+  return Math.max(Math.min(discountPaise, 0), grossPaise);
+}
+
 export interface InvoiceLineInput {
   /** What was sold. Carried through untouched — this file does not price. */
   description: string;
@@ -118,8 +157,9 @@ export function computeInvoice(
   supplyType: SupplyType,
 ): TaxedInvoice {
   const lines: TaxedLine[] = input.map((line) => {
+    const grossPaise = line.quantity * line.unitPricePaise;
     const taxableValuePaise =
-      line.quantity * line.unitPricePaise - (line.discountPaise ?? 0);
+      grossPaise - clampDiscount(grossPaise, line.discountPaise ?? 0);
     const tax = taxOnLine(taxableValuePaise, line.gstRateBps);
 
     const { cgst, sgst } =

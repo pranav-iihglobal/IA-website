@@ -733,7 +733,26 @@ export const invoiceLineSchema = z.object({
   quantity: z.coerce.number().int().positive("Quantity must be at least 1"),
   /** Rupees in, paise out — the same boundary as a product price. */
   unitPrice: rupeeField("Price"),
+  /** Flat: rupees. Percent: a number of percent, 0–100. One of the two is read. */
+  discountType: z.enum(["flat", "percent"]).default("flat"),
   discount: rupeeField("Discount"),
+  discountPercent: z
+    .union([z.string(), z.number(), z.null()])
+    .optional()
+    .transform((v, ctx) => {
+      if (v === undefined || v === null || v === "") return undefined;
+      const n = typeof v === "number" ? v : Number(String(v).trim());
+      if (!Number.isFinite(n)) {
+        ctx.addIssue({ code: "custom", message: "Discount must be a number" });
+        return z.NEVER;
+      }
+      if (n < 0 || n > 100) {
+        ctx.addIssue({ code: "custom", message: "A percentage discount is between 0 and 100" });
+        return z.NEVER;
+      }
+      // Basis points, like the GST rate: 12.5% is 1250.
+      return Math.round(n * 100);
+    }),
 });
 
 export const issueInvoiceSchema = z.object({

@@ -11,6 +11,9 @@ import { allocateCreditNoteNumber, allocateInvoiceNumber } from "./invoice-numbe
 import {
   computeInvoice,
   supplyTypeFor,
+  clampDiscount,
+  resolveDiscount,
+  type DiscountType,
   GUJARAT_STATE_CODE,
   type InvoiceLineInput,
 } from "./tax";
@@ -37,7 +40,9 @@ export interface DraftLine {
    * pay the list price. The RATE is never sent; see below.
    */
   unitPricePaise: number;
-  discountPaise?: number;
+  /** Flat paise or percent in basis points — see resolveDiscount(). Default flat 0. */
+  discountType?: DiscountType;
+  discountValue?: number;
 }
 
 export interface IssueRequest {
@@ -64,6 +69,9 @@ export interface SnapshottedLine {
   tax: InvoiceLineInput;
   productId: string;
   packLabel: string;
+  /** How the discount was stated; tax.discountPaise is what it came to. */
+  discountType: DiscountType;
+  discountValue: number;
 }
 
 /**
@@ -108,6 +116,26 @@ export function snapshotLine(
     throw new InvoiceError(`${at}: the price is not a valid amount.`);
   }
 
+  /*
+    The discount, as stated and as it comes to. A percentage is basis points
+    and may not exceed 100%; a flat amount is whole paise and may not be
+    negative. Either is then clamped to the line, so the most a discount can
+    do is make the line free — see clampDiscount().
+  */
+  const discountType: DiscountType = line.discountType ?? "flat";
+  const discountValue = line.discountValue ?? 0;
+  if (!Number.isInteger(discountValue) || discountValue < 0) {
+    throw new InvoiceError(`${at}: the discount is not a valid amount.`);
+  }
+  if (discountType === "percent" && discountValue > 10_000) {
+    throw new InvoiceError(`${at}: a discount cannot be more than 100%.`);
+  }
+  const grossPaise = line.quantity * line.unitPricePaise;
+  const discountPaise = clampDiscount(
+    grossPaise,
+    resolveDiscount(grossPaise, discountType, discountValue),
+  );
+
   const pack = (product.packSizes ?? []).find((p) => p.label === line.packLabel);
 
   return {
@@ -116,12 +144,36 @@ export function snapshotLine(
       hsn: product.hsnCode,
       quantity: line.quantity,
       unitPricePaise: line.unitPricePaise,
-      discountPaise: line.discountPaise ?? 0,
+      discountPaise,
       gstRateBps: product.gstRateBps,
     },
     productId: line.productId,
     packLabel: pack?.label ?? line.packLabel,
+    discountType,
+    discountValue,
   };
+}
+
+/**
+ * The share of a line's discount that a credit note takes with it.
+ *
+ * A credit note used to carry NO discount, so crediting a discounted line in
+ * full did not cancel it: 10 × ₹100 less ₹100 invoiced ₹900, the note gave
+ * back ₹1,000. The share is pro rata by quantity and TELESCOPES — the amount
+ * for this pick is the cumulative share after it minus the share already
+ * given — so however a line is credited in parts, the parts sum to exactly
+ * the original discount, to the paisa.
+ */
+export function creditDiscount(
+  originalDiscountPaise: number,
+  originalQuantity: number,
+  alreadyCreditedQuantity: number,
+  pickQuantity: number,
+): number {
+  if (originalQuantity <= 0 || originalDiscountPaise === 0) return 0;
+  const share = (upTo: number) =>
+    Math.round((originalDiscountPaise * Math.min(upTo, originalQuantity)) / originalQuantity);
+  return share(alreadyCreditedQuantity + pickQuantity) - share(alreadyCreditedQuantity);
 }
 
 /** Fetch the products these lines name, then snapshot each one. */
@@ -208,6 +260,8 @@ export async function issueInvoice(
         quantity: line.quantity,
         unitPricePaise: line.unitPricePaise,
         discountPaise: line.discountPaise ?? 0,
+        discountType: snapshotted[i].discountType,
+        discountValue: snapshotted[i].discountValue,
         gstRateBps: line.gstRateBps,
         taxableValuePaise: line.taxableValuePaise,
         cgstPaise: line.cgstPaise,
@@ -455,11 +509,8 @@ export async function issueCreditNote(
   }
 
   const originalLines = original.lines ?? [];
-  const picks = resolveCreditPicks(
-    originalLines,
-    request.lines,
-    await creditedSoFar(String(original._id)),
-  );
+  const alreadyCredited = await creditedSoFar(String(original._id));
+  const picks = resolveCreditPicks(originalLines, request.lines, alreadyCredited);
 
   const taxInput: InvoiceLineInput[] = picks.map((pick) => {
     const line = originalLines[pick.index];
@@ -469,6 +520,13 @@ export async function issueCreditNote(
       // NEGATIVE. See the documentType comment on the model.
       quantity: -pick.quantity,
       unitPricePaise: line.unitPricePaise,
+      // The line's discount comes back with it, pro rata — see creditDiscount().
+      discountPaise: -creditDiscount(
+        line.discountPaise ?? 0,
+        line.quantity,
+        alreadyCredited.get(pick.index) ?? 0,
+        pick.quantity,
+      ),
       // The rate as it was SOLD at, never as it is today.
       gstRateBps: line.gstRateBps,
     };
@@ -503,7 +561,9 @@ export async function issueCreditNote(
       hsn: line.hsn,
       quantity: line.quantity,
       unitPricePaise: line.unitPricePaise,
-      discountPaise: 0,
+      discountPaise: line.discountPaise ?? 0,
+      discountType: originalLines[picks[i].index]?.discountType ?? "flat",
+      discountValue: originalLines[picks[i].index]?.discountValue ?? 0,
       gstRateBps: line.gstRateBps,
       taxableValuePaise: line.taxableValuePaise,
       cgstPaise: line.cgstPaise,

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { amountInWords, rupeesToPaise } from "@/lib/money";
 import {
+  clampDiscount,
   computeInvoice,
   formatRate,
+  resolveDiscount,
   GUJARAT_STATE_CODE,
   supplyTypeFor,
   type InvoiceLineInput,
@@ -198,5 +200,31 @@ describe("formatRate", () => {
     expect(formatRate(1800)).toBe("18%");
     expect(formatRate(250)).toBe("2.5%");
     expect(formatRate(1250)).toBe("12.5%");
+  });
+});
+
+describe("discounts", () => {
+  it("resolves a percentage to paise, in basis points, rounded once", () => {
+    // 10% of ₹2,450.00
+    expect(resolveDiscount(245000, "percent", 1000)).toBe(24500);
+    // 12.5% of ₹33.33 = ₹4.16625 → ₹4.17
+    expect(resolveDiscount(3333, "percent", 1250)).toBe(417);
+    expect(resolveDiscount(3333, "flat", 500)).toBe(500);
+  });
+
+  it("clamps a discount to the line, so nothing goes negative", () => {
+    expect(clampDiscount(245000, 500000)).toBe(245000);
+    expect(clampDiscount(245000, -100)).toBe(0);
+    expect(clampDiscount(245000, 12345)).toBe(12345);
+    // Mirrored on a credit-note line.
+    expect(clampDiscount(-245000, -500000)).toBe(-245000);
+    expect(clampDiscount(-245000, 100)).toBe(0);
+  });
+
+  it("makes a line free at most, never negative, inside computeInvoice", () => {
+    const inv = computeInvoice([{ ...floraMax(10, "245"), discountPaise: 9_999_999 }], "intra");
+    expect(inv.lines[0].taxableValuePaise).toBe(0);
+    expect(inv.totalTaxPaise).toBe(0);
+    expect(inv.grandTotalPaise).toBe(0);
   });
 });

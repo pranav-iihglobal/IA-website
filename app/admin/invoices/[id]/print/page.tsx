@@ -212,7 +212,15 @@ export default async function InvoicePrintPage({
           {(doc.lines ?? []).map((line: LeanDoc, i: number) => (
             <tr key={i} className="border-b border-black/25 align-top">
               <td className="py-1.5 pr-2">{i + 1}</td>
-              <td className="py-1.5 pr-2">{line.description}</td>
+              <td className="py-1.5 pr-2">
+                {line.description}
+                {line.discountPaise ? (
+                  <span className="block text-[11px]">
+                    less discount {money(Math.abs(line.discountPaise))}
+                    {line.discountType === "percent" ? ` (${(line.discountValue ?? 0) / 100}%)` : ""}
+                  </span>
+                ) : null}
+              </td>
               <td className="py-1.5 pr-2">{line.hsn}</td>
               <td className="py-1.5 pr-2 text-right tabular-nums">
                 {count(line.quantity)}

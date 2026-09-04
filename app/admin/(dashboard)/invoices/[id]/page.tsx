@@ -241,6 +241,14 @@ export default async function InvoiceDetailPage({
                         {line.packLabel && (
                           <span className="text-ink-faint"> · {line.packLabel}</span>
                         )}
+                        {/* A discount was invisible here and on the print: a
+                            discounted line read as if the rate were lower. */}
+                        {line.discountPaise !== 0 && (
+                          <p className="text-xs text-ink-muted">
+                            Discount {money(Math.abs(line.discountPaise))}
+                            {line.discountType === "percent" && ` (${line.discountValue / 100}%)`}
+                          </p>
+                        )}
                         {/*
                           The credit position, per line. It was computed inside
                           issueCreditNote() and thrown away, so the only way to

@@ -98,7 +98,11 @@ const lineSchema = new Schema(
     quantity: { type: Number, required: true },
     /** Integer paise, before tax and before any discount. */
     unitPricePaise: { type: Number, required: true },
+    /** The resolved discount in paise — what the taxable value was reduced by. */
     discountPaise: { type: Number, default: 0 },
+    /** How it was stated: flat paise, or percent in basis points. For the print. */
+    discountType: { type: String, enum: ["flat", "percent"], default: "flat" },
+    discountValue: { type: Number, default: 0 },
     /** Basis points: 500 is 5%. Copied from the product AT ISSUE. */
     gstRateBps: { type: Number, required: true, min: 0, max: 10_000 },
 

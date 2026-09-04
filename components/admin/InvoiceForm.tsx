@@ -10,12 +10,7 @@ import {
   TextField,
 } from "./ui";
 import { formatINR, paiseToRupeeString, rupeesToPaise } from "@/lib/money";
-import {
-  computeInvoice,
-  formatRate,
-  supplyTypeFor,
-  GUJARAT_STATE_CODE,
-} from "@/lib/erp/tax";
+import { computeInvoice, formatRate, supplyTypeFor, GUJARAT_STATE_CODE, clampDiscount, resolveDiscount } from "@/lib/erp/tax";
 import type { BillableParty, BillableProduct } from "@/lib/admin/invoice-options";
 import { usePartyHistory } from "./usePartyHistory";
 import { adminFetch } from "@/lib/admin/fetch";
@@ -49,7 +44,9 @@ export interface InvoiceLineValues {
   quantity: string;
   /** Rupees, as typed. lib/schemas.ts converts to paise on the way in. */
   unitPrice: string;
+  /** Rupees when flat, a percentage when percent — whatever was typed. */
   discount: string;
+  discountType: "flat" | "percent";
 }
 
 export interface InvoiceFormValues {
@@ -60,7 +57,7 @@ export interface InvoiceFormValues {
 }
 
 export function emptyInvoiceLine(): InvoiceLineValues {
-  return { productId: "", packLabel: "", quantity: "1", unitPrice: "", discount: "" };
+  return { productId: "", packLabel: "", quantity: "1", unitPrice: "", discount: "", discountType: "flat" };
 }
 
 export function emptyInvoice(): InvoiceFormValues {
@@ -107,7 +104,8 @@ export function invoicePreview(
         hsn: product.hsnCode,
         quantity,
         unitPricePaise,
-        discountPaise: rupeesToPaise(line.discount) ?? 0,
+        // The same resolution the server does — see snapshotLine().
+        discountPaise: previewDiscount(line, quantity * unitPricePaise),
         gstRateBps: product.gstRateBps,
       };
     })
@@ -119,6 +117,16 @@ export function invoicePreview(
     values.placeOfSupplyStateCode,
   );
   return { invoice: computeInvoice(ready, supplyType), counted: ready.length };
+}
+
+/** What a typed discount comes to on a line, flat or percent, clamped like the server. */
+function previewDiscount(line: InvoiceLineValues, grossPaise: number): number {
+  if (line.discountType === "percent") {
+    const percent = Number(line.discount);
+    if (!Number.isFinite(percent) || percent <= 0) return 0;
+    return clampDiscount(grossPaise, resolveDiscount(grossPaise, "percent", Math.round(percent * 100)));
+  }
+  return clampDiscount(grossPaise, rupeesToPaise(line.discount) ?? 0);
 }
 
 /** Indian state codes, as GSTR-1 wants them. Gujarat first, then by code. */
@@ -225,6 +233,7 @@ export function InvoiceCustomerStep({
                 quantity: String(l.quantity),
                 unitPrice: l.unitPrice,
                 discount: l.discount,
+                discountType: l.discountType,
               })),
             })
           }
@@ -381,13 +390,39 @@ export function InvoiceLinesStep({
                 onUse={(unitPrice) => setLine(i, { unitPrice })}
               />
             </div>
-            <TextField
-              label="Discount"
-              kind="money"
-              prefix="₹"
-              value={line.discount}
-              onChange={(discount) => setLine(i, { discount })}
-            />
+            <div>
+              <TextField
+                label="Discount"
+                kind={line.discountType === "percent" ? "decimal" : "money"}
+                prefix={line.discountType === "percent" ? "%" : "₹"}
+                value={line.discount}
+                onChange={(discount) => setLine(i, { discount })}
+                error={errors[`lines.${i}.discount`] ?? errors[`lines.${i}.discountPercent`]}
+              />
+              {/* Flat or percent. The server resolves either to paise once. */}
+              <div role="group" aria-label="Discount as" className="mt-1.5 flex gap-1.5">
+                {(
+                  [
+                    { value: "flat", label: "₹ off" },
+                    { value: "percent", label: "% off" },
+                  ] as const
+                ).map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={line.discountType === option.value}
+                    onClick={() => setLine(i, { discountType: option.value })}
+                    className={`admin-tap rounded-full border px-3 text-xs font-semibold ${
+                      line.discountType === option.value
+                        ? "border-olive bg-accent-soft text-ink-strong"
+                        : "border-line text-ink-muted hover:border-olive"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             {product && product.gstRateBps !== null && (
               <p className="sm:col-span-2 text-xs font-semibold text-ink-soft">
                 GST {formatRate(product.gstRateBps)} · HSN {product.hsnCode} —

@@ -28,7 +28,9 @@ export interface HistoricLine {
   quantity: number;
   /** Rupees as a string, ready for the form's own money fields. */
   unitPrice: string;
+  /** Rupees when flat, percent when percent — as the form types it. */
   discount: string;
+  discountType: "flat" | "percent";
 }
 
 export interface LastOrder {
@@ -107,7 +109,13 @@ export async function partyHistory(contactId: string): Promise<PartyHistory> {
             packLabel: l.packLabel ?? "",
             quantity: l.quantity ?? 1,
             unitPrice: paiseToRupeeString(l.unitPricePaise ?? 0),
-            discount: l.discountPaise ? paiseToRupeeString(l.discountPaise) : "",
+            discountType: l.discountType === "percent" ? "percent" : "flat",
+            discount:
+              l.discountType === "percent"
+                ? String((l.discountValue ?? 0) / 100)
+                : l.discountPaise
+                  ? paiseToRupeeString(l.discountPaise)
+                  : "",
           })),
       }
     : null;

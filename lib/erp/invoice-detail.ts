@@ -32,6 +32,9 @@ export interface DetailLine {
   quantity: number;
   unitPricePaise: number;
   discountPaise: number;
+  /** How it was stated — "10%" reads better than the paise it came to. */
+  discountType: "flat" | "percent";
+  discountValue: number;
   gstRateBps: number;
   taxableValuePaise: number;
   cgstPaise: number;
@@ -184,6 +187,8 @@ export async function getInvoiceDetail(id: string): Promise<InvoiceDetail | null
       quantity,
       unitPricePaise: l.unitPricePaise ?? 0,
       discountPaise: l.discountPaise ?? 0,
+      discountType: l.discountType === "percent" ? "percent" : "flat",
+      discountValue: l.discountValue ?? 0,
       gstRateBps: l.gstRateBps ?? 0,
       taxableValuePaise: l.taxableValuePaise ?? 0,
       cgstPaise: l.cgstPaise ?? 0,

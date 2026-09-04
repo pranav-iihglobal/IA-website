@@ -62,7 +62,9 @@ export async function POST(request: NextRequest) {
           packLabel: l.packLabel,
           quantity: l.quantity,
           unitPricePaise: l.unitPrice ?? 0,
-          discountPaise: l.discount ?? 0,
+          discountType: l.discountType,
+          discountValue:
+            l.discountType === "percent" ? (l.discountPercent ?? 0) : (l.discount ?? 0),
         })),
         placeOfSupplyStateCode: parsed.data.placeOfSupplyStateCode,
         notes: parsed.data.notes,
