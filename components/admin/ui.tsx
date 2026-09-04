@@ -834,6 +834,8 @@ export function StatusPill({ status }: { status: string }) {
     payment: "bg-surface-strong/35 text-ink-strong ring-line",
     // Stock moved by a document rather than counted by a person.
     stock: "bg-laurel/20 text-ink-strong ring-laurel/50",
+    // A call logged on a contact.
+    note: "bg-surface-strong/35 text-ink-strong ring-line",
     // A stock item whose count follows the sales of its pack.
     linked: "bg-laurel/20 text-ink-strong ring-laurel/50",
     // Schemes, by the clock: live, not yet, over, or switched off.
@@ -881,6 +883,7 @@ export function StatusPill({ status }: { status: string }) {
     credit: "bg-alloy",
     payment: "bg-camel-dark/60",
     stock: "bg-laurel",
+    note: "bg-camel-dark/60",
     linked: "bg-laurel",
     active: "bg-olive",
     upcoming: "bg-alloy",

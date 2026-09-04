@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { StatusPill } from "./ui";
+import { EntityIcon } from "./EntityIcon";
+import { actorInitial } from "@/lib/admin/activity";
 import { formatIstDateLong, istDateTimeInputValue } from "@/lib/time";
 import type { HistoryEntry } from "@/lib/admin/history";
 
@@ -54,12 +56,19 @@ export function HistoryItem({
   entry,
   href,
   actorName,
+  variant = "record",
 }: {
   entry: HistoryEntry;
   href?: string | null;
   /** The person's name for their email, where the page knows it. */
   actorName?: string;
+  /**
+   * "feed" is the activity screen: an initial for who, the record kind's
+   * icon, and the time alone — the day is the heading above the group.
+   */
+  variant?: "record" | "feed";
 }) {
+  if (variant === "feed") return <FeedItem entry={entry} href={href ?? null} actorName={actorName} />;
   return (
     <li className="py-3">
       <div className="flex flex-wrap items-baseline gap-2">
@@ -118,6 +127,75 @@ export function HistoryItem({
           ))}
         </dl>
       )}
+    </li>
+  );
+}
+
+/** The activity feed's row. See HistoryItem. */
+function FeedItem({
+  entry,
+  href,
+  actorName,
+}: {
+  entry: HistoryEntry;
+  href: string | null;
+  actorName?: string;
+}) {
+  const who = actorName || entry.actor || "unknown";
+  const at = entry.at ? new Date(entry.at) : null;
+  const title = entry.summary || entry.entity;
+  return (
+    <li className="flex gap-3 py-3">
+      <span
+        aria-hidden="true"
+        className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-bold uppercase text-ink-muted"
+        title={who}
+      >
+        {actorInitial(who)}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-sm text-ink">
+            <span className="font-semibold text-ink-strong">{who}</span>
+          </span>
+          <StatusPill status={entry.action} />
+          {at && (
+            <time dateTime={entry.at} className="text-xs text-ink-faint" title={istDateTimeInputValue(at)}>
+              {istDateTimeInputValue(at).slice(11)}
+            </time>
+          )}
+        </div>
+        <p className="mt-1 flex items-center gap-1.5 text-sm">
+          <span className="text-ink-faint">
+            <EntityIcon entity={entry.entity} />
+          </span>
+          {href ? (
+            <Link href={href} className="min-w-0 truncate font-semibold text-ink-strong hover:text-cta hover:underline">
+              {title}
+            </Link>
+          ) : (
+            <span className="min-w-0 truncate font-semibold text-ink-strong">{title}</span>
+          )}
+          {entry.summary && <span className="shrink-0 text-xs text-ink-faint">{entry.entity}</span>}
+        </p>
+        {entry.note && entry.note !== entry.summary && (
+          <p className="mt-1 text-sm text-ink">{entry.note}</p>
+        )}
+        {entry.changes.length > 0 && (
+          <dl className="mt-1.5 space-y-0.5">
+            {entry.changes.map((change) => (
+              <div key={change.field} className="flex flex-wrap items-baseline gap-x-2 text-xs">
+                <dt className="font-semibold text-ink-muted">{change.label}</dt>
+                <dd className="min-w-0 text-ink-soft">
+                  <span className="line-through">{change.from}</span>
+                  {" → "}
+                  <span className="font-semibold text-ink">{change.to}</span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
     </li>
   );
 }
