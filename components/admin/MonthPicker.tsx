@@ -14,12 +14,21 @@ const MONTHS = [
  * period is the kind of thing that gets sent to an accountant as a link, and
  * a back button should return to the month you were looking at.
  */
-export function MonthPicker({ year, month }: { year: number; month: number }) {
+export function MonthPicker({
+  year,
+  month,
+  href = (y, m) => `/admin/gst?year=${y}&month=${m}`,
+}: {
+  year: number;
+  month: number;
+  /** Where a chosen month goes. The GST summary and its rows page differ. */
+  href?: (year: number, month: number) => string;
+}) {
   const router = useRouter();
   const thisYear = new Date().getFullYear();
   const years = [thisYear + 1, thisYear, thisYear - 1, thisYear - 2];
 
-  const go = (y: number, m: number) => router.push(`/admin/gst?year=${y}&month=${m}`);
+  const go = (y: number, m: number) => router.push(href(y, m));
 
   return (
     <div className="flex items-center gap-2">
