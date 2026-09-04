@@ -4,7 +4,8 @@ import { isValidObjectId } from "mongoose";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { can } from "@/lib/auth/permissions";
 import { outstandingInvoices } from "@/lib/erp/reports";
-import { AGE_BUCKETS, summariseAgeing } from "@/lib/erp/ageing";
+import { summariseAgeing } from "@/lib/erp/ageing";
+import { AgeingBands } from "@/components/admin/AgeingBands";
 import { connectToDatabase } from "@/lib/db/connect";
 import { Contact } from "@/lib/db/models/Contact";
 import { formatINR, formatRupees } from "@/lib/money";
@@ -147,25 +148,8 @@ export default async function PartyOutstandingPage({
             <h2 className="font-display text-base font-bold text-ink-strong">
               How overdue it is
             </h2>
-            <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {AGE_BUCKETS.map((bucket) => (
-                <div key={bucket.key} className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-ink-faint">
-                    {bucket.label}
-                  </p>
-                  <p
-                    className={`mt-0.5 font-display text-lg font-bold tabular-nums ${
-                      (bucket.key === "d61_90" || bucket.key === "d90_plus") &&
-                      ageing[bucket.key] > 0
-                        ? "text-danger"
-                        : "text-ink-strong"
-                    }`}
-                  >
-                    {formatRupees(ageing[bucket.key])}
-                  </p>
-                  <p className="text-xs text-ink-faint">{bucket.hint}</p>
-                </div>
-              ))}
+            <div className="mt-3">
+              <AgeingBands totals={ageing} />
             </div>
           </section>
 

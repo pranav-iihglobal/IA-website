@@ -2,10 +2,12 @@ import Link from "next/link";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { outstandingInvoices, outstandingTotal } from "@/lib/erp/reports";
 import type { OutstandingSort } from "@/lib/erp/reports";
-import { formatINR, formatRupees } from "@/lib/money";
-import { AGE_BUCKETS, groupByParty, summariseAgeing } from "@/lib/erp/ageing";
+import { formatRupees } from "@/lib/money";
+import { groupByParty, summariseAgeing } from "@/lib/erp/ageing";
 import { DownloadLink, EmptyState } from "@/components/admin/ui";
 import { OutstandingList } from "@/components/admin/OutstandingList";
+import { AgeingBands } from "@/components/admin/AgeingBands";
+import { DebtorCards } from "@/components/admin/DebtorCards";
 
 export const metadata = { title: "Outstanding" };
 export const dynamic = "force-dynamic";
@@ -88,83 +90,31 @@ export default async function OutstandingPage({
 
       {rows.length > 0 && (
         <section className="admin-card p-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-display text-base font-bold text-ink-strong">
-              How overdue it is
-            </h2>
-            {capped && (
-              <p className="text-xs text-ink-faint">
-                Across the {rows.length} shown, not all {total.count}.
-              </p>
-            )}
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {AGE_BUCKETS.map((bucket) => (
-              <div key={bucket.key} className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-ink-faint">
-                  {bucket.label}
-                </p>
-                <p
-                  className={`mt-0.5 font-display text-lg font-bold tabular-nums ${
-                    /* Only the two that mean act on it are red. Colouring
-                       every band red says nothing. */
-                    (bucket.key === "d61_90" || bucket.key === "d90_plus") &&
-                    ageing[bucket.key] > 0
-                      ? "text-danger"
-                      : "text-ink-strong"
-                  }`}
-                >
-                  {formatRupees(ageing[bucket.key])}
-                </p>
-                <p className="text-xs text-ink-faint">{bucket.hint}</p>
-              </div>
-            ))}
+          <h2 className="font-display text-base font-bold text-ink-strong">
+            How overdue it is
+          </h2>
+          <div className="mt-3">
+            <AgeingBands
+              totals={ageing}
+              note={capped ? `Across the ${rows.length} shown, not all ${total.count}.` : undefined}
+            />
           </div>
         </section>
       )}
 
       {/* ---------- By customer ---------- */}
       {parties.length > 0 && (
-        <section className="admin-card p-4">
-          <h2 className="font-display text-base font-bold text-ink-strong">
-            By customer
-          </h2>
-          <p className="mt-0.5 text-xs text-ink-muted">
-            Biggest first. Four unpaid invoices to one farmer is one phone
-            call, and the list below shows them as four rows.
-          </p>
-          <ul className="mt-3 divide-y divide-line-soft">
-            {parties.map((party) => (
-              <li
-                key={party.contactId ?? party.name}
-                className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2"
-              >
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink-strong">
-                  {party.contactId ? (
-                    <Link
-                      href={`/admin/outstanding/${party.contactId}`}
-                      className="hover:text-cta hover:underline"
-                    >
-                      {party.name}
-                    </Link>
-                  ) : (
-                    party.name
-                  )}
-                </span>
-                <span className="text-xs text-ink-faint">
-                  {party.invoices} invoice{party.invoices === 1 ? "" : "s"} ·
-                  oldest {party.oldestDays}d
-                </span>
-                <span
-                  className={`text-sm font-bold tabular-nums ${
-                    party.oldestDays > 60 ? "text-danger" : "text-ink-strong"
-                  }`}
-                >
-                  {formatINR(party.owedPaise)}
-                </span>
-              </li>
-            ))}
-          </ul>
+        <section className="space-y-3">
+          <div>
+            <h2 className="font-display text-base font-bold text-ink-strong">
+              By customer
+            </h2>
+            <p className="mt-0.5 text-xs text-ink-muted">
+              Biggest first. Four unpaid invoices to one farmer is one phone
+              call; the list below shows them as four documents.
+            </p>
+          </div>
+          <DebtorCards parties={parties} />
         </section>
       )}
 

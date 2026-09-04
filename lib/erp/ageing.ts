@@ -76,6 +76,10 @@ export interface PartyDebt {
   phone: string;
   invoices: number;
   owedPaise: number;
+  /** What those invoices came to, and what has already come back. */
+  invoicedPaise: number;
+  paidPaise: number;
+  creditedPaise: number;
   /** The oldest unpaid invoice's age, which is what decides urgency. */
   oldestDays: number;
 }
@@ -87,6 +91,9 @@ export function groupByParty(
     partyPhone: string;
     owedPaise: number;
     daysOld: number;
+    grandTotalPaise?: number;
+    paidPaise?: number;
+    creditedPaise?: number;
   }[],
 ): PartyDebt[] {
   const parties = new Map<string, PartyDebt>();
@@ -102,6 +109,9 @@ export function groupByParty(
     if (existing) {
       existing.invoices += 1;
       existing.owedPaise += row.owedPaise;
+      existing.invoicedPaise += row.grandTotalPaise ?? 0;
+      existing.paidPaise += row.paidPaise ?? 0;
+      existing.creditedPaise += row.creditedPaise ?? 0;
       existing.oldestDays = Math.max(existing.oldestDays, row.daysOld);
       // Keep the first number that is actually usable.
       if (!existing.phone && row.partyPhone) existing.phone = row.partyPhone;
@@ -112,6 +122,9 @@ export function groupByParty(
         phone: row.partyPhone,
         invoices: 1,
         owedPaise: row.owedPaise,
+        invoicedPaise: row.grandTotalPaise ?? 0,
+        paidPaise: row.paidPaise ?? 0,
+        creditedPaise: row.creditedPaise ?? 0,
         oldestDays: row.daysOld,
       });
     }
@@ -120,4 +133,42 @@ export function groupByParty(
   // Most owed first: this list answers "where is the money", and the
   // invoice list beside it already answers "who has waited longest".
   return [...parties.values()].sort((a, b) => b.owedPaise - a.owedPaise);
+}
+
+/**
+ * Each band's share of the whole, as whole percentages that ADD UP TO 100.
+ *
+ * Plain rounding of four shares lands on 99 or 101 often enough to be
+ * noticed on a bar that is supposed to be the whole debt. Largest remainder:
+ * floor each share, then hand the leftover points to the bands that lost the
+ * most in flooring. Everything zero gives four zeros, not a division error.
+ */
+export function ageingShares(totals: AgeingTotals): { key: AgeBucket; share: number }[] {
+  const keys = AGE_BUCKETS.map((b) => b.key);
+  const whole = keys.reduce((sum, key) => sum + Math.max(0, totals[key]), 0);
+  if (whole <= 0) return keys.map((key) => ({ key, share: 0 }));
+
+  const exact = keys.map((key) => (Math.max(0, totals[key]) * 100) / whole);
+  const floors = exact.map(Math.floor);
+  let left = 100 - floors.reduce((a, b) => a + b, 0);
+  const order = keys
+    .map((_, i) => i)
+    .sort((a, b) => exact[b] - floors[b] - (exact[a] - floors[a]) || a - b);
+  for (const i of order) {
+    if (left <= 0) break;
+    floors[i] += 1;
+    left -= 1;
+  }
+  return keys.map((key, i) => ({ key, share: floors[i] }));
+}
+
+/**
+ * How a debtor's row should read, from how long their oldest bill has waited.
+ * Past 60 days is red — the same threshold the bands use for "chase it";
+ * past 30 is the usual credit period and is flagged without alarm.
+ */
+export function partyTone(oldestDays: number): "danger" | "warn" | undefined {
+  if (oldestDays > 60) return "danger";
+  if (oldestDays > 30) return "warn";
+  return undefined;
 }

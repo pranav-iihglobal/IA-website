@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ageBucket, groupByParty, summariseAgeing } from "./ageing";
+import { ageBucket, ageingShares, groupByParty, partyTone, summariseAgeing } from "./ageing";
 
 describe("ageBucket", () => {
   it("puts the boundaries in the band they belong to", () => {
@@ -126,5 +126,50 @@ describe("groupByParty", () => {
       row({ contactId: "c", partyName: "Middle", owedPaise: 5000 }),
     ]);
     expect(parties.map((p) => p.name)).toEqual(["Big", "Middle", "Small"]);
+  });
+});
+
+describe("ageingShares", () => {
+  it("adds up to exactly 100, whatever the rounding wants", () => {
+    // 1/3 each would round to 33 + 33 + 33 = 99 without the remainder step.
+    const shares = ageingShares({ current: 100, d31_60: 100, d61_90: 100, d90_plus: 0 });
+    expect(shares.reduce((n, s) => n + s.share, 0)).toBe(100);
+    expect(shares.map((s) => s.share)).toEqual([34, 33, 33, 0]);
+  });
+
+  it("gives the whole bar to a single band", () => {
+    expect(ageingShares({ current: 0, d31_60: 0, d61_90: 0, d90_plus: 5 }).map((s) => s.share)).toEqual([0, 0, 0, 100]);
+  });
+
+  it("is four zeros when nothing is owed", () => {
+    expect(ageingShares({ current: 0, d31_60: 0, d61_90: 0, d90_plus: 0 }).map((s) => s.share)).toEqual([0, 0, 0, 0]);
+  });
+
+  it("keeps the bands in their order", () => {
+    expect(ageingShares({ current: 1, d31_60: 2, d61_90: 3, d90_plus: 4 }).map((s) => s.key)).toEqual([
+      "current",
+      "d31_60",
+      "d61_90",
+      "d90_plus",
+    ]);
+  });
+});
+
+describe("partyTone", () => {
+  it("is red past 60 days, flagged past 30, quiet before", () => {
+    expect(partyTone(10)).toBeUndefined();
+    expect(partyTone(30)).toBeUndefined();
+    expect(partyTone(31)).toBe("warn");
+    expect(partyTone(61)).toBe("danger");
+  });
+});
+
+describe("groupByParty totals", () => {
+  it("sums what was invoiced, paid and credited alongside what is owed", () => {
+    const [party] = groupByParty([
+      { contactId: "c", partyName: "A", partyPhone: "", owedPaise: 300, daysOld: 10, grandTotalPaise: 1000, paidPaise: 500, creditedPaise: 200 },
+      { contactId: "c", partyName: "A", partyPhone: "", owedPaise: 400, daysOld: 40, grandTotalPaise: 400, paidPaise: 0, creditedPaise: 0 },
+    ]);
+    expect(party).toMatchObject({ invoices: 2, owedPaise: 700, invoicedPaise: 1400, paidPaise: 500, creditedPaise: 200, oldestDays: 40 });
   });
 });

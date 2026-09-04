@@ -4,7 +4,8 @@ import Link from "next/link";
 import { ListCard, ViewToggle } from "./ui";
 import { useViewMode } from "./useViewMode";
 import { formatINR, formatRupees } from "@/lib/money";
-import { paymentReminder, telHref, whatsappHref } from "@/lib/crm/contact-links";
+import { paymentReminder } from "@/lib/crm/contact-links";
+import { ReachPills } from "./ReachPills";
 import type { OutstandingRow } from "@/lib/erp/reports";
 
 /**
@@ -85,43 +86,21 @@ function Age({ row }: { row: OutstandingRow }) {
 }
 
 /**
- * The two taps this screen exists for.
- *
- * A list of who owes money, with no way to reach any of them, is a report
- * rather than a tool. The WhatsApp message names the invoice and the amount
- * because "you owe us money" prompts a call back asking which one — see
- * lib/crm/contact-links.ts.
- *
- * Both are hidden rather than disabled when the stored number is not one this
- * can be confident about: a dead "Call" button is worse than none.
+ * The two taps this screen exists for — see ReachPills. The message names
+ * the invoice and the amount, because "you owe us money" prompts a call back
+ * asking which one.
  */
 function Chase({ row }: { row: OutstandingRow }) {
-  const tel = telHref(row.partyPhone);
-  const chat = whatsappHref(
-    row.partyPhone,
-    paymentReminder({
-      name: row.partyName,
-      number: row.number,
-      amount: formatRupees(row.owedPaise),
-    }),
-  );
-  if (!tel && !chat) return null;
-
-  const pill =
-    "admin-tap inline-flex items-center rounded-full border border-line px-3.5 text-xs font-semibold text-ink hover:border-olive";
   return (
-    <>
-      {tel && (
-        <a href={tel} aria-label={`Call ${row.partyName} on ${row.partyPhone}`} className={pill}>
-          Call
-        </a>
-      )}
-      {chat && (
-        <a href={chat} target="_blank" rel="noreferrer" aria-label={`WhatsApp ${row.partyName} a reminder`} className={pill}>
-          WhatsApp reminder
-        </a>
-      )}
-    </>
+    <ReachPills
+      name={row.partyName}
+      phone={row.partyPhone}
+      message={paymentReminder({
+        name: row.partyName,
+        number: row.number,
+        amount: formatRupees(row.owedPaise),
+      })}
+    />
   );
 }
 

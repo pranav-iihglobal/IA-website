@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { betaNote } from "@/lib/auth/permissions";
 import { salesOverview } from "@/lib/erp/overview";
-import { AGE_BUCKETS } from "@/lib/erp/ageing";
+import { AgeingBands } from "@/components/admin/AgeingBands";
 import { formatRupees } from "@/lib/money";
 import { BetaStar } from "@/components/admin/ui";
 import { CountRows, Figure, OverviewCard } from "@/components/admin/Overview";
@@ -90,17 +90,7 @@ export default async function SalesOverviewPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <OverviewCard title="How overdue it is" href="/admin/outstanding" hint="Across every unpaid invoice">
-          <CountRows
-            rows={AGE_BUCKETS.map((b) => ({
-              key: b.key,
-              label: b.label,
-              count: o.outstanding.ageing[b.key] / 100,
-              extra: b.hint,
-              href: "/admin/outstanding",
-            })).map((row) => ({ ...row, count: Math.round(row.count) }))}
-            tone={(key) => (key === "d61_90" || key === "d90_plus" ? "danger" : undefined)}
-          />
-          <p className="mt-2 text-xs text-ink-faint">Figures in rupees.</p>
+          <AgeingBands totals={o.outstanding.ageing} compact />
         </OverviewCard>
 
         <OverviewCard title="Who owes the most" href="/admin/outstanding?sort=largest">
