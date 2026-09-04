@@ -1037,23 +1037,22 @@ body:has(.admin-shell) {
 /*
   The phone's tab strip: every section the viewer may open, scrolling
   sideways, no scrollbar, a fade where it runs off. Same construction as
-  .admin-filter-tabs, plus: half a screen of padding either side so the first
-  and last tab can be CENTRED like the rest (scrollIntoView cannot centre a
-  tab it cannot scroll past), snap points at each tab's centre, and smooth
-  scrolling for those who have not asked their phone for none.
+  .admin-filter-tabs, plus snap points at each tab's centre and smooth
+  scrolling for those who have not asked their phone for none. The active
+  tab is centred when there is room and clamped at either end otherwise —
+  deliberately NOT padded so the first tab could centre, which left half the
+  bar empty.
 */
 .admin-ui .admin-tabstrip {
   scrollbar-width: none;
   scroll-snap-type: x proximity;
-  scroll-padding-inline: 50%;
-  padding-inline: calc(50% - 2.25rem);
 }
 @media (prefers-reduced-motion: no-preference) {
   .admin-ui .admin-tabstrip {
     scroll-behavior: smooth;
   }
   .admin-ui .admin-tabstrip-pill {
-    transition: width 160ms ease, height 160ms ease, transform 160ms ease, background-color 160ms ease;
+    transition: background-color 160ms ease, color 160ms ease, padding 160ms ease;
   }
 }
 .admin-ui .admin-tabstrip::-webkit-scrollbar {

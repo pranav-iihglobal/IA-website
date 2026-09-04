@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
+  Fragment,
   useEffect,
   useMemo,
   useRef,
@@ -477,6 +478,21 @@ export function AdminNav({ user }: { user: AdminUser }) {
   );
   const strip = useMemo(() => flat.filter(inStrip), [flat]);
   const menuItems = useMemo(() => flat.filter((item) => !inStrip(item)), [flat]);
+  /*
+    The strip keeps the sidebar's grouping as thin dividers: fourteen tabs in
+    one undifferentiated row is a search; Sales | Customers | Operations |
+    Website is a map.
+  */
+  const stripGroups = useMemo(
+    () =>
+      visible
+        .map((entry) => ({
+          id: isGroup(entry) ? entry.id : entry.href,
+          items: (isGroup(entry) ? entry.items : [entry]).filter(inStrip),
+        }))
+        .filter((g) => g.items.length > 0),
+    [visible],
+  );
 
   useEffect(() => {
     const active = stripRef.current?.querySelector<HTMLElement>('[aria-current="page"]');
@@ -740,40 +756,50 @@ export function AdminNav({ user }: { user: AdminUser }) {
       >
         <div className="admin-tabstrip-fade">
           {/*
-            The ul is padded half a screen each side (see .admin-tabstrip in
-            globals.css) so the FIRST and LAST tab can sit in the centre too;
-            each li snaps to the centre, so a flick settles on a whole tab.
-            The active tab is bigger — a wider, taller pill and a bold label —
-            so where you are reads at a glance, not only by colour.
+            The active tab is scrolled to the centre WHEN THERE IS ROOM: the
+            browser clamps at either end, so the first tab sits at the left
+            edge with tabs beside it rather than half a screen of nothing.
+            (Padding the strip so the first tab could centre was tried and
+            looked exactly like that.) The active tab is an expanded light
+            pill — icon and label side by side — where the rest are an icon
+            over a small label, so where you are reads before any word does;
+            the pill's width animates as the selection moves. Thin dividers
+            keep the sidebar's groups.
           */}
-          <ul ref={stripRef} className="admin-tabstrip flex h-14 items-stretch overflow-x-auto">
-            {strip.map((item) => {
-              const active = itemActive(item, pathname);
-              return (
-                <li key={item.href} className="min-w-[4.5rem] shrink-0 snap-center">
-                  <Link
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    className={`admin-tap flex h-full flex-col items-center justify-center gap-0.5 text-[11px] ${
-                      active
-                        ? "font-bold text-cornsilk-light"
-                        : "font-semibold text-cornsilk hover:text-cornsilk-light"
-                    }`}
-                  >
-                    <span
-                      className={`admin-tabstrip-pill flex items-center justify-center rounded-full ${
-                        active ? "h-8 w-14 scale-105 bg-olive-dark" : "h-7 w-12"
-                      }`}
-                    >
-                      {item.icon}
-                    </span>
-                    <span className="whitespace-nowrap px-2.5">
-                      {item.href === "/admin" ? "Today" : item.label}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
+          <ul ref={stripRef} className="admin-tabstrip flex h-14 items-center gap-0.5 overflow-x-auto px-2">
+            {stripGroups.map((group, gi) => (
+              <Fragment key={group.id}>
+                {gi > 0 && (
+                  <li role="separator" aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-cornsilk/25" />
+                )}
+                {group.items.map((item) => {
+                  const active = itemActive(item, pathname);
+                  const label = item.href === "/admin" ? "Today" : item.label;
+                  return (
+                    <li key={item.href} className="shrink-0 snap-center">
+                      <Link
+                        href={item.href}
+                        aria-current={active ? "page" : undefined}
+                        className={`admin-tap admin-tabstrip-pill flex items-center justify-center rounded-full ${
+                          active
+                            ? "h-10 gap-1.5 bg-cornsilk-light px-3.5 text-olive-dark shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
+                            : "h-12 min-w-[3.75rem] flex-col gap-0.5 px-2 text-cornsilk hover:bg-olive-dark/45 hover:text-cornsilk-light"
+                        }`}
+                      >
+                        {item.icon}
+                        <span
+                          className={`whitespace-nowrap ${
+                            active ? "text-[12px] font-bold" : "text-[10px] font-semibold"
+                          }`}
+                        >
+                          {label}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </Fragment>
+            ))}
           </ul>
         </div>
       </nav>
