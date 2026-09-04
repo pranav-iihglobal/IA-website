@@ -1,4 +1,5 @@
 import type { HistoryEntry } from "@/lib/admin/history";
+import { documentKind } from "@/lib/erp/document-kind";
 import type { ProfileInvoice } from "./profile";
 
 /**
@@ -24,7 +25,7 @@ export interface NoteLike {
 export type TimelineEntry =
   | { kind: "note"; id: string; at: string; body: string; author: string }
   | { kind: "change"; id: string; at: string; entry: HistoryEntry }
-  | { kind: "invoice" | "credit_note"; id: string; at: string; invoice: ProfileInvoice };
+  | { kind: "invoice" | "credit_note" | "sample_note"; id: string; at: string; invoice: ProfileInvoice };
 
 /** Where a document sorts against another at the same instant: later kinds win the tie. */
 const TIE_ORDER: Record<TimelineEntry["kind"], number> = {
@@ -33,6 +34,7 @@ const TIE_ORDER: Record<TimelineEntry["kind"], number> = {
   change: 2,
   // A credit note raised the same second as its invoice is the LATER event.
   credit_note: 3,
+  sample_note: 0,
 };
 
 function iso(value: string | Date | undefined | null): string {
@@ -75,7 +77,7 @@ export function mergeTimeline({
 
   for (const inv of invoices) {
     entries.push({
-      kind: inv.documentType === "credit_note" ? "credit_note" : "invoice",
+      kind: documentKind(inv),
       id: `inv:${inv.id}`,
       at: iso(inv.issuedAt),
       invoice: inv,

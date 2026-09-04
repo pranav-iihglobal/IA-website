@@ -1,4 +1,5 @@
 import { connectToDatabase } from "@/lib/db/connect";
+import { ON_RETURN, SALES_ONLY } from "./document-kind";
 import { Invoice } from "@/lib/db/models/Invoice";
 import { Types, type PipelineStage } from "mongoose";
 import type { LeanDoc } from "@/lib/db/lean";
@@ -52,6 +53,8 @@ export async function invoicesForPeriod(
       weight. A fabricated sale in a GSTR-1 filing is not a display bug.
     */
     isSample: { $ne: true },
+    // Free samples are not supplies; they never reach the return.
+    ...ON_RETURN,
   })
     .select(
       "number documentType againstNumber reason issuedAt status placeOfSupplyStateCode supplyType party grandTotalPaise lines",
@@ -98,6 +101,7 @@ export async function sampleInvoicesInPeriod(
     issuedAt: { $gte: from, $lt: to },
     status: { $ne: "draft" },
     isSample: true,
+    ...ON_RETURN,
   });
 }
 
@@ -139,8 +143,8 @@ export function outstandingPipeline(match: Record<string, unknown> = {}): Pipeli
         status: "issued",
         // A credit note is written already paid, so it never reaches here —
         // but "what is owed" must not be able to go negative because one was
-        // written any other way.
-        documentType: { $ne: "credit_note" },
+        // written any other way. A sample note is written paid at ₹0 too.
+        ...SALES_ONLY,
         "payment.status": { $ne: "paid" },
       },
     },
@@ -278,7 +282,8 @@ export async function revenueBetween(
   match: Record<string, unknown> = {},
 ): Promise<{ total: number; count: number }> {
   const [row] = await Invoice.aggregate<{ total: number; count: number }>([
-    { $match: { ...match, status: "issued", issuedAt: { $gte: from, $lt: to } } },
+    // Sample notes are ₹0 and would not move the total; they would move the COUNT.
+    { $match: { ...match, ...ON_RETURN, status: "issued", issuedAt: { $gte: from, $lt: to } } },
     {
       $group: {
         _id: null,

@@ -1,4 +1,5 @@
 import type { InvoiceRow } from "./list";
+import { DOCUMENT_LABELS, documentKind } from "./document-kind";
 import type { PurchaseRowShape, StockRowShape } from "./inventory-list";
 import type { OutstandingRow } from "./reports";
 import { paiseToRupeeString } from "@/lib/money";
@@ -34,7 +35,7 @@ export const INVOICE_EXPORT_HEADERS = [
 export function invoiceExportRow(row: InvoiceRow): (string | number)[] {
   return [
     row.number,
-    row.documentType === "credit_note" ? "Credit note" : "Invoice",
+    DOCUMENT_LABELS[documentKind(row)],
     row.againstNumber,
     row.financialYear,
     row.status,

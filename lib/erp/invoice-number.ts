@@ -147,6 +147,46 @@ export function isDemoInvoiceNumber(value: string): boolean {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Sample notes                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Sample notes get their OWN series — SMP.MM.YY.NNN.
+ *
+ * A free sample handed to a prospect is not a supply for consideration, so
+ * it is not a tax invoice and must not consume an IA number; it still moves
+ * stock and is still a document somebody may ask about, so it is numbered.
+ * The counter key is `smp:YY:MM` — deliberately NOT under `sample-` or
+ * `demo-`, which `erp-sample -- wipe` deletes as seeded data. This series is
+ * real.
+ */
+export function sampleNoteSeriesKey(date: Date): string {
+  const { mm, yy } = stamp(date);
+  return `smp:${yy}:${mm}`;
+}
+
+export function formatSampleNoteNumber(date: Date, sequence: number): string {
+  const { mm, yy } = stamp(date);
+  return `SMP.${mm}.${yy}.${String(sequence).padStart(3, "0")}`;
+}
+
+/** True for a sample note this app issued. Not a demo number, not a tax invoice. */
+export function isSampleNoteNumber(value: string): boolean {
+  return /^SMP\.\d{2}\.\d{2}\.\d{3,}$/.test(value.trim());
+}
+
+export async function allocateSampleNoteNumber(
+  issuedAt: Date = new Date(),
+): Promise<{ number: string; sequence: number; financialYear: string }> {
+  const sequence = await nextInSeries(sampleNoteSeriesKey(issuedAt));
+  return {
+    number: formatSampleNoteNumber(issuedAt, sequence),
+    sequence,
+    financialYear: financialYear(issuedAt),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Credit notes                                                               */
 /* -------------------------------------------------------------------------- */
 

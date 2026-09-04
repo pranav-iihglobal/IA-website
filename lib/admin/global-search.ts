@@ -1,4 +1,5 @@
 import { connectToDatabase } from "@/lib/db/connect";
+import { DOCUMENT_LABELS, documentKind } from "@/lib/erp/document-kind";
 import { Contact } from "@/lib/db/models/Contact";
 import { Invoice } from "@/lib/db/models/Invoice";
 import { Supplier } from "@/lib/db/models/Supplier";
@@ -71,7 +72,7 @@ async function invoices(q: string): Promise<SearchHit[]> {
     id: String(d._id),
     title: d.number || "(draft)",
     hint: [
-      d.documentType === "credit_note" ? "Credit note" : "Invoice",
+      DOCUMENT_LABELS[documentKind(d)],
       d.party?.businessName || d.party?.name,
       formatRupees(d.grandTotalPaise ?? 0),
       d.status === "cancelled" ? "cancelled" : d.payment?.status,

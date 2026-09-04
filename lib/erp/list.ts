@@ -21,7 +21,7 @@ const PAGE_SIZE = 25;
 export interface InvoiceRow {
   id: string;
   number: string;
-  /** "invoice" or "credit_note" — the list shows both, distinctly. */
+  /** "invoice", "credit_note" or "sample_note" — the list shows all three, distinctly. */
   documentType: string;
   /** On a credit note, the invoice it reverses. Blank otherwise. */
   againstNumber: string;
@@ -58,9 +58,11 @@ export function buildInvoiceFilter(params: URLSearchParams): LeanDoc {
     other when someone is looking for a specific document.
   */
   const kind = params.get("kind");
-  if (kind === "invoice" || kind === "credit_note") {
+  if (kind === "invoice") {
     // Documents written before credit notes existed have no documentType.
-    filter.documentType = kind === "invoice" ? { $ne: "credit_note" } : "credit_note";
+    filter.documentType = { $nin: ["credit_note", "sample_note"] };
+  } else if (kind === "credit_note" || kind === "sample_note") {
+    filter.documentType = kind;
   }
 
   const year = params.get("financialYear");

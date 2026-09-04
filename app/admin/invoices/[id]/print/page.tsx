@@ -51,6 +51,7 @@ export default async function InvoicePrintPage({
 
   const intra = doc.supplyType === "intra";
   const isCredit = doc.documentType === "credit_note";
+  const isSampleNote = doc.documentType === "sample_note";
   // The invoice's own copy of who sold it — never the current setting.
   const seller = sellerFrom(doc.seller);
   const rateRows = summariseByRate(doc.lines ?? []);
@@ -95,6 +96,7 @@ export default async function InvoicePrintPage({
             number={doc.number ?? ""}
             amount={money(doc.grandTotalPaise ?? 0)}
             isCredit={isCredit}
+            isSampleNote={isSampleNote}
           />
           <PrintButton />
         </div>
@@ -130,8 +132,13 @@ export default async function InvoicePrintPage({
         </div>
         <div className="text-right">
           <p className="text-sm font-bold uppercase tracking-wider">
-            {isCredit ? "Credit Note" : "Tax Invoice"}
+            {isCredit ? "Credit Note" : isSampleNote ? "Sample Note" : "Tax Invoice"}
           </p>
+          {isSampleNote && (
+            <p className="mt-0.5 text-[11px] font-semibold">
+              Free sample — not a tax invoice. No charge, no GST.
+            </p>
+          )}
           <p className="mt-2 text-base font-bold">{doc.number}</p>
           {/*
             The IST date. This page is a server component, so
@@ -342,8 +349,9 @@ export default async function InvoicePrintPage({
         The UPI id is not decoration: a farmer with a phone can settle a
         printed invoice without having to ring anyone for the account number.
       */}
-      {/* Not printed on a credit note: the money moves the other way. */}
-      {!isCredit && seller.bank.accountNo && (
+      {/* Not printed on a credit note (the money moves the other way) or a
+          sample note (there is no money). */}
+      {!isCredit && !isSampleNote && seller.bank.accountNo && (
         <div className="mt-3 border-t border-black/30 pt-2 text-[11px] leading-relaxed">
           <p className="font-semibold">Payment</p>
           <p>
@@ -364,7 +372,9 @@ export default async function InvoicePrintPage({
         <p className="max-w-[46ch] leading-snug">
           {isCredit
             ? `This credit note reduces the amount due on ${doc.againstNumber || "the invoice above"}.`
-            : "Goods once sold will not be taken back."}{" "}
+            : isSampleNote
+              ? "Goods supplied free of charge as a trial sample. Not for resale."
+              : "Goods once sold will not be taken back."}{" "}
           Subject to {SITE.address.district} jurisdiction.
         </p>
         <p className="text-right">
@@ -434,18 +444,22 @@ function ShareOnWhatsApp({
   number,
   amount,
   isCredit,
+  isSampleNote,
 }: {
   phone: string;
   name: string;
   number: string;
   amount: string;
   isCredit: boolean;
+  isSampleNote: boolean;
 }) {
   const href = whatsappHref(
     phone,
     isCredit
       ? `Namaste ${name}, this is IKSARVA Agritech. Credit note ${number} for ${amount} has been raised against your bill. The document follows.`
-      : `Namaste ${name}, this is IKSARVA Agritech. Your invoice ${number} comes to ${amount}. The bill follows. Thank you.`,
+      : isSampleNote
+        ? `Namaste ${name}, this is IKSARVA Agritech. Thank you for trying our products — sample note ${number} lists what we handed over, free of charge. We will call to hear how it went.`
+        : `Namaste ${name}, this is IKSARVA Agritech. Your invoice ${number} comes to ${amount}. The bill follows. Thank you.`,
   );
   if (!href) return null;
 

@@ -1,4 +1,5 @@
 import { connectToDatabase } from "@/lib/db/connect";
+import { isCredit, isSale, isSampleNote } from "@/lib/erp/document-kind";
 import { Contact } from "@/lib/db/models/Contact";
 import { Invoice } from "@/lib/db/models/Invoice";
 import type { LeanDoc } from "@/lib/db/lean";
@@ -91,7 +92,8 @@ export interface Trading {
  */
 export function summariseTrading(invoices: ProfileInvoice[]): Trading {
   const counted = invoices.filter((i) => i.status !== "cancelled");
-  const orders = counted.filter((i) => i.documentType !== "credit_note");
+  // Sales only: a credit note is a refund, a sample note is a gift.
+  const orders = counted.filter(isSale);
 
   // Order dates only. A refund is not a visit to the shop.
   const dates = orders
@@ -121,9 +123,10 @@ export function summariseTrading(invoices: ProfileInvoice[]): Trading {
     status: deriveStatus(lastOrderAt),
     // From the counted invoices only, so a cancelled order does not appear in
     // "what they buy" while being absent from the totals beside it.
-    products: tallyProducts(counted.flatMap((i) => i.lines ?? [])),
+    // Sample lines have quantities and no value; "what they buy" is what they paid for.
+    products: tallyProducts(counted.filter((i) => !isSampleNote(i)).flatMap((i) => i.lines ?? [])),
     cancelledCount: invoices.length - counted.length,
-    creditNoteCount: counted.length - orders.length,
+    creditNoteCount: counted.filter(isCredit).length,
   };
 }
 

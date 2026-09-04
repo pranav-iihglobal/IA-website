@@ -42,7 +42,17 @@ export function ContactTimeline({ entries }: { entries: TimelineEntry[] }) {
         const cancelled = inv.status === "cancelled";
         return (
           <li key={e.id} className="flex flex-wrap items-baseline gap-2 py-3">
-            <StatusPill status={cancelled ? "cancelled" : e.kind === "credit_note" ? "credit note" : inv.paymentStatus} />
+            <StatusPill
+              status={
+                cancelled
+                  ? "cancelled"
+                  : e.kind === "credit_note"
+                    ? "credit note"
+                    : e.kind === "sample_note"
+                      ? "sample note"
+                      : inv.paymentStatus
+              }
+            />
             <Link
               /* The record, not the printable document. What is still owed is
                  a question about its history, and the paperwork cannot answer it. */

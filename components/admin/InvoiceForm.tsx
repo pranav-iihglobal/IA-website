@@ -60,6 +60,14 @@ export interface InvoiceFormValues {
   notes: string;
 }
 
+/**
+ * The same three steps raise a SAMPLE NOTE: who, what, how many — at ₹0,
+ * with no discount, no place of supply and no GST. Free goods to a
+ * prospect; see lib/erp/sample-note.ts. The mode hides what does not apply
+ * rather than a second form drifting from this one.
+ */
+export type InvoiceFormMode = "invoice" | "sample";
+
 export function emptyInvoiceLine(): InvoiceLineValues {
   return {
     productId: "",
@@ -98,6 +106,7 @@ export function invoicePreview(
   /** The schemes live now, and whose invoice it is — see previewDiscount(). */
   schemes: SchemeRule[] = [],
   party?: BillableParty,
+  mode: InvoiceFormMode = "invoice",
 ): { invoice: ReturnType<typeof computeInvoice>; counted: number } | null {
   const byId = new Map(products.map((p) => [p.id, p]));
   const ready = values.lines
@@ -110,7 +119,8 @@ export function invoicePreview(
         line.uom === "box" && pack && pack.unitsPerBox > 0
           ? toPieces(typed, "box", pack.unitsPerBox)
           : typed;
-      const unitPricePaise = rupeesToPaise(line.unitPrice);
+      // A sample is ₹0 by definition; the price box is not even shown.
+      const unitPricePaise = mode === "sample" ? 0 : rupeesToPaise(line.unitPrice);
       if (
         !product ||
         product.gstRateBps === null ||
@@ -126,7 +136,8 @@ export function invoicePreview(
         quantity,
         unitPricePaise,
         // The same resolution the server does — see snapshotLine().
-        discountPaise: previewDiscount(line, quantity * unitPricePaise, schemes, party),
+        discountPaise:
+          mode === "sample" ? 0 : previewDiscount(line, quantity * unitPricePaise, schemes, party),
         gstRateBps: product.gstRateBps,
       };
     })
@@ -208,6 +219,7 @@ export function InvoiceCustomerStep({
   parties,
   errors = {},
   onPartyAdded,
+  mode = "invoice",
 }: {
   values: InvoiceFormValues;
   onChange: (next: InvoiceFormValues) => void;
@@ -215,7 +227,9 @@ export function InvoiceCustomerStep({
   errors?: Record<string, string>;
   /** A customer created from inside this form, for the picker to offer. */
   onPartyAdded?: (party: BillableParty) => void;
+  mode?: InvoiceFormMode;
 }) {
+  const sample = mode === "sample";
   const [addingParty, setAddingParty] = useState<string | null>(null);
   const set = (patch: Partial<InvoiceFormValues>) => onChange({ ...values, ...patch });
 
@@ -231,9 +245,12 @@ export function InvoiceCustomerStep({
   );
 
   return (
-    <Section title="Customer" description="Who the invoice is made out to.">
+    <Section
+      title={sample ? "Given to" : "Customer"}
+      description={sample ? "Who is trying the product. A lead, most often." : "Who the invoice is made out to."}
+    >
       <EntityCombo
-        label="Bill to"
+        label={sample ? "Given to" : "Bill to"}
         required
         placeholder="Search by name, village or id"
         options={parties.map((p) => ({ id: p.id, label: p.name, hint: p.hint }))}
@@ -259,7 +276,7 @@ export function InvoiceCustomerStep({
           }}
         />
       )}
-      {party && (
+      {party && !sample && (
         <p className="mt-1.5 text-xs font-semibold text-ink-soft">
           {party.gstin
             ? `GSTIN ${party.gstin} — a B2B sale, listed individually on GSTR-1.`
@@ -272,7 +289,7 @@ export function InvoiceCustomerStep({
         that already has lines would double an order silently — so it is
         offered only while the form is still untouched.
       */}
-      {history.lastOrder && history.lastOrder.lines.length > 0 && !hasTypedLines && (
+      {!sample && history.lastOrder && history.lastOrder.lines.length > 0 && !hasTypedLines && (
         <button
           type="button"
           onClick={() =>
@@ -296,17 +313,21 @@ export function InvoiceCustomerStep({
           {history.lastOrder.number}
         </button>
       )}
-      <SelectField
-        label="Place of supply"
-        hint="A state, not a PIN code. It decides CGST+SGST against IGST."
-        value={values.placeOfSupplyStateCode}
-        onChange={(placeOfSupplyStateCode) => set({ placeOfSupplyStateCode })}
-        options={STATE_CODES.map((s) => ({
-          value: s.code,
-          label: `${s.code} — ${s.name}`,
-        }))}
-        error={errors.placeOfSupplyStateCode}
-    />    </Section>
+      {/* No supply, no place of supply: a sample note carries no GST. */}
+      {!sample && (
+        <SelectField
+          label="Place of supply"
+          hint="A state, not a PIN code. It decides CGST+SGST against IGST."
+          value={values.placeOfSupplyStateCode}
+          onChange={(placeOfSupplyStateCode) => set({ placeOfSupplyStateCode })}
+          options={STATE_CODES.map((s) => ({
+            value: s.code,
+            label: `${s.code} — ${s.name}`,
+          }))}
+          error={errors.placeOfSupplyStateCode}
+        />
+      )}
+    </Section>
   );
 }
 
@@ -325,6 +346,7 @@ export function InvoiceLinesStep({
   party,
   schemes = [],
   errors = {},
+  mode = "invoice",
 }: {
   values: InvoiceFormValues;
   onChange: (next: InvoiceFormValues) => void;
@@ -334,7 +356,9 @@ export function InvoiceLinesStep({
   /** Live now. Shown under a blank discount when one would apply. */
   schemes?: SchemeRule[];
   errors?: Record<string, string>;
+  mode?: InvoiceFormMode;
 }) {
+  const sample = mode === "sample";
   const set = (patch: Partial<InvoiceFormValues>) => onChange({ ...values, ...patch });
   const setLine = (index: number, patch: Partial<InvoiceLineValues>) =>
     set({ lines: values.lines.map((l, i) => (i === index ? { ...l, ...patch } : l)) });
@@ -348,8 +372,12 @@ export function InvoiceLinesStep({
 
   return (
     <Section
-      title="Lines"
-      description="The GST rate and the HSN code come from the product record."
+      title={sample ? "What is handed over" : "Lines"}
+      description={
+        sample
+          ? "No charge. Stock will be reduced by these quantities."
+          : "The GST rate and the HSN code come from the product record."
+      }
     >
       {errors.lines && (
         <p className="text-sm font-semibold text-cta">{errors.lines}</p>
@@ -455,72 +483,77 @@ export function InvoiceLinesStep({
                 </div>
               )}
             </div>
-            <div>
-              <TextField
-                label="Price each"
-                kind="money"
-                prefix="₹"
-                hint={
-                  pack
-                    ? `Suggested from the product. Change it if the price was negotiated.`
-                    : undefined
-                }
-                value={line.unitPrice}
-                onChange={(unitPrice) => setLine(i, { unitPrice })}
-              />
-              {/*
-                "What did we charge them last time?" is asked on every
-                negotiated sale, and the answer was already in the
-                invoices with no way to reach it without opening another
-                screen. One tap applies it; it is never applied on its
-                own, because the suggested price is the product's current
-                one and quietly overriding that would hide a price rise.
-              */}
-              <LastSold
-                price={lastPrice.get(`${line.productId}::${line.packLabel}`)}
-                current={line.unitPrice}
-                onUse={(unitPrice) => setLine(i, { unitPrice })}
-              />
-            </div>
-            <div>
-              <TextField
-                label="Discount"
-                kind={line.discountType === "percent" ? "decimal" : "money"}
-                prefix={line.discountType === "percent" ? "%" : "₹"}
-                value={line.discount}
-                onChange={(discount) => setLine(i, { discount })}
-                error={errors[`lines.${i}.discount`] ?? errors[`lines.${i}.discountPercent`]}
-                hint={
-                  scheme
-                    ? `Scheme: ${scheme.scheme.name} (${describeSchemeDiscount(scheme.scheme)}) applies — type a discount to override.`
-                    : undefined
-                }
-              />
-              {/* Flat or percent. The server resolves either to paise once. */}
-              <div role="group" aria-label="Discount as" className="mt-1.5 flex gap-1.5">
-                {(
-                  [
-                    { value: "flat", label: "₹ off" },
-                    { value: "percent", label: "% off" },
-                  ] as const
-                ).map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={line.discountType === option.value}
-                    onClick={() => setLine(i, { discountType: option.value })}
-                    className={`admin-tap rounded-full border px-3 text-xs font-semibold ${
-                      line.discountType === option.value
-                        ? "border-olive bg-accent-soft text-ink-strong"
-                        : "border-line text-ink-muted hover:border-olive"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {product && product.gstRateBps !== null && (
+            {/* Nothing is priced on a sample; the fields would only invite a figure. */}
+            {!sample && (
+              <>
+                <div>
+                  <TextField
+                    label="Price each"
+                    kind="money"
+                    prefix="₹"
+                    hint={
+                      pack
+                        ? `Suggested from the product. Change it if the price was negotiated.`
+                        : undefined
+                    }
+                    value={line.unitPrice}
+                    onChange={(unitPrice) => setLine(i, { unitPrice })}
+                  />
+                  {/*
+                    "What did we charge them last time?" is asked on every
+                    negotiated sale, and the answer was already in the
+                    invoices with no way to reach it without opening another
+                    screen. One tap applies it; it is never applied on its
+                    own, because the suggested price is the product's current
+                    one and quietly overriding that would hide a price rise.
+                  */}
+                  <LastSold
+                    price={lastPrice.get(`${line.productId}::${line.packLabel}`)}
+                    current={line.unitPrice}
+                    onUse={(unitPrice) => setLine(i, { unitPrice })}
+                  />
+                </div>
+                <div>
+                  <TextField
+                    label="Discount"
+                    kind={line.discountType === "percent" ? "decimal" : "money"}
+                    prefix={line.discountType === "percent" ? "%" : "₹"}
+                    value={line.discount}
+                    onChange={(discount) => setLine(i, { discount })}
+                    error={errors[`lines.${i}.discount`] ?? errors[`lines.${i}.discountPercent`]}
+                    hint={
+                      scheme
+                        ? `Scheme: ${scheme.scheme.name} (${describeSchemeDiscount(scheme.scheme)}) applies — type a discount to override.`
+                        : undefined
+                    }
+                  />
+                  {/* Flat or percent. The server resolves either to paise once. */}
+                  <div role="group" aria-label="Discount as" className="mt-1.5 flex gap-1.5">
+                    {(
+                      [
+                        { value: "flat", label: "₹ off" },
+                        { value: "percent", label: "% off" },
+                      ] as const
+                    ).map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={line.discountType === option.value}
+                        onClick={() => setLine(i, { discountType: option.value })}
+                        className={`admin-tap rounded-full border px-3 text-xs font-semibold ${
+                          line.discountType === option.value
+                            ? "border-olive bg-accent-soft text-ink-strong"
+                            : "border-line text-ink-muted hover:border-olive"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+            {!sample && product && product.gstRateBps !== null && (
               <p className="sm:col-span-2 text-xs font-semibold text-ink-soft">
                 GST {formatRate(product.gstRateBps)} · HSN {product.hsnCode} —
                 from the product record, not editable here.
@@ -546,23 +579,40 @@ export function InvoiceLinesStep({
     onChange,
     preview,
     errors = {},
+    mode = "invoice",
   }: {
     values: InvoiceFormValues;
     onChange: (next: InvoiceFormValues) => void;
     preview: ReturnType<typeof invoicePreview>;
     errors?: Record<string, string>;
+    mode?: InvoiceFormMode;
   }) {
     const set = (patch: Partial<InvoiceFormValues>) => onChange({ ...values, ...patch });
     const incomplete = values.lines.length - (preview?.counted ?? 0);
+    const sample = mode === "sample";
+    const pieces = preview?.invoice.lines.reduce((n, l) => n + l.quantity, 0) ?? 0;
 
     return (
       <Section
         title="Review"
-        description="What will be written down. Nothing here can be edited after the invoice is issued — a correction is a credit note."
+        description={
+          sample
+            ? "A Sample note is issued, numbered SMP, at no charge. It is not a tax invoice and never reaches the GST return."
+            : "What will be written down. Nothing here can be edited after the invoice is issued — a correction is a credit note."
+        }
       >
-        <InvoiceFigures preview={preview?.invoice ?? null} incomplete={incomplete} />
+        {sample ? (
+          <p className="admin-card px-4 py-3 text-sm text-ink">
+            {preview
+              ? `${pieces} piece${pieces === 1 ? "" : "s"} across ${preview.counted} line${preview.counted === 1 ? "" : "s"} will come off the shelf. No charge, no GST.`
+              : "Add a product and a quantity to see what will move."}
+            {incomplete > 0 && ` ${incomplete} line${incomplete === 1 ? " is" : "s are"} still missing a product or a quantity.`}
+          </p>
+        ) : (
+          <InvoiceFigures preview={preview?.invoice ?? null} incomplete={incomplete} />
+        )}
         <TextareaField
-        label="Anything to print on the invoice"
+        label={sample ? "Anything to print on the note" : "Anything to print on the invoice"}
         value={values.notes}
         onChange={(notes) => set({ notes })}
         error={errors.notes}

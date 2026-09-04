@@ -18,7 +18,7 @@ export default async function CancelInvoicePage({
   const { id } = await params;
   // A credit note raised in error has to be voidable too — the engine
   // supports it, and cancelling one releases its quantities back.
-  const doc = await invoiceForActionOr404(id, { allowCreditNote: true });
+  const doc = await invoiceForActionOr404(id, { allowCreditNote: true, allowSampleNote: true });
 
   return (
     <>

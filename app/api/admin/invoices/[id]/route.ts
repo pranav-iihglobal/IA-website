@@ -165,6 +165,12 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         { status: 400 },
       );
     }
+    if (invoice.documentType === "sample_note") {
+      return NextResponse.json(
+        { error: "A sample note charged nothing. There is no payment to record against it." },
+        { status: 400 },
+      );
+    }
 
     const before = { ...invoice.payment };
     // Assigned as a whole rather than field by field: `payment` is optional on

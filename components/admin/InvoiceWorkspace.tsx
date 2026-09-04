@@ -52,9 +52,11 @@ const FILTERS = [
   { value: "paid", label: "Paid" },
   { value: "cancelled", label: "Cancelled" },
   { value: "credit_notes", label: "Credit notes" },
+  { value: "samples", label: "Samples" },
 ];
 
 const isCredit = (row: InvoiceRow) => row.documentType === "credit_note";
+const isSampleNote = (row: InvoiceRow) => row.documentType === "sample_note";
 
 export function InvoiceWorkspace({
   initialData,
@@ -131,9 +133,18 @@ export function InvoiceWorkspace({
           </h1>
         </div>
         {canWrite && (
-          <Link href="/admin/invoices/new" className="admin-btn admin-btn-primary admin-tap">
-            Raise invoice
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Free goods to a prospect: a Sample note, not a tax invoice. */}
+            <Link
+              href="/admin/samples/new"
+              className="admin-btn admin-tap border border-line bg-raised/70 text-ink hover:border-olive"
+            >
+              Give a sample
+            </Link>
+            <Link href="/admin/invoices/new" className="admin-btn admin-btn-primary admin-tap">
+              Raise invoice
+            </Link>
+          </div>
         )}
       </div>
 
@@ -187,18 +198,20 @@ export function InvoiceWorkspace({
                 </Link>
               }
               subtitle={`${row.partyName}${row.gstin ? ` · ${row.gstin}` : ""}`}
-              figure={formatINR(row.grandTotalPaise)}
+              figure={isSampleNote(row) ? "free" : formatINR(row.grandTotalPaise)}
               pills={
                 <>
                   {isCredit(row) ? (
                     <StatusPill status="credit note" />
+                  ) : isSampleNote(row) ? (
+                    <StatusPill status="sample note" />
                   ) : (
                     <>
                       <StatusPill status={row.status} />
                       <StatusPill status={row.paymentStatus} />
                     </>
                   )}
-                  {isCredit(row) && row.status === "cancelled" && <StatusPill status="cancelled" />}
+                  {(isCredit(row) || isSampleNote(row)) && row.status === "cancelled" && <StatusPill status="cancelled" />}
                   {row.isHistorical && <StatusPill status="filed" />}
                   <span className="text-ink-faint">
                     {row.issuedAt ? formatIstDate(new Date(row.issuedAt)) : "not issued"}
@@ -246,7 +259,9 @@ function InvoiceActions({
   canWrite: boolean;
   canCancel: boolean;
 }) {
-  const live = !row.isHistorical && !isCredit(row) && row.status === "issued";
+  // Payment and Credit: a real, issued SALE. Cancel: any issued document.
+  const live = !row.isHistorical && !isCredit(row) && !isSampleNote(row) && row.status === "issued";
+  const cancellable = !row.isHistorical && row.status === "issued";
   const pill =
     "admin-tap inline-flex items-center rounded-full border border-line px-3 py-1 text-xs font-semibold text-ink-muted hover:border-olive";
   return (
@@ -264,7 +279,7 @@ function InvoiceActions({
           Credit
         </Link>
       )}
-      {canCancel && live && (
+      {canCancel && cancellable && (
         <Link
           href={`/admin/invoices/${row.id}/cancel`}
           className="admin-tap inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-ink-soft hover:bg-danger/12 hover:text-danger"
@@ -332,18 +347,20 @@ function InvoiceTable({
                   <span className="flex flex-wrap gap-1.5 text-xs">
                     {isCredit(row) ? (
                       <StatusPill status="credit note" />
+                    ) : isSampleNote(row) ? (
+                      <StatusPill status="sample note" />
                     ) : (
                       <>
                         <StatusPill status={row.status} />
                         <StatusPill status={row.paymentStatus} />
                       </>
                     )}
-                    {isCredit(row) && row.status === "cancelled" && <StatusPill status="cancelled" />}
+                    {(isCredit(row) || isSampleNote(row)) && row.status === "cancelled" && <StatusPill status="cancelled" />}
                     {row.isHistorical && <StatusPill status="filed" />}
                   </span>
                 </td>
                 <td className={`${td} whitespace-nowrap text-right font-semibold tabular-nums text-ink-strong`}>
-                  {formatINR(row.grandTotalPaise)}
+                  {isSampleNote(row) ? "free" : formatINR(row.grandTotalPaise)}
                 </td>
                 <td className={`${td} whitespace-nowrap text-right`}>
                   <span className="inline-flex flex-wrap justify-end gap-1.5">

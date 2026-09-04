@@ -12,6 +12,7 @@ import {
   InvoiceTotals,
   emptyInvoice,
   invoicePreview,
+  type InvoiceFormMode,
   type InvoiceFormValues,
 } from "./InvoiceForm";
 import { adminFetch } from "@/lib/admin/fetch";
@@ -40,12 +41,17 @@ export function RaiseInvoiceForm({
   initialPartyId = "",
   /** The seasonal schemes live when the page loaded — see invoicePreview(). */
   schemes = [],
+  /** "sample" issues a Sample note at ₹0 instead — see lib/erp/sample-note.ts. */
+  mode = "invoice",
 }: {
   products: BillableProduct[];
   parties: BillableParty[];
   initialPartyId?: string;
   schemes?: SchemeRule[];
+  mode?: InvoiceFormMode;
 }) {
+  const sample = mode === "sample";
+  const noun = sample ? "sample note" : "invoice";
   const router = useRouter();
   const { toast } = useToast();
   const [values, setValues] = useState<InvoiceFormValues>(() => ({
@@ -94,34 +100,48 @@ export function RaiseInvoiceForm({
     setFormError(null);
 
     const result = await adminFetch<{ id: string; number: string }>(
-      "/api/admin/invoices",
+      sample ? "/api/admin/samples" : "/api/admin/invoices",
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         /*
           Note what is ABSENT: no GST rate, no HSN, no totals, no number.
-          Those are not the client's to state — see lib/schemas.ts.
+          Those are not the client's to state — see lib/schemas.ts. A sample
+          sends no price either: it is ₹0 by definition.
         */
-        body: JSON.stringify({
-          contactId: values.contactId,
-          placeOfSupplyStateCode: values.placeOfSupplyStateCode,
-          lines: values.lines.map((l) => ({
-            productId: l.productId,
-            packLabel: l.packLabel,
-            quantity: Number(l.quantity) || 0,
-            uom: l.uom,
-            unitPrice: l.unitPrice,
-            discountType: l.discountType,
-            discount: l.discountType === "flat" ? l.discount : "",
-            discountPercent: l.discountType === "percent" ? l.discount : "",
-          })),
-          notes: values.notes,
-        }),
+        body: JSON.stringify(
+          sample
+            ? {
+                contactId: values.contactId,
+                lines: values.lines.map((l) => ({
+                  productId: l.productId,
+                  packLabel: l.packLabel,
+                  quantity: Number(l.quantity) || 0,
+                  uom: l.uom,
+                })),
+                notes: values.notes,
+              }
+            : {
+                contactId: values.contactId,
+                placeOfSupplyStateCode: values.placeOfSupplyStateCode,
+                lines: values.lines.map((l) => ({
+                  productId: l.productId,
+                  packLabel: l.packLabel,
+                  quantity: Number(l.quantity) || 0,
+                  uom: l.uom,
+                  unitPrice: l.unitPrice,
+                  discountType: l.discountType,
+                  discount: l.discountType === "flat" ? l.discount : "",
+                  discountPercent: l.discountType === "percent" ? l.discount : "",
+                })),
+                notes: values.notes,
+              },
+        ),
       },
     );
 
     if (!result.ok || !result.data) {
-      const message = result.error ?? "Could not raise the invoice";
+      const message = result.error ?? `Could not issue the ${noun}`;
       setFormError(message);
       const fields = (result.data as { fields?: Record<string, string> } | null)?.fields;
       if (fields) setErrors(fields);
@@ -137,7 +157,7 @@ export function RaiseInvoiceForm({
       document and filed — this used to close a sheet in silence, so the only
       way to know an invoice existed was to find it in the list.
     */
-    toast(`Invoice ${result.data.number} issued`, "success", {
+    toast(`${sample ? "Sample note" : "Invoice"} ${result.data.number} issued`, "success", {
       action: {
         label: "Print",
         onClick: () => router.push(`/admin/invoices/${result.data!.id}/print`),
@@ -160,14 +180,14 @@ export function RaiseInvoiceForm({
   });
 
   const party = allParties.find((p) => p.id === values.contactId);
-  const preview = invoicePreview(values, products, schemes, party);
+  const preview = invoicePreview(values, products, schemes, party, mode);
   const linesReady = preview?.counted ?? 0;
 
   const steps: WizardStep[] = [
     {
       id: "customer",
-      title: "Customer",
-      description: "Who it is made out to",
+      title: sample ? "Given to" : "Customer",
+      description: sample ? "Who is trying it" : "Who it is made out to",
       errorKeys: ["contactId", "placeOfSupplyStateCode"],
       complete: Boolean(values.contactId),
       content: (
@@ -177,13 +197,14 @@ export function RaiseInvoiceForm({
           parties={allParties}
           errors={errors}
           onPartyAdded={(p) => setAddedParties((current) => [p, ...current])}
+          mode={mode}
         />
       ),
     },
     {
       id: "lines",
-      title: "Lines",
-      description: "What was sold, and for how much",
+      title: sample ? "Samples" : "Lines",
+      description: sample ? "What is handed over, and how many" : "What was sold, and for how much",
       errorKeys: ["lines"],
       complete: linesReady > 0,
       count: linesReady || undefined,
@@ -195,13 +216,14 @@ export function RaiseInvoiceForm({
           party={party}
           schemes={schemes}
           errors={errors}
+          mode={mode}
         />
       ),
     },
     {
       id: "review",
       title: "Review",
-      description: "The figures that will be filed",
+      description: sample ? "What will move" : "The figures that will be filed",
       errorKeys: ["notes"],
       complete: Boolean(preview),
       content: (
@@ -210,6 +232,7 @@ export function RaiseInvoiceForm({
           onChange={change}
           preview={preview}
           errors={errors}
+          mode={mode}
         />
       ),
     },
@@ -230,13 +253,13 @@ export function RaiseInvoiceForm({
         errors={errors}
         saving={saving}
         dirty={dirty}
-        submitLabel="Issue invoice"
+        submitLabel={sample ? "Issue sample note" : "Issue invoice"}
         onCancel={leave}
       />
 
       <ConfirmDialog
         open={confirmLeave}
-        title="Discard this invoice?"
+        title={`Discard this ${noun}?`}
         message="Nothing has been issued and no number has been allocated. Leaving now loses what is typed."
         confirmLabel="Discard"
         cancelLabel="Keep editing"

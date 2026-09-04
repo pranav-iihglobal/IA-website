@@ -252,7 +252,7 @@ export function creditDiscount(
 }
 
 /** Fetch the products these lines name, then snapshot each one. */
-async function snapshotLines(
+export async function snapshotLines(
   lines: DraftLine[],
   context: IssueContext,
 ): Promise<SnapshottedLine[]> {
@@ -664,6 +664,9 @@ export async function issueCreditNote(
   if (!original) throw new InvoiceError("That invoice does not exist.");
   if (original.documentType === "credit_note") {
     throw new InvoiceError("You cannot credit a credit note.");
+  }
+  if (original.documentType === "sample_note") {
+    throw new InvoiceError("A sample note charged nothing, so there is nothing to credit. Cancel it if the sample came back.");
   }
   if (original.status !== "issued") {
     throw new InvoiceError(

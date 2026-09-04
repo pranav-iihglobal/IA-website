@@ -1,4 +1,5 @@
 import { connectToDatabase } from "@/lib/db/connect";
+import { SALES_ONLY } from "./document-kind";
 import { Invoice } from "@/lib/db/models/Invoice";
 import type { LeanDoc } from "@/lib/db/lean";
 import { paiseToRupeeString } from "@/lib/money";
@@ -69,9 +70,10 @@ export async function partyHistory(contactId: string): Promise<PartyHistory> {
     /*
       Invoices only. A credit note's quantities are negative and its lines
       reverse a sale — repeating one would raise an invoice for minus three
-      bags, and reading a price off one is meaningless.
+      bags, and reading a price off one is meaningless. A sample note's
+      price is ₹0, which is not "what we charged them last time" either.
     */
-    documentType: { $ne: "credit_note" },
+    ...SALES_ONLY,
   })
     .select("number issuedAt lines")
     .sort({ issuedAt: -1 })

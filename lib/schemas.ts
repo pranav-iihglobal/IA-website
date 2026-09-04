@@ -774,6 +774,26 @@ export const issueInvoiceSchema = z.object({
   notes: z.string().trim().default(""),
 });
 
+/**
+ * A sample note: goods handed over free. No prices, no discounts, no place
+ * of supply — nothing on it is a supply for consideration. Quantities and
+ * the pack are what matter, because stock moves.
+ */
+export const issueSampleNoteSchema = z.object({
+  contactId: objectIdSchema,
+  lines: z
+    .array(
+      z.object({
+        productId: objectIdSchema,
+        packLabel: z.string().trim().default(""),
+        quantity: z.coerce.number().int().positive("Quantity must be at least 1"),
+        uom: z.enum(["piece", "box"]).default("piece"),
+      }),
+    )
+    .min(1, "Add at least one line"),
+  notes: z.string().trim().default(""),
+});
+
 /** After issue, only these may change. See lib/db/models/Invoice.ts. */
 export const invoicePaymentSchema = z.object({
   status: z.enum(["unpaid", "partial", "paid"]),

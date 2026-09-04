@@ -67,7 +67,8 @@ describe("credit notes in the list", () => {
 
   it("treats a document written before credit notes existed as an invoice", () => {
     // Those rows have no documentType at all, so it cannot be an equality test.
-    expect(filterFor("kind=invoice").documentType).toEqual({ $ne: "credit_note" });
+    expect(filterFor("kind=invoice").documentType).toEqual({ $nin: ["credit_note", "sample_note"] });
+    expect(filterFor("kind=sample_note").documentType).toBe("sample_note");
   });
 
   it("ignores an unknown kind rather than returning nothing", () => {

@@ -264,12 +264,21 @@ export function ContactProfile({
               party arrives prefilled — see InvoiceWorkspace.
             */}
             {canBill && (
-              <Link
-                href={`/admin/invoices/new?party=${contact.id}`}
-                className="admin-btn admin-tap border border-line bg-raised/70 text-ink hover:border-olive hover:bg-surface-muted"
-              >
-                Raise an invoice
-              </Link>
+              <>
+                {/* Free goods, numbered and off the shelf — see lib/erp/sample-note.ts. */}
+                <Link
+                  href={`/admin/samples/new?party=${contact.id}`}
+                  className="admin-btn admin-tap border border-line bg-raised/70 text-ink hover:border-olive hover:bg-surface-muted"
+                >
+                  Give a sample
+                </Link>
+                <Link
+                  href={`/admin/invoices/new?party=${contact.id}`}
+                  className="admin-btn admin-tap border border-line bg-raised/70 text-ink hover:border-olive hover:bg-surface-muted"
+                >
+                  Raise an invoice
+                </Link>
+              </>
             )}
             {canEdit && (
               <Link

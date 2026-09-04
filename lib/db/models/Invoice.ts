@@ -156,10 +156,16 @@ const invoiceSchema = new Schema(
      *
      * The print view shows absolute values, because a printed credit note
      * reads "₹1,050", not "−₹1,050".
+     *
+     * A SAMPLE NOTE is the third kind: goods handed over free to a prospect.
+     * Every amount on it is zero, so the sums stay right by themselves; what
+     * has to be kept out by name are the COUNTS and the return — it is not an
+     * order and not a supply. lib/erp/document-kind.ts holds the one set of
+     * rules every aggregation uses for that.
      */
     documentType: {
       type: String,
-      enum: ["invoice", "credit_note"],
+      enum: ["invoice", "credit_note", "sample_note"],
       default: "invoice",
       required: true,
       index: true,

@@ -85,12 +85,12 @@ describe("outstandingPipeline", () => {
   const stages = outstandingPipeline({ contactId: "x" });
   const find = (key: string) => stages.filter((s) => key in s);
 
-  it("keeps the caller's filter and never admits a paid invoice or a credit note", () => {
+  it("keeps the caller's filter and never admits a paid invoice, a credit note or a sample note", () => {
     const [{ $match }] = find("$match") as { $match: Record<string, unknown> }[];
     expect($match).toMatchObject({
       contactId: "x",
       status: "issued",
-      documentType: { $ne: "credit_note" },
+      documentType: { $nin: ["credit_note", "sample_note"] },
       "payment.status": { $ne: "paid" },
     });
   });

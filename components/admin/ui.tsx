@@ -821,6 +821,8 @@ export function StatusPill({ status }: { status: string }) {
     // A credit note is not an alarm — it is ordinary paperwork — but it must
     // never be mistaken for an invoice at a glance.
     "credit note": "bg-alloy/15 text-ink-strong ring-alloy/40",
+    // Free goods to a prospect. Not a sale, not an alarm.
+    "sample note": "bg-laurel/20 text-ink-strong ring-laurel/50",
 
     // Audit actions, on the Activity screen.
     create: "bg-accent-soft/60 text-ink-muted ring-laurel",
@@ -869,6 +871,7 @@ export function StatusPill({ status }: { status: string }) {
     issued: "bg-olive",
     filed: "bg-camel-dark/60",
     "credit note": "bg-alloy",
+    "sample note": "bg-laurel",
 
     create: "bg-olive",
     update: "bg-camel-dark/60",

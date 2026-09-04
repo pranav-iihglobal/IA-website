@@ -24,6 +24,7 @@ export function invoiceListQuery({
   if (sort) query.set("sort", sort);
   if (filter === "cancelled") query.set("status", "cancelled");
   else if (filter === "credit_notes") query.set("kind", "credit_note");
+  else if (filter === "samples") query.set("kind", "sample_note");
   else if (filter) query.set("payment", filter);
   return query;
 }

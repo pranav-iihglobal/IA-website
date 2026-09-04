@@ -117,6 +117,41 @@ export interface BillableParty {
   stage: string;
 }
 
+/**
+ * Who can be GIVEN A SAMPLE: every real contact — a cold lead most of all,
+ * since the sample is how a lead stops being cold. Same shape as the
+ * billable list so the form's picker is the same control.
+ */
+export async function getSampleParties(): Promise<BillableParty[]> {
+  try {
+    await connectToDatabase();
+    const docs = await Contact.find({ isSample: { $ne: true } })
+      .select("name businessName contactId village district channel dealer stage kind")
+      .sort({ name: 1 })
+      .limit(5000)
+      .lean();
+    return docs.map((c: LeanDoc) => ({
+      id: String(c._id),
+      name: c.businessName || c.name || "(unnamed)",
+      hint:
+        [
+          c.contactId,
+          c.village,
+          c.district,
+          c.kind === "lead" ? (c.stage === "sample" ? "sample stage" : "lead") : "",
+        ]
+          .filter(Boolean)
+          .join(" · ") || undefined,
+      gstin: c.dealer?.gstin ?? "",
+      channel: c.channel ?? "",
+      stage: c.stage ?? "customer",
+    })) as BillableParty[];
+  } catch (error) {
+    console.error("[admin] could not load sample parties:", error);
+    return [];
+  }
+}
+
 export async function getBillableParties(): Promise<BillableParty[]> {
   try {
     await connectToDatabase();

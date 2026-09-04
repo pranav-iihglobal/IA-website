@@ -48,6 +48,7 @@ export default async function InvoiceDetailPage({
   if (!invoice) notFound();
 
   const isCredit = invoice.documentType === "credit_note";
+  const isSampleNote = invoice.documentType === "sample_note";
   const canWrite = can(me, "billing:write");
   const canCancel = can(me, "billing:delete");
   /*
@@ -57,7 +58,8 @@ export default async function InvoiceDetailPage({
     See lib/erp/one.ts, which enforces the same three rules on the URLs.
   */
   const open = invoice.status === "issued" && !invoice.isHistorical;
-  const live = open && !isCredit;
+  // Payment and Credit are for a SALE. A sample note charged nothing.
+  const live = open && !isCredit && !isSampleNote;
 
   /* Displayed magnitude. The stored sign is what every sum relies on. */
   const money = (paise: number) => formatINR(isCredit ? Math.abs(paise) : paise);
@@ -81,8 +83,9 @@ export default async function InvoiceDetailPage({
         title={invoice.number || "(no number)"}
         pills={
           <>
-            <StatusPill status={isCredit ? "credit note" : invoice.status} />
-            {!isCredit && <StatusPill status={invoice.payment.status} />}
+            <StatusPill status={isCredit ? "credit note" : isSampleNote ? "sample note" : invoice.status} />
+            {!isCredit && !isSampleNote && <StatusPill status={invoice.payment.status} />}
+            {isSampleNote && invoice.status === "cancelled" && <StatusPill status="cancelled" />}
             {invoice.isHistorical && <StatusPill status="filed" />}
             {invoice.isSample && <StatusPill status="demo" />}
             {invoice.issuedAt && (

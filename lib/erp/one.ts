@@ -39,11 +39,17 @@ export interface InvoiceActionOptions {
    * then rejected.
    */
   allowCreditNote?: boolean;
+  /**
+   * Whether this act makes sense on a sample note. Cancelling one does — the
+   * sample came back, or was never handed over — and puts the stock back.
+   * Paying or crediting one does not: nothing was charged.
+   */
+  allowSampleNote?: boolean;
 }
 
 export async function invoiceForActionOr404(
   id: string,
-  { allowCreditNote = false }: InvoiceActionOptions = {},
+  { allowCreditNote = false, allowSampleNote = false }: InvoiceActionOptions = {},
 ): Promise<LeanDoc> {
   if (!isValidObjectId(id)) notFound();
 
@@ -58,6 +64,7 @@ export async function invoiceForActionOr404(
   */
   if (doc.status !== "issued" || doc.isHistorical) notFound();
   if (doc.documentType === "credit_note" && !allowCreditNote) notFound();
+  if (doc.documentType === "sample_note" && !allowSampleNote) notFound();
 
   return doc;
 }

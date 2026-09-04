@@ -30,7 +30,15 @@ export function usePartyHistory(contactId: string): PartyHistory {
       const response = await adminFetch<PartyHistory>(
         `/api/admin/invoices/history?contactId=${encodeURIComponent(contactId)}`,
       );
-      if (!cancelled) setHistory({ id: contactId, data: response.data ?? NOTHING });
+      /*
+        Only a GOOD answer is history. adminFetch hands back the body of an
+        error response as `data` too — `{ error }` — and reading `.prices`
+        off that crashed the Lines step the moment the session had expired,
+        on the form where a crash costs six typed lines.
+      */
+      if (!cancelled) {
+        setHistory({ id: contactId, data: response.ok && response.data ? response.data : NOTHING });
+      }
     })();
 
     return () => {

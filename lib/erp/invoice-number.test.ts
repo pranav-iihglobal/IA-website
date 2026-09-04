@@ -165,3 +165,21 @@ describe("the credit note series", () => {
     );
   });
 });
+
+describe("sample notes", () => {
+  it("number in their own SMP series, by IST month", async () => {
+    const { formatSampleNoteNumber, sampleNoteSeriesKey, isSampleNoteNumber } = await import("./invoice-number");
+    // 23:30Z on 30 September is 1 October in India.
+    const at = new Date("2026-09-30T23:30:00Z");
+    expect(formatSampleNoteNumber(at, 7)).toBe("SMP.10.26.007");
+    expect(sampleNoteSeriesKey(at)).toBe("smp:26:10");
+    expect(isSampleNoteNumber("SMP.10.26.007")).toBe(true);
+    expect(isSampleNoteNumber("DEMO.10.26.007")).toBe(false);
+    expect(isSampleNoteNumber("IA.10.26.007")).toBe(false);
+  });
+
+  it("keeps its counter out of the demo wipe", async () => {
+    const { sampleNoteSeriesKey } = await import("./invoice-number");
+    expect(/^(sample|demo)-/.test(sampleNoteSeriesKey(new Date()))).toBe(false);
+  });
+});
