@@ -8,6 +8,7 @@ import { RecordHistory } from "@/components/admin/RecordHistory";
 import { RecordHeader, StatusPill } from "@/components/admin/ui";
 import { connectToDatabase } from "@/lib/db/connect";
 import { StockItem, needsReorder } from "@/lib/db/models/StockItem";
+import { Product } from "@/lib/db/models/Product";
 import { formatINR, formatRupees } from "@/lib/money";
 import { formatIstDateLong } from "@/lib/time";
 import type { LeanDoc } from "@/lib/db/lean";
@@ -24,13 +25,11 @@ const KIND_LABELS: Record<string, string> = {
 /**
  * One stock item.
  *
- * Stock here is a COUNT, not a derived figure — it moves for reasons no
- * invoice records: a sample handed to a farmer, a bag split in transit, a
- * recount that found six more than the book said. Which makes "who counted
- * this, and what did they say it was before" the question about a stock
- * record, and it was unanswerable: every count has been written to the audit
- * log since the log was wired up, and the only screen that could read it
- * showed all changes to all records in one stream.
+ * Stock here is a COUNT first, and for an item linked to a product pack a
+ * figure the sales then move — so "who counted this, what did they say it
+ * was, and what has sold since" is the question about a stock record. Every
+ * count and every move is in the audit log; this is the page that reads them
+ * for one item.
  *
  * So the history is the point of this page, and the figures above it are
  * there to be read rather than typed — the previous /admin/stock/<id> was the
@@ -54,6 +53,13 @@ export default async function StockDetailPage({
   ]);
   if (!doc) notFound();
 
+  const linked = doc.productId
+    ? ((await Product.findById(doc.productId).select("name").lean()) as LeanDoc | null)
+    : null;
+  const linkedLabel = doc.productId
+    ? `${linked?.name?.en ?? "a product no longer on file"} — ${doc.packLabel || "(pack not named)"}`
+    : "";
+
   const onHand = doc.onHand ?? 0;
   const unitCostPaise = doc.unitCostPaise ?? 0;
   const low = needsReorder(doc);
@@ -67,6 +73,7 @@ export default async function StockDetailPage({
         pills={
           <>
             {low && <StatusPill status="unpaid" />}
+            {doc.productId && <StatusPill status="linked" />}
             {doc.isSample && <StatusPill status="demo" />}
             <span className="text-ink-faint">
               {KIND_LABELS[doc.kind ?? "finished"] ?? doc.kind}
@@ -88,9 +95,10 @@ export default async function StockDetailPage({
 
       {low && (
         <p className="admin-card px-4 py-3 text-sm font-semibold text-danger">
-          At or below the reorder level of {doc.reorderLevel}. This alert is
-          only as fresh as the last count — selling does not decrement stock in
-          this system, by design.
+          At or below the reorder level of {doc.reorderLevel}.{" "}
+          {doc.productId
+            ? "Every invoice of this pack moves the count, so this is current as of the last sale."
+            : "This alert is only as fresh as the last count — link the item to a product pack and sales will move it."}
         </p>
       )}
 
@@ -119,6 +127,7 @@ export default async function StockDetailPage({
         </div>
 
         <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line-soft pt-3 sm:grid-cols-4">
+          <Field label="Sold as" value={linkedLabel} />
           <Field label="Supplier" value={doc.supplier} />
           <Field label="Location" value={doc.location} />
           <Field

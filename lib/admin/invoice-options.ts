@@ -1,6 +1,7 @@
 import { connectToDatabase } from "@/lib/db/connect";
 import { Product } from "@/lib/db/models/Product";
 import { Contact } from "@/lib/db/models/Contact";
+import { StockItem } from "@/lib/db/models/StockItem";
 import type { LeanDoc } from "@/lib/db/lean";
 
 /**
@@ -22,6 +23,12 @@ export interface BillablePack {
   dealerPricePaise: number | null;
   /** Packs per box; 0 when not sold by the box. */
   unitsPerBox: number;
+  /**
+   * Pieces on the linked shelf, or null when no stock item tracks this pack.
+   * A hint for the person typing; the server checks the shelf itself at
+   * issue and refuses the line if it has moved (lib/erp/stock-moves.ts).
+   */
+  onHand: number | null;
 }
 
 export interface BillableProduct {
@@ -49,10 +56,17 @@ function paise(value: unknown): number | null {
 export async function getBillableProducts(): Promise<BillableProduct[]> {
   try {
     await connectToDatabase();
-    const docs = await Product.find()
-      .select("name sku hsnCode gstRateBps packSizes displayOrder")
-      .sort({ displayOrder: 1 })
-      .lean();
+    const [docs, shelves] = await Promise.all([
+      Product.find()
+        .select("name sku hsnCode gstRateBps packSizes displayOrder")
+        .sort({ displayOrder: 1 })
+        .lean(),
+      StockItem.find({ productId: { $ne: null } }).select("productId packLabel onHand").lean(),
+    ]);
+    const onHandFor = new Map<string, number>();
+    for (const s of shelves as LeanDoc[]) {
+      onHandFor.set(`${String(s.productId)} ${s.packLabel ?? ""}`, s.onHand ?? 0);
+    }
 
     return docs.map((p: LeanDoc) => {
       const gstRateBps = typeof p.gstRateBps === "number" ? p.gstRateBps : null;
@@ -78,6 +92,7 @@ export async function getBillableProducts(): Promise<BillableProduct[]> {
           farmerPricePaise: paise(pack.farmerPricePaise),
           dealerPricePaise: paise(pack.dealerPricePaise),
           unitsPerBox: typeof pack.unitsPerBox === "number" ? pack.unitsPerBox : 0,
+          onHand: onHandFor.get(`${String(p._id)} ${pack.label ?? ""}`) ?? null,
         })),
         blockedReason: missing.length
           ? `Needs ${missing.join(" and ")} before it can be invoiced.`

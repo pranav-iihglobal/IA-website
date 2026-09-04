@@ -21,6 +21,30 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/*
+  The partial unique index on StockItem (one item per product pack) refuses
+  a second link with E11000. That is a person's mistake with a plain answer,
+  not a fault: 409, naming what to do.
+*/
+function isDuplicateLink(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === 11000 &&
+    String((error as { message?: unknown }).message ?? "").includes("one_item_per_pack")
+  );
+}
+
+function duplicateLink() {
+  return NextResponse.json(
+    {
+      error: "Another stock item is already linked to that pack. Unlink it first, or pick a different pack.",
+      fields: { packLabel: "Already linked to another item" },
+    },
+    { status: 409 },
+  );
+}
+
 type Params = { params: Promise<{ id: string }> };
 
 function badId() {
@@ -73,6 +97,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       ...(snapshot
         ? { supplierId: snapshot.supplierId, supplier: snapshot.supplier }
         : { supplierId: null }),
+      // Blank means unlinked; the model wants null, not "".
+      productId: parsed.data.productId || null,
     };
 
     // Read first, so the audit entry can say what actually changed rather
@@ -103,6 +129,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     return NextResponse.json({ id: String(updated._id) });
   } catch (error) {
+    if (isDuplicateLink(error)) return duplicateLink();
     return errorResponse(error);
   }
 }

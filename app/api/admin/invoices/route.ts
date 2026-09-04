@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { issueInvoiceSchema } from "@/lib/schemas";
 import { InvoiceError, issueInvoice } from "@/lib/erp/invoice";
+import { StockShortageError } from "@/lib/erp/stock-moves";
 import { exportInvoices, listInvoices } from "@/lib/erp/list";
 import { INVOICE_EXPORT_HEADERS, invoiceExportRow } from "@/lib/erp/export";
 import { EXPORT_READ, csvResponse } from "@/lib/admin/csv-response";
@@ -84,6 +85,10 @@ export async function POST(request: NextRequest) {
       that text, rather than a 500 that says "something went wrong" about a
       problem they can fix in thirty seconds.
     */
+    // A stock shortage names the line, so the form can put it under the field.
+    if (error instanceof StockShortageError) {
+      return NextResponse.json({ error: error.message, fields: error.fields }, { status: 400 });
+    }
     if (error instanceof InvoiceError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }

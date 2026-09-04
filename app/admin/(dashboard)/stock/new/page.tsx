@@ -3,13 +3,14 @@ import { EMPTY_STOCK } from "@/lib/admin/form-defaults";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { getSupplierOptions } from "@/lib/admin/supplier-options";
+import { getStockLinkOptions } from "@/lib/admin/stock-link-options";
 
 export const metadata = { title: "New stock item" };
 export const dynamic = "force-dynamic";
 
 export default async function NewStockItemPage() {
   await requirePageAccess("billing:write");
-  const suppliers = await getSupplierOptions();
+  const [suppliers, products] = await Promise.all([getSupplierOptions(), getStockLinkOptions()]);
 
   return (
     <>
@@ -20,7 +21,7 @@ export default async function NewStockItemPage() {
         description="Saving records a count — the date stamps itself."
       />
       <div className="mt-8">
-        <StockForm initial={EMPTY_STOCK} suppliers={suppliers} />
+        <StockForm initial={EMPTY_STOCK} suppliers={suppliers} products={products} />
       </div>
     </>
   );

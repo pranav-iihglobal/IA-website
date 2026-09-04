@@ -37,6 +37,7 @@ export const AUDIT_ACTIONS: { value: string; label: string }[] = [
   { value: "cancel", label: "Cancelled" },
   { value: "credit", label: "Credit note" },
   { value: "payment", label: "Payment" },
+  { value: "stock", label: "Stock moved" },
   { value: "note", label: "Call logged" },
 ];
 

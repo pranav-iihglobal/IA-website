@@ -830,6 +830,10 @@ export function StatusPill({ status }: { status: string }) {
     cancel: "bg-danger/12 text-danger ring-danger/35",
     credit: "bg-alloy/15 text-ink-strong ring-alloy/40",
     payment: "bg-surface-strong/35 text-ink-strong ring-line",
+    // Stock moved by a document rather than counted by a person.
+    stock: "bg-laurel/20 text-ink-strong ring-laurel/50",
+    // A stock item whose count follows the sales of its pack.
+    linked: "bg-laurel/20 text-ink-strong ring-laurel/50",
 
     // Derived customer states — see STATUS_LABELS in lib/crm/shape.ts.
     Active: "bg-accent-soft/60 text-ink-muted ring-laurel",
@@ -868,6 +872,8 @@ export function StatusPill({ status }: { status: string }) {
     cancel: "bg-danger",
     credit: "bg-alloy",
     payment: "bg-camel-dark/60",
+    stock: "bg-laurel",
+    linked: "bg-laurel",
 
     Active: "bg-olive",
     "At risk": "bg-alloy",

@@ -80,6 +80,8 @@ const stock: StockRowShape = {
   notes: "",
   countedAt: null,
   isSample: true,
+  productId: null,
+  packLabel: "",
 };
 
 const purchase: PurchaseRowShape = {

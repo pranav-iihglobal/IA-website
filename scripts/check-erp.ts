@@ -22,6 +22,7 @@ import { connectToDatabase } from "../lib/db/connect";
 import { Counter, nextInSeries, peekSeries, raiseSeriesTo } from "../lib/db/models/Counter";
 import { AuditLog, recordAudit } from "../lib/db/models/AuditLog";
 import { Invoice } from "../lib/db/models/Invoice";
+import { StockItem } from "../lib/db/models/StockItem";
 import { formatIstDate, istParts } from "../lib/time";
 import { parseInvoiceNumber } from "../lib/erp/invoice-number";
 
@@ -301,17 +302,48 @@ async function main() {
     gaps.join(", "),
   );
 
+  /*
+    Perpetual stock rests on one guarded update: `onHand >= q` in the filter
+    of the same updateOne that decrements. lib/erp/stock-moves.test.ts proves
+    the plan; only a server can prove that fifty callers racing for thirty
+    pieces get exactly thirty and the rest are refused, not that the shelf
+    goes negative.
+  */
+  console.log("\n  Stock — the guarded decrement\n");
+  const shelf = await StockItem.create({
+    name: `SELFTEST shelf ${Date.now()}`,
+    sku: "SELFTEST",
+    kind: "finished",
+    unit: "piece",
+    onHand: 30,
+  });
+  const attempts = await Promise.all(
+    Array.from({ length: CONCURRENT }, () =>
+      StockItem.updateOne({ _id: shelf._id, onHand: { $gte: 1 } }, { $inc: { onHand: -1 } }),
+    ),
+  );
+  const taken = attempts.filter((r) => r.modifiedCount === 1).length;
+  const left = (await StockItem.findById(shelf._id).select("onHand").lean())?.onHand;
+  check(
+    `${CONCURRENT} callers racing for 30 pieces: exactly 30 succeed`,
+    taken === 30,
+    `${taken} succeeded`,
+  );
+  check("and the shelf reads 0, never negative", left === 0, `onHand is ${left}`);
+
   console.log("\n  Cleaning up\n");
+  const removedShelves = await StockItem.deleteMany({ sku: "SELFTEST" });
   const removedCounters = await Counter.deleteMany({ _id: SERIES });
   const removedAudits = await AuditLog.deleteMany({ entity: ENTITY });
   // deleteOne on the collection, not the document: the model refuses changes
   // to an issued invoice, and this row has no business surviving the run.
   const removedInvoices = await Invoice.deleteMany({ number: /^SELFTEST\./ });
   check(
-    "the test series, rows and invoice are gone",
+    "the test series, rows, invoice and shelf are gone",
     removedCounters.deletedCount === 1 &&
       removedAudits.deletedCount >= 2 &&
-      removedInvoices.deletedCount >= 1,
+      removedInvoices.deletedCount >= 1 &&
+      removedShelves.deletedCount >= 1,
   );
 
   console.log(

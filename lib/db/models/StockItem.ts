@@ -7,11 +7,14 @@ import { Schema, model, models, type InferSchemaType, type Model } from "mongoos
  * how many are left, and is that below the point where somebody should order
  * more. A sachet with no label is as unsellable as no sachet.
  *
- * `onHand` is a COUNT, deliberately not derived from invoices. Stock moves for
- * reasons no invoice records — a sample handed to a farmer, a bag split in
- * transit, a recount that found six more than the book said. Deriving it would
- * make the app's number confidently wrong; a counted number that someone
- * updates is honestly approximate, which is what stock actually is.
+ * `onHand` is PERPETUAL for an item linked to a product pack: an issued
+ * invoice takes pieces off it, a credit note or a cancellation puts them
+ * back, and a line asking for more than is on hand is refused before any
+ * number is allocated (lib/erp/stock-moves.ts). It is still a COUNT first —
+ * saving the form records what somebody actually saw and overrides the book,
+ * because stock moves for reasons no document records: a bag split in
+ * transit, a recount that found six more. An unlinked item is a count and
+ * nothing else, which is what packaging and raw material want.
  */
 
 export const STOCK_KINDS = ["finished", "packaging", "raw"] as const;
@@ -30,6 +33,15 @@ const stockSchema = new Schema(
     },
     /** "sachet", "bottle", "kg", "label" — whatever it is counted in. */
     unit: { type: String, default: "unit", trim: true },
+
+    /**
+     * The product pack this item IS, when it is one. Set on finished goods
+     * so a sale moves the count; null on packaging and raw material, and on
+     * a finished good nobody has linked yet. One item per pack — see the
+     * partial unique index below.
+     */
+    productId: { type: Schema.Types.ObjectId, ref: "Product", default: null, index: true },
+    packLabel: { type: String, default: "", trim: true },
 
     onHand: { type: Number, default: 0 },
     /**
@@ -58,6 +70,20 @@ const stockSchema = new Schema(
 
 /** The list, and the "needs ordering" view. */
 stockSchema.index({ kind: 1, name: 1 });
+/**
+ * One shelf per pack. Two items linked to the same pack would each be
+ * deducted for the same sale, or neither would, depending on which one the
+ * query found first. Partial, so the many unlinked items do not collide on
+ * null.
+ */
+stockSchema.index(
+  { productId: 1, packLabel: 1 },
+  {
+    unique: true,
+    name: "one_item_per_pack",
+    partialFilterExpression: { productId: { $type: "objectId" } },
+  },
+);
 
 export type StockItemDoc = InferSchemaType<typeof stockSchema>;
 

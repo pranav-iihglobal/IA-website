@@ -4,6 +4,7 @@ import { StockForm, type StockFormValues } from "@/components/admin/StockForm";
 import { FormPageHeader } from "@/components/admin/ui";
 import { requirePageAccess } from "@/lib/admin/page-guard";
 import { getSupplierOptions } from "@/lib/admin/supplier-options";
+import { getStockLinkOptions } from "@/lib/admin/stock-link-options";
 import { connectToDatabase } from "@/lib/db/connect";
 import { StockItem } from "@/lib/db/models/StockItem";
 import { paiseToRupeeString } from "@/lib/money";
@@ -19,6 +20,8 @@ function toFormValues(doc: LeanDoc): StockFormValues {
     sku: doc.sku ?? "",
     kind: doc.kind ?? "finished",
     unit: doc.unit ?? "unit",
+    productId: doc.productId ? String(doc.productId) : "",
+    packLabel: doc.packLabel ?? "",
     onHand: String(doc.onHand ?? 0),
     reorderLevel: String(doc.reorderLevel ?? 0),
     // paiseToRupeeString, not String(paise / 100): the latter reads 105050
@@ -42,9 +45,10 @@ export default async function EditStockItemPage({
   if (!isValidObjectId(id)) notFound();
 
   await connectToDatabase();
-  const [doc, suppliers] = await Promise.all([
+  const [doc, suppliers, products] = await Promise.all([
     StockItem.findById(id).lean() as Promise<LeanDoc | null>,
     getSupplierOptions(),
+    getStockLinkOptions(),
   ]);
   if (!doc) notFound();
 
@@ -65,6 +69,7 @@ export default async function EditStockItemPage({
           initial={toFormValues(doc)}
           itemId={id}
           suppliers={suppliers}
+          products={products}
           /* Sent back on save, so a count taken on one phone cannot silently
              erase one taken on another. */
           version={typeof doc.__v === "number" ? doc.__v : 0}

@@ -78,6 +78,13 @@ const lineSchema = new Schema(
   {
     /** Reporting only. Never read for a price, a rate or an HSN code. */
     productId: { type: Schema.Types.ObjectId, ref: "Product", default: null },
+    /**
+     * The stock item this line came off, when its pack was linked at issue.
+     * Written once, here, because lines are frozen after; a cancellation or a
+     * credit note reads it to put the pieces back on the same shelf even if
+     * the link has since been moved. Null when nothing moved.
+     */
+    stockItemId: { type: Schema.Types.ObjectId, ref: "StockItem", default: null },
 
     /**
      * Credit note lines only: which line of the ORIGINAL invoice this reverses,

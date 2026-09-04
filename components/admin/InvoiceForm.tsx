@@ -12,7 +12,7 @@ import {
 import { formatINR, paiseToRupeeString, rupeesToPaise } from "@/lib/money";
 import { computeInvoice, formatRate, supplyTypeFor, GUJARAT_STATE_CODE, clampDiscount, resolveDiscount } from "@/lib/erp/tax";
 import { toPieces } from "@/lib/erp/quantity";
-import type { BillableParty, BillableProduct } from "@/lib/admin/invoice-options";
+import type { BillablePack, BillableParty, BillableProduct } from "@/lib/admin/invoice-options";
 import { usePartyHistory } from "./usePartyHistory";
 import { adminFetch } from "@/lib/admin/fetch";
 import { districtOptions } from "@/lib/crm/places";
@@ -384,11 +384,7 @@ export function InvoiceLinesStep({
                 value={line.quantity}
                 onChange={(quantity) => setLine(i, { quantity })}
                 error={errors[`lines.${i}.quantity`]}
-                hint={
-                  line.uom === "box" && pack && pack.unitsPerBox > 0
-                    ? `× ${pack.unitsPerBox} per box = ${toPieces(Number(line.quantity) || 0, "box", pack.unitsPerBox)} pieces`
-                    : undefined
-                }
+                hint={quantityHint(line, pack)}
               />
               {/* By the box, for a pack that has a box size — dealers order that way. */}
               {pack && pack.unitsPerBox > 0 && (
@@ -536,6 +532,26 @@ export function InvoiceLinesStep({
  * are negotiated.
  */
 /** Dealers order by the box where the pack has a box size; everyone else by the piece. */
+/**
+ * Under the quantity: the box arithmetic, and what the shelf holds when a
+ * stock item tracks this pack — so an over-ask is seen before it is refused.
+ */
+function quantityHint(
+  line: InvoiceLineValues,
+  pack: BillablePack | undefined,
+): string | undefined {
+  const parts: string[] = [];
+  if (line.uom === "box" && pack && pack.unitsPerBox > 0) {
+    parts.push(
+      `× ${pack.unitsPerBox} per box = ${toPieces(Number(line.quantity) || 0, "box", pack.unitsPerBox)} pieces`,
+    );
+  }
+  if (pack && pack.onHand !== null) {
+    parts.push(pack.onHand === 0 ? "none on hand" : `${pack.onHand} on hand`);
+  }
+  return parts.length ? parts.join(" · ") : undefined;
+}
+
 function suggestUom(
   pack: { unitsPerBox: number } | undefined,
   party: BillableParty | undefined,

@@ -826,6 +826,13 @@ const supplierRef = z
   .refine((v) => v === "" || /^[a-f\d]{24}$/i.test(v), "Pick a supplier from the list")
   .default("");
 
+/** The product pack a stock item tracks — optional, an id or blank. */
+const productRef = z
+  .string()
+  .trim()
+  .refine((v) => v === "" || /^[a-f\d]{24}$/i.test(v), "Pick a product from the list")
+  .default("");
+
 /**
  * IKSARVA's own tax identity and bank details — the Settings page.
  *
@@ -907,6 +914,13 @@ export const stockItemSchema = z
     sku: z.string().trim().default(""),
     kind: z.enum(["finished", "packaging", "raw"]).default("finished"),
     unit: z.string().trim().default("unit"),
+    /*
+      Linked to a product pack, or not. Both or neither: a product with no
+      pack named cannot be matched to an invoice line, and would silently
+      never move.
+    */
+    productId: productRef,
+    packLabel: z.string().trim().default(""),
     onHand: z.coerce.number().min(0, "Cannot be negative").default(0),
     /** 0 means "no alert wanted" — see needsReorder() in the model. */
     reorderLevel: z.coerce.number().min(0).default(0),
@@ -916,8 +930,14 @@ export const stockItemSchema = z
     location: z.string().trim().default(""),
     notes: z.string().trim().default(""),
   })
+  .refine((v) => !v.productId || v.packLabel !== "", {
+    message: "Which pack of that product is this?",
+    path: ["packLabel"],
+  })
   .transform(({ unitCost, ...rest }) => ({
     ...rest,
+    // A pack label without a product means nothing; keep the pair honest.
+    packLabel: rest.productId ? rest.packLabel : "",
     unitCostPaise: unitCost ?? 0,
     // Saving IS the count. Nobody edits a stock figure without having looked.
     countedAt: new Date(),

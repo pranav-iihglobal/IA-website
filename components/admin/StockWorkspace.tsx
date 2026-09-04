@@ -242,6 +242,7 @@ export function StockWorkspace({
               pills={
                 <>
                   <StatusPill status={row.kind} />
+                  {row.productId && <StatusPill status="linked" />}
                   {low(row) && <StatusPill status="unpaid" />}
                 </>
               }

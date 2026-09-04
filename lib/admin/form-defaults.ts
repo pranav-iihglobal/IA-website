@@ -112,6 +112,8 @@ export const EMPTY_STOCK: StockFormValues = {
   sku: "",
   kind: "finished",
   unit: "unit",
+  productId: "",
+  packLabel: "",
   onHand: "0",
   reorderLevel: "0",
   unitCost: "",

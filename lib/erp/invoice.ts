@@ -18,6 +18,17 @@ import {
   type InvoiceLineInput,
 } from "./tax";
 import { toPieces, type Uom } from "./quantity";
+import { InvoiceError } from "./invoice-error";
+import {
+  assertNoShortage,
+  deductStock,
+  movesFromLines,
+  planStockMoves,
+  restoreStock,
+  shelfItemsFor,
+} from "./stock-moves";
+
+export { InvoiceError };
 
 /**
  * Raising and cancelling invoices.
@@ -56,8 +67,6 @@ export interface IssueRequest {
   notes?: string;
   issuedAt?: Date;
 }
-
-export class InvoiceError extends Error {}
 
 /** What a line needs from its product, and nothing more. */
 export interface LineProduct {
@@ -249,67 +258,114 @@ export async function issueInvoice(
   );
 
   const issuedAt = request.issuedAt ?? new Date();
-  const allocated = await allocateInvoiceNumber(issuedAt);
 
-  const invoice = await Invoice.create({
-    number: allocated.number,
-    financialYear: allocated.financialYear,
-    status: "issued",
-    issuedAt,
-    contactId: contact._id,
-    seller,
-    party: {
-      name: contact.name ?? "",
-      businessName: contact.businessName ?? "",
-      gstin: contact.dealer?.gstin ?? "",
-      phone: contact.phone ?? "",
-      address: [contact.village, contact.taluka].filter(Boolean).join(", "),
-      village: contact.village ?? "",
-      district: contact.district ?? "",
-      pin: contact.pin ?? "",
-      state: contact.state ?? "Gujarat",
-    },
-    placeOfSupplyStateCode: placeOfSupply,
-    supplyType,
-    /*
-      Zipped by index rather than smuggled through computeInvoice(). The tax
-      engine takes lines and returns lines in the same order; it has no
-      business carrying a product id, and relying on it to preserve keys it
-      does not know about would break silently the day it stopped spreading.
-    */
-    lines: computed.lines.map((line, i) => {
-      return {
-        productId: snapshotted[i].productId,
-        description: line.description,
-        packLabel: snapshotted[i].packLabel,
-        hsn: line.hsn,
-        quantity: line.quantity,
-        uom: snapshotted[i].uom,
-        boxes: snapshotted[i].boxes,
-        unitsPerBox: snapshotted[i].unitsPerBox,
-        unitPricePaise: line.unitPricePaise,
-        discountPaise: line.discountPaise ?? 0,
-        discountType: snapshotted[i].discountType,
-        discountValue: snapshotted[i].discountValue,
-        gstRateBps: line.gstRateBps,
-        taxableValuePaise: line.taxableValuePaise,
-        cgstPaise: line.cgstPaise,
-        sgstPaise: line.sgstPaise,
-        igstPaise: line.igstPaise,
-        lineTotalPaise: line.lineTotalPaise,
-      };
-    }),
-    subtotalPaise: computed.subtotalPaise,
-    cgstPaise: computed.cgstPaise,
-    sgstPaise: computed.sgstPaise,
-    igstPaise: computed.igstPaise,
-    totalTaxPaise: computed.totalTaxPaise,
-    roundOffPaise: computed.roundOffPaise,
-    grandTotalPaise: computed.grandTotalPaise,
-    amountInWords: computed.amountInWords,
-    notes: request.notes ?? "",
-    createdBy: actor,
-  });
+  /*
+    Stock, BEFORE the number. A line asking for more than is on the shelf is
+    refused here, per line, and no number has been consumed by the attempt —
+    a refusal that left a gap in the GST series would be a question from the
+    department about an invoice that never existed. Only packs with a linked
+    stock item take part; the rest are not tracked and never refuse.
+
+    Then the pieces come off, guarded per item, and only then is the number
+    allocated. If the write below still fails, the pieces go back; the number
+    is wasted, as it always was, and check-erp reports the gap.
+  */
+  const shelf = await shelfItemsFor(snapshotted);
+  const moves = assertNoShortage(
+    planStockMoves(
+      snapshotted.map((s, index) => ({
+        index,
+        productId: s.productId,
+        packLabel: s.packLabel,
+        quantity: s.tax.quantity,
+      })),
+      shelf,
+    ),
+  );
+  const itemForLine = new Map<number, string>();
+  for (const move of moves) {
+    for (const index of move.lineIndexes) itemForLine.set(index, move.itemId);
+  }
+
+  await deductStock(moves, { note: "sold — invoice being issued", actor });
+
+  let allocated: Awaited<ReturnType<typeof allocateInvoiceNumber>>;
+  try {
+    allocated = await allocateInvoiceNumber(issuedAt);
+  } catch (error) {
+    await restoreStock(moves, { note: "returned — the invoice could not be numbered", actor });
+    throw error;
+  }
+
+  let invoice: HydratedDocument<InvoiceDoc>;
+  try {
+    invoice = await Invoice.create({
+      number: allocated.number,
+      financialYear: allocated.financialYear,
+      status: "issued",
+      issuedAt,
+      contactId: contact._id,
+      seller,
+      party: {
+        name: contact.name ?? "",
+        businessName: contact.businessName ?? "",
+        gstin: contact.dealer?.gstin ?? "",
+        phone: contact.phone ?? "",
+        address: [contact.village, contact.taluka].filter(Boolean).join(", "),
+        village: contact.village ?? "",
+        district: contact.district ?? "",
+        pin: contact.pin ?? "",
+        state: contact.state ?? "Gujarat",
+      },
+      placeOfSupplyStateCode: placeOfSupply,
+      supplyType,
+      /*
+        Zipped by index rather than smuggled through computeInvoice(). The tax
+        engine takes lines and returns lines in the same order; it has no
+        business carrying a product id, and relying on it to preserve keys it
+        does not know about would break silently the day it stopped spreading.
+      */
+      lines: computed.lines.map((line, i) => {
+        return {
+          productId: snapshotted[i].productId,
+          stockItemId: itemForLine.get(i) ?? null,
+          description: line.description,
+          packLabel: snapshotted[i].packLabel,
+          hsn: line.hsn,
+          quantity: line.quantity,
+          uom: snapshotted[i].uom,
+          boxes: snapshotted[i].boxes,
+          unitsPerBox: snapshotted[i].unitsPerBox,
+          unitPricePaise: line.unitPricePaise,
+          discountPaise: line.discountPaise ?? 0,
+          discountType: snapshotted[i].discountType,
+          discountValue: snapshotted[i].discountValue,
+          gstRateBps: line.gstRateBps,
+          taxableValuePaise: line.taxableValuePaise,
+          cgstPaise: line.cgstPaise,
+          sgstPaise: line.sgstPaise,
+          igstPaise: line.igstPaise,
+          lineTotalPaise: line.lineTotalPaise,
+        };
+      }),
+      subtotalPaise: computed.subtotalPaise,
+      cgstPaise: computed.cgstPaise,
+      sgstPaise: computed.sgstPaise,
+      igstPaise: computed.igstPaise,
+      totalTaxPaise: computed.totalTaxPaise,
+      roundOffPaise: computed.roundOffPaise,
+      grandTotalPaise: computed.grandTotalPaise,
+      amountInWords: computed.amountInWords,
+      notes: request.notes ?? "",
+      createdBy: actor,
+    });
+  } catch (error) {
+    await restoreStock(moves, {
+      note: `returned — ${allocated.number} could not be written`,
+      actor,
+    });
+    throw error;
+  }
 
   await recordAudit({
     actor,
@@ -322,6 +378,17 @@ export async function issueInvoice(
       party: invoice.party.name,
     },
   });
+  if (moves.length > 0) {
+    // The stock entries were written before the number existed; name it now.
+    await recordAudit({
+      actor,
+      action: "stock",
+      entity: "Invoice",
+      entityId: String(invoice._id),
+      after: { itemsMoved: moves.length },
+      note: `${invoice.number} took ${moves.reduce((n, m) => n + m.quantity, 0)} pieces off the shelf`,
+    });
+  }
 
   /*
     The customer record learns about the sale — the stored figures the list
@@ -358,10 +425,34 @@ export async function cancelInvoice(
   if (invoice.status === "cancelled") throw new InvoiceError("Already cancelled.");
   if (invoice.status !== "issued") throw new InvoiceError("Only an issued invoice can be cancelled.");
 
+  /*
+    Stock goes the other way from the document. Cancelling an INVOICE puts
+    its pieces back on the shelf — after the save, so a refused save leaves
+    the shelf as it was. Cancelling a CREDIT NOTE takes them off again, and
+    that can be refused: the returned canisters may have been sold since. So
+    it happens before the save, and a shortage stops the cancellation.
+  */
+  const moves = movesFromLines(invoice.lines ?? []);
+  const isCreditNote = invoice.documentType === "credit_note";
+  if (isCreditNote && moves.length > 0) {
+    await deductStock(moves, { note: `sold again — ${invoice.number} cancelled`, actor });
+  }
+
   invoice.status = "cancelled";
   invoice.cancelledAt = new Date();
   invoice.cancelledReason = reason.trim();
-  await invoice.save();
+  try {
+    await invoice.save();
+  } catch (error) {
+    if (isCreditNote && moves.length > 0) {
+      await restoreStock(moves, { note: `returned — ${invoice.number} could not be cancelled`, actor });
+    }
+    throw error;
+  }
+
+  if (!isCreditNote && moves.length > 0) {
+    await restoreStock(moves, { note: `returned — ${invoice.number} cancelled`, actor });
+  }
 
   await recordAudit({
     actor,
@@ -584,6 +675,8 @@ export async function issueCreditNote(
     supplyType: original.supplyType,
     lines: computed.lines.map((line, i) => ({
       productId: originalLines[picks[i].index]?.productId ?? null,
+      // The same shelf the original took them off, so they go back there.
+      stockItemId: originalLines[picks[i].index]?.stockItemId ?? null,
       againstLineIndex: picks[i].index,
       description: line.description,
       packLabel: originalLines[picks[i].index]?.packLabel ?? "",
@@ -636,6 +729,12 @@ export async function issueCreditNote(
 
   // Money back to the customer: their lifetime revenue comes down by it.
   await applyTradingDelta(note.contactId, tradingDelta(note, "apply"));
+
+  // And the goods back on the shelf, for the lines that came off one.
+  const returned = movesFromLines(note.lines ?? []);
+  if (returned.length > 0) {
+    await restoreStock(returned, { note: `returned — ${note.number} credits ${original.number}`, actor });
+  }
 
   return note;
 }

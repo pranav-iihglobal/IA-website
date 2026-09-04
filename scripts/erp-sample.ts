@@ -381,6 +381,27 @@ async function main() {
     ]);
     console.log(`  Stock    : ${stock} items`);
     console.log(`  Purchases: ${purchases}\n`);
+
+    /*
+      Finished goods nobody has linked to a product pack are counted by hand
+      only — no sale moves them, and their reorder alert is as fresh as the
+      last count. Reported so the directors can link them from the item's
+      edit page; never linked here, because which item IS which pack is
+      their call.
+    */
+    const unlinked = (await StockItem.find({
+      isSample: { $ne: true },
+      kind: "finished",
+      productId: null,
+    })
+      .select("name sku")
+      .lean()) as { name?: string; sku?: string }[];
+    if (unlinked.length > 0) {
+      console.log(`  ${unlinked.length} real finished-goods item${unlinked.length === 1 ? "" : "s"} not linked to a product pack —`);
+      console.log("  sales do not move these counts. Link each on its edit page (\"Sold as\"):");
+      for (const item of unlinked) console.log(`    ${item.name}${item.sku ? `  (${item.sku})` : ""}`);
+      console.log();
+    }
   } else {
     console.log(
       "\n  Usage: npm run erp-sample -- seed [count] | wipe | doctor\n",

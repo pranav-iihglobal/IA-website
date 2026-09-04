@@ -21,15 +21,17 @@ import { stockItemSchema } from "@/lib/schemas";
 import { formatRupees, rupeesToPaise } from "@/lib/money";
 import { SupplierPicker } from "./SupplierPicker";
 import type { SupplierOption } from "@/lib/admin/supplier-options";
+import type { StockLinkOption } from "@/lib/admin/stock-link-options";
 
 /**
  * One stock item, on its own page.
  *
- * `onHand` is a counted number, not a derived one. Stock moves for reasons no
- * invoice records — a sample handed to a farmer, a bag split in transit, a
- * recount that found six more than the book said. Saving RECORDS A COUNT, and
- * the date stamps itself; that is why the two steps are "what it is" and
- * "what there is", rather than one undifferentiated list of ten fields.
+ * `onHand` is a counted number first. Saving RECORDS A COUNT, and the date
+ * stamps itself; that is why the two steps are "what it is" and "what there
+ * is", rather than one undifferentiated list of ten fields. An item LINKED to
+ * a product pack then moves with every sale between counts — the count is
+ * what a person saw, the moves are what the documents did, and a new count
+ * overrides both.
  */
 
 export interface StockFormValues {
@@ -37,6 +39,9 @@ export interface StockFormValues {
   sku: string;
   kind: string;
   unit: string;
+  /** The product pack this item is, or blank for packaging and the like. */
+  productId: string;
+  packLabel: string;
   onHand: string;
   reorderLevel: string;
   unitCost: string;
@@ -61,6 +66,7 @@ export function StockForm({
   itemId,
   version,
   suppliers,
+  products,
 }: {
   initial: StockFormValues;
   itemId?: string;
@@ -68,6 +74,8 @@ export function StockForm({
   version?: number;
   /** Every real supplier, for the picker. */
   suppliers: SupplierOption[];
+  /** Every product and its packs, for the link. */
+  products: StockLinkOption[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -164,13 +172,14 @@ export function StockForm({
 
   const costPaise = rupeesToPaise(values.unitCost);
   const onHand = Number(values.onHand);
+  const linkedProduct = products.find((p) => p.id === values.productId);
 
   const steps: WizardStep[] = [
     {
       id: "item",
       title: "The item",
       description: "What it is and where it sits",
-      errorKeys: ["name", "sku", "kind", "unit", "supplierId", "supplier", "location"],
+      errorKeys: ["name", "sku", "kind", "unit", "supplierId", "supplier", "location", "productId", "packLabel"],
       complete: Boolean(values.name.trim()),
       content: (
         <Section title="The item" description="What it is and where it sits.">
@@ -217,6 +226,41 @@ export function StockForm({
               error={errors.supplierId ?? errors.supplier}
             />
           </div>
+          {/*
+            The link that makes the count perpetual. Product first, then the
+            pack — a product is several shelves. Offered on every kind, since
+            what gets sold is a decision for the person, not the form.
+          */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              label="Sold as"
+              hint={
+                values.productId
+                  ? "Each invoice of this pack reduces the count; credit notes and cancellations restore it."
+                  : "Link a product pack and the count follows its sales. Leave blank for packaging and raw material."
+              }
+              value={values.productId}
+              onChange={(productId) => set({ productId, packLabel: "" })}
+              error={errors.productId}
+              options={[
+                { value: "", label: "Not linked — counted by hand only" },
+                ...products.map((p) => ({ value: p.id, label: p.name })),
+              ]}
+            />
+            {linkedProduct && (
+              <SelectField
+                label="Pack"
+                value={values.packLabel}
+                onChange={(packLabel) => set({ packLabel })}
+                error={errors.packLabel}
+                required
+                options={[
+                  { value: "", label: "Choose a pack…" },
+                  ...linkedProduct.packs.map((label) => ({ value: label, label })),
+                ]}
+              />
+            )}
+          </div>
         </Section>
       ),
     },
@@ -229,7 +273,11 @@ export function StockForm({
       content: (
         <Section
           title="The count"
-          description="Saving records a count — the date updates whenever you save."
+          description={
+            values.productId
+              ? "Saving records a count and overrides what the sales have done to it — the date updates whenever you save."
+              : "Saving records a count — the date updates whenever you save."
+          }
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField

@@ -83,6 +83,9 @@ export interface StockRowShape {
   notes: string;
   countedAt: string | null;
   isSample: boolean;
+  /** Set when the count follows the sales of a product pack. */
+  productId: string | null;
+  packLabel: string;
 }
 
 function toStockRow(d: LeanDoc): StockRowShape {
@@ -101,6 +104,8 @@ function toStockRow(d: LeanDoc): StockRowShape {
     notes: d.notes ?? "",
     countedAt: d.countedAt ? new Date(d.countedAt).toISOString() : null,
     isSample: Boolean(d.isSample),
+    productId: d.productId ? String(d.productId) : null,
+    packLabel: d.packLabel ?? "",
   };
 }
 
